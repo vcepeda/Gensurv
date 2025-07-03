@@ -1,0 +1,18 @@
+{% extends 'gensurvapp/base.html' %}
+
+{% block content %}
+<h1>GenSurv</h1>
+<p>### Welcome to GenSurv Metadata Collection</p>
+<p>Follow the steps to upload your metadata and FASTQ files, then download the combined data.</p>
+<p>Use the sidebar to navigate through different sections.</p>
+<h2>Instructions</h2>
+<ol>
+    <li>Upload FASTQ file(s) (.fastq, .fq or .fastq.gz, .fq.gz).</li>
+    <li>Upload completed CSV metadata file corresponding to the FASTQs.
+        <ul>
+            <li>To understand the required fields, <a href="{% url 'sample_csv' %}">download the sample CSV format</a>.</li>
+        </ul>
+    </li>
+    <li>Optional: View the uploaded data and download it.</li>
+</ol>
+{% endblock %}

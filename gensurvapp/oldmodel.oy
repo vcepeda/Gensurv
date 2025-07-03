@@ -1,0 +1,126 @@
+from django.db import models
+from django.contrib.auth.models import User
+# Create your models here.
+from django.conf import settings  # use settings to reference AUTH_USER_MODEL
+
+class TodoItem(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="todoitem", null=True)
+    name = models.CharField(max_length=200)
+
+    def __str__(self):
+        return self.name
+
+class Item(models.Model):
+    todolist = models.ForeignKey(TodoItem, on_delete=models.CASCADE)
+    text = models.CharField(max_length=300)
+    complete = models.BooleanField(default=False)
+
+    def __str__(self):
+        return self.text
+
+# Dashboard and data extension
+
+#class Submission(models.Model):
+#    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='submissions')
+#    metadata_file = models.FileField(upload_to='uploads/metadata/')
+#    antibiotics_file = models.FileField(upload_to='uploads/antibiotics/', null=True, blank=True)
+#    fastq_files = models.ManyToManyField('UploadedFile', related_name='submission_fastq_files', blank=True)  # Add a unique related_name here
+#    created_at = models.DateTimeField(auto_now_add=True)
+#
+#    def __str__(self):
+#        return f"Submission by {self.user.username} on {self.created_at}"
+#
+#class UploadedFile(models.Model):
+#    file = models.FileField(upload_to='uploads/fastq/')
+#    submission = models.ForeignKey(Submission, related_name='uploaded_fastq_files', on_delete=models.CASCADE)  # Continue using the distinct related_name
+#
+#    def __str__(self):
+#        return self.file.name
+# models.py
+
+#class Submission(models.Model):
+#    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='submissions')
+#    metadata_file = models.FileField(upload_to='uploads/metadata/')
+#    antibiotics_file = models.FileField(upload_to='uploads/antibiotics/', null=True, blank=True)
+#    created_at = models.DateTimeField(auto_now_add=True)
+#
+#    def __str__(self):
+#        return f"Submission by {self.user.username} on {self.created_at}"
+
+#class UploadedFile(models.Model):
+#    file = models.FileField(upload_to='uploads/fastq/')
+#    submission = models.ForeignKey(Submission, related_name='uploaded_fastq_files', on_delete=models.CASCADE)
+
+#    def __str__(self):
+#        return self.file.name
+
+import logging
+import os
+from django.utils.text import slugify
+
+def user_submission_path(instance, filename):
+    # Create a folder for each submission based on the user and submission ID
+    return os.path.join(
+        'submissions',
+        slugify(instance.user.username),  # Folder based on the username
+        f'submission_{instance.id}',  # Folder for each submission
+        filename  # The actual file name
+    )
+
+#class Submission(models.Model):
+#    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='submissions')
+#    metadata_file = models.FileField(upload_to=user_submission_path)
+#    antibiotics_file = models.FileField(upload_to=user_submission_path, null=True, blank=True)
+#    created_at = models.DateTimeField(auto_now_add=True)
+#    def save(self, *args, **kwargs):
+#        # Ensure the instance has an ID before saving files
+#        if not self.pk:  # If the Submission doesn't exist yet
+#            super().save(*args, **kwargs)  # Save it once to get the ID
+        
+        # Now that the ID is available, save the files again with the correct path
+#        super().save(*args, **kwargs)
+    #def __str__(self):
+    #    return f"Submission by {self.user.username} on {self.created_at}"
+
+
+
+class Submission(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='submissions')
+    metadata_file = models.FileField(upload_to=user_submission_path)
+    antibiotics_file = models.FileField(upload_to=user_submission_path, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        # Check before the first save
+        logging.debug(f"Before first save: ID = {self.pk}")
+    
+        # Save the object to get an ID if it doesn't have one
+        if not self.pk:
+            super().save(*args, **kwargs)  # Save to assign ID
+            logging.debug(f"After first save: ID = {self.pk}")
+
+            # Ensure file paths use the correct ID
+            self.metadata_file.name = user_submission_path(self, self.metadata_file.name)
+            logging.debug(f"Updated metadata file path: {self.metadata_file.name}")
+            if self.antibiotics_file:
+                self.antibiotics_file.name = user_submission_path(self, self.antibiotics_file.name)
+                logging.debug(f"Updated antibiotics file path: {self.antibiotics_file.name}")
+            # Save the object again to store the correct paths
+            #super().save(*args, **kwargs)
+            # Save again, but only update file fields to avoid duplicate insert
+            super().save(update_fields=['metadata_file', 'antibiotics_file'])
+            logging.debug(f"After updateing save: ID = {self.pk}")
+        else:
+            # Just update files if object already exists
+            super().save(*args, **kwargs)
+            logging.debug(f"Final save paths - Metadata: {self.metadata_file.name}, Antibiotics: {self.antibiotics_file.name if self.antibiotics_file else 'None'}")
+
+class UploadedFile(models.Model):
+    file = models.FileField(upload_to=user_submission_path)
+    submission = models.ForeignKey(Submission, related_name='uploaded_fastq_files', on_delete=models.CASCADE)
+
+    def __str__(self):
+        return self.file.name
+
+
+

@@ -1,0 +1,8 @@
+Column Name,Description,Mandatory/Optional
+Sample Identifier,Unique ID, same as in the metadata file,Mandatory
+Metadata File location,Location of the metadata file,Mandatory
+Antibiotics Testing File location,Location of the antibiotics testing file,Mandatory
+Illumina Read-1 File location,Location of the Illumina Read-1 file,Optional
+Illumina Read-2 File location,Location of the Illumina Read-2 file,Optional
+Nanopore File location,Location of the Nanopore file,Optional
+Pacbio File location,Location of the PacBio file,Optional

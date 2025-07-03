@@ -1,0 +1,25 @@
+{% extends "gensurvapp/base.html" %}
+
+{% block title %}
+  Todo List
+{% endblock %}
+
+{% block content %}
+  <h1>Todo List of Gensurv</h1>
+  <ul>
+    {% for todo in todos %}
+    <li>
+      <a href="{% url 'index' todo.name %}">{{ todo.name }}</a>: {% if todo.complete %}Completed{% else %} Not completed {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+
+  <h1>Todo List of user</h1>
+  <ul>
+    {% for todo in user.todoitem.all %}
+    <li>
+      <a href="{% url 'index' todo.name %}">{{ todo.name }}</a>
+    </li>
+    {% endfor %}
+  </ul>
+{% endblock %}
