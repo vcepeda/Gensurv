@@ -1,0 +1,11 @@
+{% extends 'gensurvapp/base.html' %}
+
+{% block content %}
+<h1>Upload Your Data Files</h1>
+<p>Upload your CSV metadata file and the associated FASTQ files (can be gzipped).</p>
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Upload</button>
+</form>
+{% endblock %}

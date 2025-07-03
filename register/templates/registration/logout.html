@@ -1,0 +1,14 @@
+{% extends "gensurvapp/base.html" %}
+
+{% block title %}
+Logged Out
+{% endblock %}
+
+{% block content %}
+<div class="logout-confirmation text-center">
+    <h2>You have been logged out successfully.</h2>
+    <p>We hope to see you back soon!</p>
+    <a href="{% url 'login' %}" class="btn btn-primary">Login Again</a> 
+    <a href="{% url 'home' %}" class="btn btn-secondary">Back to Home</a>
+</div>
+{% endblock %}

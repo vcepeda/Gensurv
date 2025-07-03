@@ -1,0 +1,26 @@
+{% extends "gensurvapp/base.html" %}
+{% load custom_tags %}
+
+{% block content %}
+<h1>Upload Your Data Files</h1>
+<h2>Single Sample Upload</h2>
+
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Upload</button>
+</form>
+
+<!-- Link to Bulk Upload Page -->
+<h2>Bulk Upload</h2>
+<p>If you have multiple samples to upload, please use the bulk upload option.</p>
+<a href="{% url 'bulk_upload' %}" class="btn btn-secondary">Go to Bulk Upload</a>
+
+{% if error_message %}
+    <div class="alert alert-danger">
+        {{ error_message }}
+    </div>
+{% endif %}
+
+{% endblock %}
+

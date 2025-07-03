@@ -1,0 +1,5 @@
+Testing Method,Tested Antibiotic,Observed Antibiotic Resistance SIR,Observed Antibiotic Resistance MIC (mg/L)
+disk diffusion,Antibiotic1,Resistant,>256
+Vitek,Antibiotic2,Intermediate,2.0
+broth microdilution,Antibiotic3,Susceptible,1.0
+genome sequencing,Antibiotic4,Resistant,0.5

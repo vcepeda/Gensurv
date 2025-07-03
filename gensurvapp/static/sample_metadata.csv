@@ -1,0 +1,2 @@
+Sample Identifier,Isolate Species,Subtype,Collection Date,Sampling Strategy,Sample Source,Collection Method,City,Postal Code,County,State,Country,Lab Identifier,Sex,Age Group,Country of Putative Exposure,Sequencing Platform,Sequencing Type,Library Preparation Kit,Sequencing Chemistry,NGS Files,Antibiotics File,Antibiotics Info
+Single,562,SerovarA,15-01-2023,surveillance,human clinical (hospital),swab,New York,10001,New York County,New York,USA,Lab_001,male,adult,USA,Illumina,whole genome sequencing,,NextSeq Chemistry,Illumina:Single.fastq,sample_antibiotics.csv,

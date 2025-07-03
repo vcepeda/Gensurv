@@ -1,0 +1,23 @@
+{% extends "gensurvapp/base.html" %}
+
+{% block title %}
+Create New List
+{% endblock %}
+
+{% block content %}
+<h3>Create Page</h3>
+
+{% if error_message %}
+    <div class="alert alert-danger">{{ error_message }}</div>
+{% endif %}
+
+<form method="post" action="{% url 'create' %}" class="form-group">
+    {% csrf_token %}
+    <div class="input-group mb-3">
+        <div class="input-group-prepend">
+            <button type="submit" name="save" class="btn btn-success">Create New</button>
+        </div>    
+        {{ form.name }}
+    </div>    
+</form>
+{% endblock %}

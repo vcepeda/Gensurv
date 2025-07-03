@@ -1,0 +1,24 @@
+{% extends "gensurvapp/base.html" %}
+{% load custom_tags %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1>Submission {{ submission.id }} Results</h1>
+    <p class="lead">Explore the results for the samples in this submission.</p>
+    <div class="card mb-4">
+        <div class="card-header">Samples in Submission {{ submission.id }}</div>
+        <div class="card-body">
+            <ul class="list-group">
+                {% for sample_id in sample_ids %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <a href="{% url 'sample_results' submission.id sample_id %}" class="text-decoration-none">
+                        Sample {{ sample_id }}
+                    </a>
+                    <span class="badge badge-primary badge-pill">View Results</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

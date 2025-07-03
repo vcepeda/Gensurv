@@ -1,0 +1,184 @@
+{% extends "gensurvapp/base.html" %}
+{% load custom_tags %}
+{% block content %}
+
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="mb-5">
+        <h1 id="top" class="text-center">Sample {{ sample_id }} Results</h1>
+        <p class="lead">
+            Explore the most relevant results, including bacterial analyses, plasmid-related findings, and summary metrics.<br>
+            For detailed analysis of sample <strong>{{ sample_id }}</strong>, 
+            <a href="{% url 'sample_all_results' submission.id sample_id %}">click here</a>.
+        </p>
+    </div>
+
+
+    <!-- Bactopia Results -->
+    <h2 id="bac" class="text-info">Basic Bacterial Analyses: Results from Bactopia</h2>
+    <p>
+        This section provides insights into the sample's quality, assembly, antimicrobial resistance, and taxonomic classification.
+    </p>
+
+    {% if bactopia_result %}
+        <!-- Summary Files -->
+        <h3>Summary Files</h3>
+        <p>
+            Summary Files are called "Merged results" in Bactopia and refer to the combined output from multiple samples or analyses aggregated into summary files.
+        </p>
+        <ul>
+            <li>
+                <a href="{{ request.scheme }}://{{ request.get_host }}{{ bactopia_result.directory_path }}/bactopia-runs/bactopia-20241206-082913/merged-results/amrfinderplus.tsv" target="_blank" download>
+                    Download amrfinderplus.tsv
+                </a>
+            </li>
+            <li>
+                <a href="{{ request.scheme }}://{{ request.get_host }}{{ bactopia_result.directory_path }}/bactopia-runs/bactopia-20241206-082913/merged-results/assembly-scan.tsv" target="_blank" download>
+                    Download assembly-scan.tsv
+                </a>
+            </li>
+        </ul>
+
+        <!-- AMRFinderPlus Table -->
+        <div class="table-responsive mt-4">
+            <h4>AMRFinderPlus Results</h4>
+            {% if amrfinderplus_data %}
+            <table class="table table-striped table-hover table-bordered">
+                <thead class="thead-dark">
+                    <tr>
+                        {% for column in amrfinderplus_data.0.keys %}
+                        <th>{{ column }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in amrfinderplus_data %}
+                    <tr>
+                        {% for value in row.values %}
+                        <td>{{ value }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>No data available for AMRFinderPlus.</p>
+            {% endif %}
+        </div>
+
+        <!-- Assembly Scan Table -->
+        <div class="table-responsive mt-4">
+            <h4>Assembly Scan Results</h4>
+            {% if assembly_scan_data %}
+            <table class="table table-striped table-hover table-bordered">
+                <thead class="thead-dark">
+                    <tr>
+                        {% for column in assembly_scan_data.0.keys %}
+                        <th>{{ column }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in assembly_scan_data %}
+                    <tr>
+                        {% for value in row.values %}
+                        <td>{{ value }}</td>
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p>No data available for Assembly Scan.</p>
+            {% endif %}
+        </div>
+
+
+    {% else %}
+    <p>No Bactopia results available.</p>
+    {% endif %}
+
+    <!-- PlasmIdent Results -->
+
+    <h2 id="plas" class="text-info">Plasmid-Related Analyses: Results from PlasmIdent</h2>
+    <p>
+        This section provides a detailed overview of plasmid-related analyses conducted on the sample.
+    </p>
+
+    {% if plasmid_ident_result %}
+
+        <!-- Summary Metrics -->
+        <div class="card mb-4">
+            <div class="card-header">Summary Metrics</div>
+            <div class="card-body">
+                <p>Number of Contigs: {{ num_contigs|default:"N/A" }}</p>
+                <p>Number of AR Genes: {{ num_ar_genes|default:"N/A" }}</p>
+            </div>
+        </div>
+
+<!-- AR Genes Table -->
+<div id="ar-genes-table" class="table-responsive" style="margin-top: 20px; max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px; border-radius: 5px;">
+    <h4>AR Genes</h4>
+    {% if ar_genes_table %}
+    <!-- Add Download Link -->
+    <div style="margin-bottom: 15px;">
+        <a href="{{ request.scheme }}://{{ request.get_host }}{{ plasmid_ident_result.directory_path }}/{{ sample_id }}/ar_genes/{{ sample_id }}_ar_genes.tsv" 
+           target="_blank" 
+           download>
+            Download AR Genes TSV
+        </a>
+    </div>
+    <table class="table table-striped table-hover table-bordered">
+        <thead class="thead-dark">
+            <tr>
+                {% for column in ar_genes_table.0.keys %}
+                <th>{{ column }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in ar_genes_table %}
+            <tr>
+                {% for value in row.values %}
+                <td>{{ value }}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No data available for AR Genes.</p>
+    {% endif %}
+</div>
+
+
+<!-- Plasmid Visualization Plots with AR Genes -->
+<div style="margin-top: 40px;"> <!-- Added margin-top for extra spacing -->
+    <h4>Plasmid Visualization Plots with AR Genes</h4>
+    <p>Visual representations of plasmids with AR genes:</p>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+        {% if filtered_plot_files %}
+            {% for plot_file in filtered_plot_files %}
+            <div style="text-align: center;">
+                <!-- Add title above the image -->
+                <h5 style="font-size: 14px; margin-bottom: 5px; word-break: break-word;">{{ plot_file }}</h5>
+                <a href="{{ request.scheme }}://{{ request.get_host }}{{ plasmid_ident_result.directory_path }}/{{ sample_id }}/plots/{{ plot_file }}" target="_blank">
+                    <img src="{{ request.scheme }}://{{ request.get_host }}{{ plasmid_ident_result.directory_path }}/{{ sample_id }}/plots/{{ plot_file }}" 
+                        alt="{{ plot_file }}" 
+                        style="width: 100%; height: auto; border: 1px solid #ddd; border-radius: 4px; padding: 5px;">
+                </a>
+            </div>
+            {% endfor %}
+        {% else %}
+        <p>No plots available for plasmids with AR genes.</p>
+        {% endif %}
+    </div>
+</div>
+
+
+    {% else %}
+    <p>No PlasmIdent results available for this sample.</p>
+    {% endif %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,120 @@
+{% extends 'gensurvapp/base.html' %}
+{% load custom_tags %}
+
+{% block content %}
+
+<div class="container mt-5">
+    <!-- Page Header -->
+    <div class="mb-5">
+        <h1 class="text-center">Submissions</h1>
+        <p class="lead">
+            View uploaded data, including metadata, antibiotic files, FASTQ files, their analysis statuses, and results.
+        </p>
+    </div>
+
+    <!-- Submissions Table -->
+    <div class="card">
+        <div class="card-header">Submission Details</div>
+        <div class="card-body table-responsive">
+            <table class="table table-striped table-hover table-bordered">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Username</th>
+                        <th>Submission ID</th>
+                        <th>Submission Date</th>
+                        <th>Metadata File</th>
+                        <th>Antibiotics Files</th>
+                        <th>FASTQ Files</th>
+                        <th>Analysis Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for data in submissions %}
+                    <tr>
+                        <!-- Username -->
+                        <td>{{ data.submission.user.username }}</td>
+
+                        <!-- Submission ID -->
+                        <td>{{ data.submission.id }}</td>
+
+                        <!-- Submission Date -->
+                        <td>{{ data.submission.created_at|date:"Y-m-d H:i" }}</td>
+
+                        <!-- Metadata File -->
+                        <td>
+                            {% if data.submission.metadata_file %}
+                                <a href="{{ data.submission.metadata_file.url }}" target="_blank">
+                                    {{ data.submission.metadata_file.name|basename }}
+                                </a>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Antibiotics Files -->
+                        <td>
+                            {% if data.antibiotics_files %}
+                                {% for antibiotics_file in data.antibiotics_files %}
+                                    <a href="{{ antibiotics_file.file.url }}" target="_blank">
+                                        {{ antibiotics_file.file.name|basename }}
+                                    </a><br>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- FASTQ Files -->
+                        <td>
+                            {% if data.grouped_fastq_files %}
+                                {% for sample_id, files in data.grouped_fastq_files.items %}
+                                    <strong>{{ sample_id }}</strong>:<br>
+                                    {% for file in files %}
+                                        <a href="{{ file.url }}" target="_blank">
+                                            {{ file.name|basename }}
+                                        </a><br>
+                                    {% endfor %}
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Analysis Status -->
+                        <td>
+                            {% if data.sample_analysis_status %}
+                                {% for sample_id, status in data.sample_analysis_status.items %}
+                                    <strong>{{ sample_id }}</strong>: 
+                                    <span class="badge 
+                                        {% if status == "completed" %}
+                                            badge-success
+                                        {% elif status == "failed" %}
+                                            badge-danger
+                                        {% else %}
+                                            badge-warning
+                                        {% endif %}
+                                    ">
+                                        {{ status|default:"Pending" }}
+                                    </span><br>
+                                {% endfor %}
+                            {% else %}
+                                <span class="badge badge-warning">Pending</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Actions (View Results Button) -->
+                        <td>
+                            <a href="{% url 'submission_results' data.submission.id %}" class="btn btn-primary btn-sm">
+                                View Results
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

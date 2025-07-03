@@ -1,0 +1,244 @@
+{% extends 'gensurvapp/base.html' %}
+{% load custom_tags %}
+
+{% block content %}
+
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="mb-5">
+        <h1 class="text-center">Submissions</h1>
+        <p class="lead">
+            View uploaded data, including metadata, antibiotic files, FASTQ files, and their analysis statuses.
+        </p>
+    </div>
+
+    <!-- Submissions Table -->
+    <div class="card">
+        <div class="card-header">Submission Details</div>
+        <div class="card-body table-responsive">
+            <table class="table table-striped table-hover table-bordered">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Username</th>
+                        <th>Submission ID</th>
+                        <th>Submission Date</th>
+                        <th>Metadata File</th>
+                        <th>Antibiotics Data</th>
+                        <th>FASTQ Files</th>
+                        <th>Analysis Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for data in submissions %}
+                    <tr>
+                        <!-- Username -->
+                        <td>{{ data.submission.user.username }}</td>
+
+                        <!-- Submission ID -->
+                        <td>{{ data.submission.id }} </td>
+
+                        <!-- Submission Date -->
+                        <td>{{ data.submission.created_at|date:"Y-m-d H:i" }}</td>                        
+                        
+                        <!-- Metadata Files -->
+                        <td>
+                        
+                            {% with raw=data.submission.uploadedfile_set|get_file:"metadata_raw" cleaned=data.submission.uploadedfile_set|get_file:"metadata_cleaned" %}
+                                {% if raw %}
+                                    <strong>Raw:</strong>
+                                    <a href="{{ raw.file.url }}" target="_blank">
+                                        {{ raw.file.name|basename }}
+                                    </a><br>
+
+                                {% endif %}
+                                {% if cleaned and cleaned.cleaned_file %}
+                                <strong>Cleaned:</strong>
+                                <a href="{{ cleaned.cleaned_file.url }}" target="_blank">{{ cleaned.cleaned_file.name|basename }}</a><br>
+                            {% elif raw and raw.cleaned_file %}
+                                <strong>Cleaned:</strong>
+                                <a href="{{ raw.cleaned_file.url }}" target="_blank">{{ raw.cleaned_file.name|basename }}</a><br>
+                            {% endif %}
+
+                                {% if not raw and not cleaned %}
+                                    {% if data.submission.metadata_file %}
+                                        <strong>Metadata:</strong>
+                                         <a href="{{ data.submission.metadata_file.url }}" target="_blank">
+                                        {{ data.submission.metadata_file.name|basename }}
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">N/A</span>
+                                    {% endif %}
+                                {% endif %}
+                                    {% if data.metadata_resub_count %}
+                                <div><small class="text-muted">🔁 Resubmissions: {{ data.metadata_resub_count }}</small></div>
+                                {% endif %}
+
+                     {% if raw %}
+                        {% if data.submission.resubmission_allowed %}
+                            {% if data.submission.metadata_warnings %}
+                            <div class="alert alert-warning mt-2 p-2">
+                                <strong>Metadata Warning:</strong><br>
+                                {{ data.submission.metadata_warnings|linebreaksbr }}
+                            </div>
+                            {% endif %}
+
+                            <div class="mt-1">
+                            <a href="{% url 'resubmit_file' data.submission.id 'metadata' %}" class="btn btn-warning btn-sm">
+                                Resubmit Metadata
+                            </a>
+                            </div>
+                                                {% endif %}
+
+                        {% if data.metadata_resub_count %}
+                            <div class="mt-1">
+                                <a href="{% url 'resubmit_file' data.submission.id 'metadata' %}" class="btn btn-secondary btn-sm">
+                                    View Resubmission History
+                                </a>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+
+
+
+                    {% endwith %}
+                    {% if data.submission and data.submission.id %}
+{% if not data.submission.deletion_requested %}
+  <form action="{% url 'request_submission_deletion' data.submission.id %}" method="post" style="display:inline;">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger btn-sm mt-2" onclick="return confirm('Are you sure you want to request deletion of this submission?')">
+      Request Deletion
+    </button>
+  </form>
+{% else %}
+  <div class="alert alert-info mt-2 p-2">
+    Deletion has been requested for this submission.
+  </div>
+{% endif %}
+
+
+{% endif %}
+
+
+                </td>
+
+
+<!-- Antibiotics Files -->
+<td>
+    {% if data.antibiotics_files or data.antibiotics_info %}
+        
+        {% if data.antibiotics_files %}
+            <strong>Files:</strong><br>
+            {% for antibiotics_file in data.antibiotics_files %}
+                {% if antibiotics_file.file %}
+                    {% with sid=antibiotics_file.sample_id|default:"Unnamed Sample" %}
+                        <strong>{{ sid }}</strong>:<br>
+                        {% if antibiotics_file.cleaned_file %}
+                            Raw: <a href="{{ antibiotics_file.file.url }}" target="_blank">
+                                {{ antibiotics_file.file.name|basename }}
+                            </a><br>
+                            Cleaned: <a href="{{ antibiotics_file.cleaned_file.url }}" target="_blank">
+                                {{ antibiotics_file.cleaned_file.name|basename }}
+                            </a><br>
+                        {% else %}
+                            <a href="{{ antibiotics_file.file.url }}" target="_blank">
+                                {{ antibiotics_file.file.name|basename }}
+                            </a><br>
+                        {% endif %}
+                    {% endwith %}
+                {% endif %}
+            {% endfor %}
+        {% endif %}
+
+        {% if data.antibiotics_info %}
+            <strong>Info:</strong><br>
+            {% for sample_id, info in data.antibiotics_info.items %}
+                {% with existing_file=data.antibiotics_files|get_sample_file:sample_id %}
+                    {% if not existing_file %}
+                        <!-- Only show info if no file was already shown for this sample -->
+                        <strong>{{ sample_id }}</strong>: {{ info }}<br>
+                    {% endif %}
+                {% endwith %}
+            {% endfor %}
+        {% endif %}
+
+    {% else %}
+        <span class="text-muted">N/A</span>
+    {% endif %}
+
+    {% if data.submission.antibiotics_warnings %}
+    <div class="alert alert-warning mt-2 p-2">
+        <strong>Antibiotics Warning:</strong><br>
+        {{ data.submission.antibiotics_warnings|linebreaksbr }}
+    </div>
+{% endif %}
+</td>
+
+
+
+
+
+<!-- FASTQ Files -->
+<td>
+    {% if data.grouped_fastq_files %}
+        {% for sample_id, files in data.grouped_fastq_files.items %}
+            <strong>{{ sample_id }}</strong>:<br>
+            {% for file in files %}
+                <a href="{{ file.file.url }}" target="_blank">
+                    {{ file.file.name|basename }}
+                </a><br>
+            {% endfor %}
+        {% endfor %}
+    {% else %}
+        <span class="text-muted">N/A</span>
+    {% endif %}
+
+{% if data.submission.extra_fastq_warning %}
+    <div class="alert alert-warning mt-2 p-2">
+        <strong>FASTQ Warning:</strong><br>
+        {{ data.submission.extra_fastq_warning|linebreaksbr }}
+    </div>
+{% endif %}
+
+
+</td>
+
+
+
+                        <!-- Analysis Status -->
+                        <td>
+                            {% if data.sample_analysis_status %}
+                                {% for sample_id, status in data.sample_analysis_status.items %}
+                                    <strong>{{ sample_id }}</strong>: 
+                                    <span class="badge 
+                                        {% if status == "completed" %}
+                                            badge-success
+                                        {% elif status == "failed" %}
+                                            badge-danger
+                                        {% else %}
+                                            badge-warning
+                                        {% endif %}
+                                    ">
+                                        {{ status|default:"Pending" }}
+                                    </span>
+                                <!-- View Results Link -->
+                                    {% if status == 'completed' %}
+                                    <br>
+                                    <a href="{% url 'sample_results' data.submission.id sample_id %}" class="btn btn-sm btn-primary mt-1">
+                                        View Results
+                                    </a>{% endif %}
+                                    <br> <!-- Ensures each sample is displayed on a new line -->
+
+                                {% endfor %}
+                            {% else %}
+                                <span class="badge badge-warning">Pending</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
