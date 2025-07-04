@@ -1513,6 +1513,10 @@ def upload_files(request):
     if not request.user.is_superuser and maintenance_message and request.method == "POST":
         messages.error(request, "Uploads are currently disabled due to maintenance.")
         return redirect('upload_files')
+
+    # Session-passed values from redirect
+    upload_context = request.session.pop('upload_context', {})
+
     
     """Handle single and bulk file uploads with validation."""
     single_error_message = None
@@ -2237,24 +2241,41 @@ def upload_files(request):
                 bulk_error_message = f"Bulk upload form is invalid. Please correct the errors below.\n{bulk_form.errors}"
                 logger.error(f"Bulk form errors: {bulk_form.errors}")
             
-    #finally:
+    #finally after single or bulk upload processing:
     total_time = time.time() - start_time
     request.session['upload_duration'] = f"{total_time:.2f} seconds"
     logger.info(f"⏱️ Server processing time: {total_time:.2f} seconds")
+    # Save to model
+    if submission:
+        submission.upload_duration = total_time
 
-    
-    client_total_upload_time = request.POST.get("client_total_upload_time")
-    client_network_delay = request.POST.get("client_network_delay")
-
-    if client_total_upload_time and client_network_delay:
+    upload_start_time = request.POST.get("upload_start_time")
+    if upload_start_time:
         try:
-            logger.info(f"✅ Total upload time (client-side): {float(client_total_upload_time):.2f}s")
-            logger.info(f"📡 Upload + network delay (client-side): {float(client_network_delay):.2f}s")
+            client_start = float(upload_start_time)
+            now = time.time()
+            client_total = now - client_start
+            network_delay = client_total - total_time
+
+            logger.info(f"✅ Total upload time (client-side): {client_total:.2f}s")
+            logger.info(f"📡 Upload + network delay (client-side): {network_delay:.2f}s")
+
+            request.session['client_total_upload_time'] = f"{client_total:.2f} seconds"
+            request.session['network_delay'] = f"{network_delay:.2f} seconds"
+            # Save to model
+            if submission:
+                submission.client_total_upload_time = client_total
+                submission.network_delay = network_delay
         except Exception as e:
             logger.warning(f"⚠️ Failed to parse client timing info: {e}")
+    # Finalize
+    if submission:
+        submission.save()
+
+
                 
     # Render the page with the appropriate messages and forms
-    return render(request, 'gensurvapp/upload.html', {
+    response = render(request, 'gensurvapp/upload.html', {
         'single_form': single_form,
         'bulk_form': bulk_form,
         'single_error_message': single_error_message,
@@ -2265,6 +2286,13 @@ def upload_files(request):
         "resubmission_allowed": submission.resubmission_allowed if submission else False,
         'submission_id': submission.id if submission else None,
     })
+
+    # Clean up session keys
+    for key in ['upload_duration', 'network_delay', 'client_total_upload_time']:
+        request.session.pop(key, None)
+    #also clean forms for rerendering. if raload page, it submits data again 
+
+    return response
 
 
 def compare_metadata_with_uploaded_files_single(submission, metadata_df):

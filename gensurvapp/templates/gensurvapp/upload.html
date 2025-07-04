@@ -54,7 +54,9 @@
                     {% if single_success_message %}
                      {% if request.session.upload_duration %}
                         <div class="alert alert-info mt-2">
-                            ⚙️ Processing duration (server): {{ request.session.upload_duration }}
+                            ✅ Total upload time: {{ request.session.client_total_upload_time }}<br>
+                            ⚙️ Processing duration (server): {{ request.session.upload_duration }}<br>
+                            📡 Upload + network delay: {{ request.session.network_delay }}
                         </div>
                     {% endif %}
                     <div class="alert alert-success mt-3">
@@ -118,7 +120,9 @@
                         {% if bulk_success_message %}
                         {% if request.session.upload_duration %}
                         <div class="alert alert-info mt-2">
-                            ⚙️ Processing duration (server): {{ request.session.upload_duration }}
+                            ✅ Total upload time: {{ request.session.client_total_upload_time }}<br>
+                            ⚙️ Processing duration (server): {{ request.session.upload_duration }}<br>
+                            📡 Upload + network delay: {{ request.session.network_delay }}
                         </div>
                         {% endif %}
                         <div class="alert alert-success mt-3">
@@ -145,29 +149,26 @@
 </div>
 
 <script>
-  document.querySelectorAll("form").forEach(form => {
-    form.addEventListener("submit", function () {
-      localStorage.setItem("uploadStartTime", Date.now());
-      const isSingle = form.querySelector("button[type='submit']").name === "single_upload";
-      localStorage.setItem("uploadFormType", isSingle ? "single" : "bulk");
-      // ✅ Send previously stored timing data to Django
-      const totalTime = localStorage.getItem("client_total_upload_time");
-      const networkDelay = localStorage.getItem("client_network_delay");
-      if (totalTime && networkDelay) {
-        const totalInput = document.createElement("input");
-        totalInput.type = "hidden";
-        totalInput.name = "client_total_upload_time";
-        totalInput.value = totalTime;
-        form.appendChild(totalInput);
+document.querySelectorAll("form").forEach(form => {
+  form.addEventListener("submit", function () {
+    const startTimestamp = Date.now();  // this is when upload starts
+    localStorage.setItem("uploadStartTime", startTimestamp);
 
-        const delayInput = document.createElement("input");
-        delayInput.type = "hidden";
-        delayInput.name = "client_network_delay";
-        delayInput.value = networkDelay;
-        form.appendChild(delayInput);
-      }    
-    });
+    const isSingle = form.querySelector("button[type='submit']").name === "single_upload";
+    localStorage.setItem("uploadFormType", isSingle ? "single" : "bulk");
+
+    // Send upload start timestamp to Django
+    let existingInput = form.querySelector("input[name='upload_start_time']");
+    if (!existingInput) {
+      existingInput = document.createElement("input");
+      existingInput.type = "hidden";
+      existingInput.name = "upload_start_time";
+      form.appendChild(existingInput);
+    }
+    existingInput.value = (startTimestamp / 1000).toFixed(3);  // seconds since epoch
   });
+});
+
 
   window.addEventListener("load", function () {
     const startTime = localStorage.getItem("uploadStartTime");
@@ -188,9 +189,9 @@
       localStorage.setItem("client_total_upload_time", totalSeconds.toFixed(2));
       localStorage.setItem("client_network_delay", delta);
 
-      displayElement.innerText = `✅ Total upload time: ${totalSeconds.toFixed(2)}s
-                                ⚙️ Server processing time: ${serverSeconds.toFixed(2)}s
-                                📡 Upload + network delay: ~${delta}s`;
+      //displayElement.innerText = `✅ Total upload time: ${totalSeconds.toFixed(2)}s
+       //                         ⚙️ Server processing time: ${serverSeconds.toFixed(2)}s
+       //                         📡 Upload + network delay: ~${delta}s`;
 
       localStorage.removeItem("uploadStartTime");
       localStorage.removeItem("uploadFormType");

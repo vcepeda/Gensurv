@@ -68,6 +68,10 @@ class Submission(models.Model):
     antibiotics_warnings = models.TextField(blank=True, null=True)
     fastq_warnings = models.TextField(blank=True, null=True)  # optional
     deletion_requested = models.BooleanField(default=False)
+    upload_duration = models.FloatField(null=True, blank=True, help_text="Server processing time in seconds")
+    client_total_upload_time = models.FloatField(null=True, blank=True, help_text="Client-reported total upload time in seconds")
+    network_delay = models.FloatField(null=True, blank=True, help_text="Estimated network + upload delay in seconds")
+
 
     from django.core.files.base import ContentFile
 
