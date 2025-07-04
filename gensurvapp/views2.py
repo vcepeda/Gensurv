@@ -40,7 +40,10 @@ from pathlib import Path
 from django.db.models import Count
 from django.db.models import Prefetch
 from functools import lru_cache
-
+import shutil
+from django.core.files.base import File
+from django.core.files import File as DjangoFile
+from django.core.mail import send_mail
 
 # Configure logging to a file
 logging.basicConfig(filename='bulk_upload.log', level=logging.DEBUG)
@@ -856,10 +859,6 @@ def validate_csv_columns(df: pd.DataFrame, expected_columns: dict):
 
             # Check mandatory columns for empty values
             if is_mandatory:
-                #empty_rows = df[df[column].str.strip().replace("", pd.NA).isna()].index.tolist()
-                #empty_rows = df[
-                #df[column].astype(str).str.strip().replace("", pd.NA).isna()
-                #].index.tolist()
                 empty_rows = normalized_col[normalized_col.isna()].index.tolist()
 
 
@@ -868,7 +867,7 @@ def validate_csv_columns(df: pd.DataFrame, expected_columns: dict):
 
                     validation_results["is_valid"] = False
                     validation_results["invalid_values"].append(
-                        f"{column}: Empty values found in rows: {', '.join(map(str, empty_rows))}"
+                        f"{column}: Empty values found in row(s): {', '.join(map(str, normalized_col[normalized_col.isna()].index + 1))}"
                     )
 
             # Validate non-empty values for optional columns
@@ -880,7 +879,7 @@ def validate_csv_columns(df: pd.DataFrame, expected_columns: dict):
                     validation_results["is_valid"] = False
                     validation_results["type_mismatches"].append(
                         f"{column}: Non-empty values must be of type {expected_types}. "
-                        f"Invalid values found in rows: {', '.join(map(str, invalid_values.index + 1))}"
+                        f"Invalid values found in row(s): {', '.join(map(str, invalid_values.index + 1))}"
                     )
 
 
@@ -901,7 +900,7 @@ def validate_csv_columns(df: pd.DataFrame, expected_columns: dict):
                 if not invalid_mic_values.empty:
                     validation_results["is_valid"] = False
                     validation_results["type_mismatches"].append(
-                        f"{column}: Invalid MIC values in rows: {', '.join(map(str, invalid_mic_values.index + 1))}"
+                        f"{column}: Invalid MIC values in row(s): {', '.join(map(str, invalid_mic_values.index + 1))}"
                     )
 
             # Special case for Isolate Species validation
@@ -933,7 +932,7 @@ def validate_csv_columns(df: pd.DataFrame, expected_columns: dict):
                 if invalid_sex_values:
                     validation_results["is_valid"] = False
                     validation_results["type_mismatches"].append(
-                        f"{column}: Invalid values in rows: {', '.join(map(str, invalid_sex_values))}"
+                        f"{column}: Invalid values in row(s): {', '.join(map(str, invalid_sex_values))}"
                     )
                 continue
 
@@ -952,7 +951,7 @@ def validate_csv_columns(df: pd.DataFrame, expected_columns: dict):
                 if invalid_age_group_values:
                     validation_results["is_valid"] = False
                     validation_results["type_mismatches"].append(
-                        f"{column}: Invalid values in rows: {'; '.join(invalid_age_group_values)}"
+                        f"{column}: Invalid values in row(s): {'; '.join(invalid_age_group_values)}"
                     )
                 continue
 
@@ -994,7 +993,7 @@ def validate_csv_columns(df: pd.DataFrame, expected_columns: dict):
                 if not invalid_sampling.empty:
                     validation_results["is_valid"] = False
                     validation_results["type_mismatches"].append(
-                        f"{column}: Invalid Sampling Strategy in rows: {', '.join(map(str, invalid_sampling.index + 1))}"
+                        f"{column}: Invalid Sampling Strategy in row(s): {', '.join(map(str, invalid_sampling.index + 1))}"
                     )
                 continue
 
@@ -1149,16 +1148,33 @@ def validate_csv_columns(df: pd.DataFrame, expected_columns: dict):
 
         # ✅ Illumina R2 cannot be filled unless R1 is also filled
         if "illumina r2" in df.columns:
-            invalid_r2_rows = df[
-                (df["illumina r2"].notna() & (df["illumina r2"].str.strip() != "")) &
-                (~df.get("illumina r1", "").notna() | (df["illumina r1"].str.strip() == ""))
-                ].index + 1
+        #    invalid_r2_rows = df[
+        #        (df["illumina r2"].notna() & (df["illumina r2"].str.strip() != "")) &
+        #        (~df.get("illumina r1", "").notna() | (df["illumina r1"].str.strip() == ""))
+        #        ].index + 1
+#
+        #    if len(invalid_r2_rows) > 0:
+ #               validation_results["is_valid"] = False
+   #             validation_results["type_mismatches"].append(
+    #            f"'Illumina R2' cannot be provided without 'Illumina R1'. Affected rows: {', '.join(map(str, invalid_r2_rows))}"
+     #           )
+    # 1. make safe, comparable string Series for both columns
+            r2 = df["illumina r2"].fillna("").astype(str).str.strip()
+            if "illumina r1" in df.columns:
+                r1 = df["illumina r1"].fillna("").astype(str).str.strip()
+            else:                                      # column truly absent
+                r1 = pd.Series([""] * len(df), index=df.index)
+
+            # 2. rows where R2 is present but R1 is empty
+            invalid_r2_rows = df[(r2 != "") & (r1 == "")].index + 1
 
             if len(invalid_r2_rows) > 0:
                 validation_results["is_valid"] = False
                 validation_results["type_mismatches"].append(
-                f"'Illumina R2' cannot be provided without 'Illumina R1'. Affected rows: {', '.join(map(str, invalid_r2_rows))}"
+                    "'Illumina R2' cannot be provided without 'Illumina R1'. "
+                    f"Affected rows: {', '.join(map(str, invalid_r2_rows))}"
                 )
+
 
         # ✅ Optional: Only allow one filename per platform field (no semicolons or commas)
             for field in all_ngs_fields:
@@ -1507,7 +1523,7 @@ def upload_files(request):
     bulk_form = BulkUploadForm()
     submission = None
     warning_message = None
-
+    start_time = time.time()
     if request.method == "POST":
         if "single_upload" in request.POST:
             single_form = FileUploadForm(request.POST, request.FILES)
@@ -1683,6 +1699,7 @@ def upload_files(request):
 
                     # ✅ Validate the antibiotics file (if provided). This calls function to fix trail delimiters
                     antibiotics_df= pd.DataFrame()
+                    ab_warning=None
                     if uploaded_antibiotics_file:
                         valid_antibiotics, ab_warning, antibiotics_message, detected_delimiter_anti, antibiotics_df = validate_and_save_csv(uploaded_antibiotics_file, ANTIBIOTICS_COLUMNS)
                         logger.debug(f"Detected delimiter: {detected_delimiter_anti}")
@@ -1693,8 +1710,7 @@ def upload_files(request):
                         # ✅ Log successful validation
                         elif ab_warning:
                         # No errors, just warnings — show to user but don't stop the process
-                            ab_warning = f"Warnings in antibiotics file:\n{antibiotics_message}"
-                            logger.debug(f"Continue with warnings: {ab_warning}")
+                            logger.debug(f"Warnings in antibiotics file:\n{antibiotics_message}")
                         else:
                             logger.info(f"Sample '{sample_id}': Uploaded antibiotics file successfully validated: {uploaded_antibiotics_file.name}")
 
@@ -1723,32 +1739,33 @@ def upload_files(request):
                     #if warning_message:
                     if metadata_warning:
                         submission.resubmission_allowed = True
-                        submission.save()
+                        submission.metadata_warnings = metadata_message  # or warning_message if you want formatted output
+                        #submission.save()#not save twice
                     else:
                         submission.resubmission_allowed = False
+                    if ab_warning:
+                        submission.antibiotics_warnings = antibiotics_message
+                        #logger.debug(f"Warnings in antibiotics file:\n{antibiotics_message}")
+                    #if metadata_warning or ab_warning:
+                    #    submission.resubmission_allowed = True
+                    if extra_fastq_files:
+                        submission.extra_fastq_warning = extra_fastq_warning
+
                     submission.save()
 
-                    #cleaned_metadata_csv = metadata_df.to_csv(index=False)
-                    #cleaned_file = ContentFile(cleaned_metadata_csv)
-                    #cleaned_file.name = f"cleaned_{metadata_file.name}"
+                    # Save metadata file
+                    # Generate cleaned file from DataFrame
                     cleaned_file = generate_cleaned_file(metadata_file.name, metadata_df)
 
-
-                    # Save raw metadata file (optional)
+                    # Save raw + cleaned metadata file in single UploadedFile row:
                     UploadedFile.objects.create(
                         submission=submission,
                         file=metadata_file,
+                        cleaned_file=cleaned_file,
                         file_type="metadata_raw",
                         sample_id=sample_id
                     )
 
-                    # Save cleaned metadata file
-                    UploadedFile.objects.create(
-                        submission=submission,
-                        file=cleaned_file,
-                        file_type="metadata_cleaned",
-                        sample_id=sample_id
-                    )
 
                     # ✅ Save sequencing files based on expected_fastq_files list
                     for expected_file in expected_fastq_files:
@@ -1777,14 +1794,14 @@ def upload_files(request):
                         #cleaned_file.name = f"cleaned_{uploaded_antibiotics_file.name}"  # optional, for clarity
                         cleaned_file = generate_cleaned_file(uploaded_antibiotics_file.name, antibiotics_df)
 
-
                         UploadedFile.objects.create(
                             submission=submission,
-                            file=uploaded_antibiotics_file,       # Raw file (uploaded)
-                            cleaned_file=cleaned_file,            # Cleaned file (from pandas DataFrame)
-                            file_type="antibiotics",
+                            file=uploaded_antibiotics_file,
+                            cleaned_file=cleaned_file,
+                            file_type="antibiotics_raw",
                             sample_id=sample_id
                         )
+
                     else:
                         logger.info(f"Sample '{sample_id}': No antibiotics file provided for submission upload.")
 
@@ -1813,6 +1830,10 @@ def upload_files(request):
         elif "bulk_upload" in request.POST:
             bulk_form = BulkUploadForm(request.POST, request.FILES)
             bulk_error_message = None
+            metadata_warning_message = ""
+            antibiotics_warning_message = ""
+            extra_fastq_warning_message = ""
+
             if bulk_form.is_valid():
                 try:
                    # Extract files from the form
@@ -1838,18 +1859,19 @@ def upload_files(request):
                             logger.debug(f"Processing #${i+1} uploaded FASTQ file: {fastq_file.name} (type: {type(fastq_file)})")
                     
                     # ✅ Validate metadata file . this calls function to fix trail inside
-                    valid_metadata, metadata_warning, metadata_message, detected_delimiter_meta, metadata_df = validate_and_save_csv(metadata_file, METADATA_COLUMNS,ESSENTIAL_METADATA_COLUMNS)
+                    valid_metadata, metadata_warning, metadata_message, detected_delimiter_meta, metadata_df = validate_and_save_csv(
+                    metadata_file, METADATA_COLUMNS, ESSENTIAL_METADATA_COLUMNS)
                     logger.debug(f"Detected delimiter: {detected_delimiter_meta}")
 
                     if not valid_metadata:
                         raise ValueError(f"Metadata file error: {metadata_message}")
                     elif metadata_warning:
                         # No errors, just warnings — show to user but don't stop the process
-                        warning_message = f"Warnings in metadata file:\n{metadata_message}"
-                        logger.debug(f"Metadata file validated with warnings: {warning_message}")
+                        #metadata_warning_message += f"{metadata_message}\n" # do i need the + if its one metadata file per bulk submission?
+                        metadata_warning_message += f"{metadata_message}\n" 
+                        logger.debug(f"Metadata file validated with warnings: {metadata_message}")
                     else:
                         # No errors or warnings — proceed with the upload
-                        #single_success_message = "Metadata file validated successfully."
                         logger.debug(f"Metadata file validated successfully: {metadata_file.name}")
                     
                     # Loaded metadata into a DataFrame for validation
@@ -1867,8 +1889,6 @@ def upload_files(request):
                     valid_extensions = (".fastq", ".fq", ".bam", ".fastq.gz", ".fq.gz", ".bam.gz", ".bz2", ".xz", ".zip")
                     # ✅ Extract uploaded FASTQ file names
                     uploaded_fastq_files_names = {f.name.strip() for f in fastq_files}
-                    #uploaded_fastq_pool = {f.name.strip(): f for f in fastq_files}  # filename -> file
-                    #used_fastq_files = set()
                     extra_fastq_warning = ""
 
                     logger.debug(f"📁 Uploaded FASTQ filenames: {uploaded_fastq_files_names}")
@@ -1922,16 +1942,7 @@ def upload_files(request):
                             matched_fastq_files.add(file)
                             logger.debug(f"✅ File '{file}' passed extension check.")
 
-                        # Check for missing files
-                        #missing_fastq_files = set(expected_fastq_files) - uploaded_fastq_files_names
-                        #if missing_fastq_files:
-                        #    logger.error(f"❌ Missing FASTQ files: {missing_fastq_files}")
-                        #    raise ValueError(
-                        #        f"Sample '{sample_id}': Some FASTQ files listed in metadata are missing from the upload.\n"
-                        #        f"Missing: {', '.join(sorted(missing_fastq_files))}\n"
-                        #        f"Expected: {', '.join(expected_fastq_files)}\n"
-                        #        f"Uploaded: {', '.join(sorted(uploaded_fastq_files_names))}"
-                        #    )
+
                         # ✅ Check for missing files for this sample
                         missing_fastq_files = [f for f in expected_fastq_files if f not in uploaded_fastq_files_names]
                         if missing_fastq_files:
@@ -1944,31 +1955,18 @@ def upload_files(request):
                                 #f"Uploaded: {', '.join(sorted(uploaded_fastq_files_names
                             )
 
-
-                        # ✅ Confirm presence of each expected file
-                        #for expected_file in expected_fastq_files:
-                        #    if expected_file not in uploaded_fastq_files_names:
-                        #        raise ValueError(f"Sample '{sample_id}': Expected file '{expected_file}' is not found in uploaded files.")
-                        #    logger.debug(f"🧬 Matched expected file: {expected_file}")
                         # Log success
                         logger.info(f"✅ Sample '{sample_id}': All expected FASTQ files validated successfully.")
 
-                    # ✅ Check for leftover unassigned files
-                    #leftover_fastq = set(uploaded_fastq_pool.keys()) - used_fastq_files
-                    #if leftover_fastq:
-                    #    extra_fastq_warning = f"⚠️ Warning: Extra FASTQ file(s) were uploaded but not used: {', '.join(leftover_fastq)}."
-                    #    logger.warning(extra_fastq_warning)
+
                     # ✅ Warn about extra files. Optional: log and ignore extras
                     extra_fastq_files = uploaded_fastq_files_names - matched_fastq_files
                     extra_fastq_warning = ""
-                    #if extra_fastq_files:
-                    #    logger.warning(f"⚠️ Sample '{sample_id}': Extra FASTQ files detected (ignored): {', '.join(extra_fastq_files)}")
-                    #    extra_fastq_warning = f"⚠️ Warning: Extra FASTQ file(s) were uploaded but ignored: {', '.join(extra_fastq_files)}."
+
                     if extra_fastq_files:
-                        extra_fastq_warning = f"⚠️ Warning: Extra FASTQ file(s) were uploaded but ignored: {', '.join(sorted(extra_fastq_files))}."
-                        logger.warning(extra_fastq_warning)
-
-
+                        #extra_fastq_warning = f"⚠️ Warning: Extra FASTQ file(s) were uploaded but ignored: {', '.join(sorted(extra_fastq_files))}."
+                        extra_fastq_warning_message += f"Extra FASTQ file(s) ignored: {', '.join(sorted(extra_fastq_files))}\n"
+                        logger.warning(extra_fastq_warning_message)
 
                     ###################ANTIBIOTICS FILE VALIDATION 
                             
@@ -1978,6 +1976,7 @@ def upload_files(request):
 
                     # ✅ Iterate over each sample in the metadata
                     for idx, row in metadata_df.iterrows():
+                        ab_warning=None
                         # Extract sample identifier from metadata
                         raw_value = row.get("sample identifier", f"row {idx + 1}")
                         sample_id = str(raw_value).strip()
@@ -2021,8 +2020,8 @@ def upload_files(request):
                                 raise ValueError(f"Sample '{sample_id}': Antibiotics file error: {message}")
                             elif ab_warning:
                                 # No errors, just warnings — show to user but don't stop the process
-                                ab_warning = f"Warnings in antibiotics file:\n{message}"
-                                logger.debug(f"Continue with warnings: {ab_warning}")
+                                ab_message = f"Warnings in antibiotics file:\n{message}"
+                                logger.debug(f"Continue with warnings: {ab_message}")
                             else:
                                 # ✅ Log success
                                 logger.info(f"✅ Sample '{sample_id}': Antibiotics file '{uploaded_file.name}' validated successfully.")
@@ -2049,12 +2048,20 @@ def upload_files(request):
                     # Save the submission and associated files
                     submission = Submission(user=request.user,is_bulk_upload = True)
                     #if warning_message:
-                    if metadata_warning:
+                    if metadata_warning_message:
                         submission.resubmission_allowed = True
+                        submission.metadata_warnings = metadata_warning_message  # or warning_message if you want formatted output
                         submission.save()
                     else:
-                        submission.resubmission_allowed = False
-                    submission.save()
+                        submission.save()
+                        #submission.metadata_warnings = None# do i need to put none or can just remove this line?
+                    #    submission.resubmission_allowed = False
+                    #if antibiotics_warning_message:
+                    #    submission.antibiotics_warnings = antibiotics_warning_message
+                        #logger.debug(f"Warnings in antibiotics file:\n{antibiotics_message}")
+                    #if extra_fastq_warning_message:
+                    #    submission.extra_fastq_warning = extra_fastq_warning_message
+                    #submission.save()
                     logger.debug(f"After setting is_bulk_upload: {submission.is_bulk_upload}")
 
                     # Save the cleaned metadata to Submission.metadata_file
@@ -2067,18 +2074,12 @@ def upload_files(request):
                     # Save the metadata file to the submission using FileField
                     #submission.metadata_file.save(metadata_file.name, metadata_file, save=True)
 
-                    # ✅ Also save the raw metadata file separately (in UploadedFile)
+                    # Save raw + cleaned metadata file in single UploadedFile row:
                     UploadedFile.objects.create(
                         submission=submission,
-                        file=metadata_file,  # original uploaded file
+                        file=metadata_file,
+                        cleaned_file=cleaned_file,
                         file_type="metadata_raw",
-                        sample_id=sample_id
-                    )
-                    # Save cleaned metadata file
-                    UploadedFile.objects.create(
-                        submission=submission,
-                        file=cleaned_file,
-                        file_type="metadata_cleaned",
                         sample_id=sample_id
                     )
 
@@ -2160,6 +2161,8 @@ def upload_files(request):
                             if not valid:
                                 logger.error(f"❌ Sample '{sample_id}': Antibiotics file validation failed: {message}")
                                 raise ValueError(f"Sample '{sample_id}': Antibiotics file error: {message}")
+                            elif ab_warning:
+                                antibiotics_warning_message += f"Sample '{sample_id}': {message}\n"
 
                             # ✅ Log success
                             logger.info(f"✅ Sample '{sample_id}': Antibiotics file '{uploaded_file.name}' validated successfully.")
@@ -2171,13 +2174,18 @@ def upload_files(request):
                                 logger.debug(f"BULK ANTIBIOTICS FILe: expected={expected_ab_file},  uploaded_file name={uploaded_file.name},for sample {sample_id}")
                                 cleaned_file = generate_cleaned_file(uploaded_file.name, antibiotics_df)
                                 #cleaned_file = generate_cleaned_file(uploaded_antibiotics_file.name, antibiotics_df) 
+
+                                # Rewind the uploaded_file first (safety!)
+                                uploaded_file.seek(0)
+
                                 UploadedFile.objects.create(
                                     submission=submission,
-                                    file=uploaded_file,     # Raw uploaded file
-                                    cleaned_file=cleaned_file,         # Cleaned CSV
-                                    file_type="antibiotics",
+                                    file=uploaded_file,            # Raw uploaded file
+                                    cleaned_file=cleaned_file,     # Cleaned CSV
+                                    file_type="antibiotics_raw",
                                     sample_id=sample_id
                                 )
+
                                 logger.debug(f"✅ Saved antibiotics file anliverd cleaned version for sample '{sample_id}'")
                             else:
                                 logger.warning(f"⚠️ Skipping missing antibiotics file: {expected_ab_file} for sample '{sample_id}'")
@@ -2187,17 +2195,35 @@ def upload_files(request):
                         else:
                             logger.info(f"ℹ️ Sample '{sample_id}': No antibiotics file or info provided.")
 
-                    bulk_success_message = "Bulk upload completed successfully."
+                    #bulk_success_message = "Bulk upload completed successfully."
 
                     #if warning_message:
-                    if metadata_warning:
-                        bulk_success_message = f"{bulk_success_message}\n{warning_message}"
-                        logger.info(f"ℹ️ bulk success message warning message: {bulk_success_message}")
-                    if extra_fastq_warning:
-                        bulk_success_message = f"{bulk_success_message}\n{extra_fastq_warning}"
-                        logger.info(f"ℹ️ bulk success message extra fastq: {bulk_success_message}")
+                    if antibiotics_warning_message:
+                        submission.antibiotics_warnings = antibiotics_warning_message
+                    
+                    if extra_fastq_warning_message:
+                        submission.extra_fastq_warning = extra_fastq_warning_message
+                    submission.save()
 
 
+                    # Show summarized message to user
+                    success_messages = ["Bulk upload completed successfully."]
+                    if metadata_warning_message:
+                        success_messages.append("⚠️ Metadata file accepted with warnings.")
+                    if antibiotics_warning_message:
+                        success_messages.append("⚠️ Some antibiotics files accepted with warnings.")
+                    if extra_fastq_warning_message:
+                        success_messages.append("⚠️ Extra FASTQ files were ignored.")
+                    bulk_success_message = "\n".join(success_messages)
+                    messages.success(request, bulk_success_message, extra_tags='dashboard') #not sure where will be this used
+                    logger.info(f"{bulk_success_message}")
+                    #if warning_message:
+                    #if metadata_warning:
+                    #    bulk_success_message = f"{bulk_success_message}\n{warning_message}"
+                    #    logger.info(f"ℹ️ bulk success message warning message: {bulk_success_message}")
+                    #if extra_fastq_warning:
+                    #    bulk_success_message = f"{bulk_success_message}\n{extra_fastq_warning}"
+                    #    logger.info(f"ℹ️ bulk success message extra fastq: {bulk_success_message}")
                     logger.info("Bulk upload completed successfully.")
 
                 except ValueError as ve:
@@ -2206,11 +2232,36 @@ def upload_files(request):
                 except Exception as e:
                     bulk_error_message = f"An unexpected error occurred during bulk upload: {str(e)}"
                     logger.error(f"Bulk upload error: {bulk_error_message}", exc_info=True)
+                
             else:
                 bulk_error_message = f"Bulk upload form is invalid. Please correct the errors below.\n{bulk_form.errors}"
                 logger.error(f"Bulk form errors: {bulk_form.errors}")
             
+    #finally:
+    total_time = time.time() - start_time
+    request.session['upload_duration'] = f"{total_time:.2f} seconds"
+    logger.info(f"⏱️ Server processing time: {total_time:.2f} seconds")
+
+    
+    client_total_upload_time = request.POST.get("client_total_upload_time")
+    client_network_delay = request.POST.get("client_network_delay")
+
+    if client_total_upload_time and client_network_delay:
+        try:
+            client_total = float(client_total_upload_time)
+            network_delay = float(client_network_delay)
             
+
+            logger.info(f"✅ Total upload time (client-side): {client_total:.2f}s")
+            logger.info(f"📡 Upload + network delay (client-side): {network_delay:.2f}s")
+            
+            request.session['network_delay'] = f"{network_delay:.2f} seconds"
+            request.session['client_total_upload_time'] = f"{client_total:.2f} seconds"
+
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to parse client timing info: {e}")
+
+                
     # Render the page with the appropriate messages and forms
     return render(request, 'gensurvapp/upload.html', {
         'single_form': single_form,
@@ -2222,8 +2273,6 @@ def upload_files(request):
         'maintenance_message': maintenance_message,  # Pass the message
         "resubmission_allowed": submission.resubmission_allowed if submission else False,
         'submission_id': submission.id if submission else None,
-
-
     })
 
 
@@ -2269,7 +2318,81 @@ def compare_metadata_with_uploaded_files_single(submission, metadata_df):
 
     return bool(missing or extra or ab_mismatch), msg
 
+
 def compare_metadata_with_uploaded_files(submission, metadata_df):
+    """
+    Compares resubmitted metadata with already uploaded files (FASTQ and antibiotics) for this submission.
+    Returns: (has_mismatches: bool, mismatch_message: str)
+    """
+    metadata_df.columns = metadata_df.columns.str.lower().str.strip()
+    mismatches = []
+
+    # Build lookup for uploaded FASTQ files
+    uploaded_fastqs = submission.uploadedfile_set.filter(file_type="fastq")
+    uploaded_by_sample = {}
+    for f in uploaded_fastqs:
+        sid = (f.sample_id or "").lower()
+        uploaded_by_sample.setdefault(sid, set()).add(f.file.name.split("/")[-1])
+
+    # Build lookup for uploaded antibiotics files → IMPORTANT: use "antibiotics_raw"
+    uploaded_ab = {
+        (f.sample_id or "").lower(): f.file.name.split("/")[-1]
+        for f in submission.uploadedfile_set.filter(file_type="antibiotics_raw")
+    }
+
+    for idx, row in metadata_df.iterrows():
+        sample_id = str(row.get("sample identifier", "")).strip().lower()
+        expected_fastq = [
+            str(row[col]).strip()
+            for col in ["illumina r1", "illumina r2", "nanopore", "pacbio"]
+            if col in metadata_df.columns and pd.notna(row[col])
+        ]
+
+        expected_ab = (
+            str(row["antibiotics file"]).strip()
+            if "antibiotics file" in row and pd.notna(row["antibiotics file"])
+            else None
+        )
+
+        antibiotics_info = (
+            str(row["antibiotics info"]).strip()
+            if "antibiotics info" in row and pd.notna(row["antibiotics info"])
+            else None
+        )
+
+        uploaded_fastq_names = uploaded_by_sample.get(sample_id, set())
+        ab_file_name = uploaded_ab.get(sample_id)
+
+        # Compare FASTQ files
+        extra = uploaded_fastq_names - set(expected_fastq)
+        missing = set(expected_fastq) - uploaded_fastq_names
+
+        # Compare antibiotics only if antibiotics file was used (not info)
+        ab_mismatch = False
+        if expected_ab and not antibiotics_info:
+            ab_mismatch = expected_ab != ab_file_name
+
+        # If antibiotics info was used → we do NOT expect a file
+        if antibiotics_info and ab_file_name:
+            ab_mismatch = True
+            expected_ab = None  # we force expected_ab = None in this case to explain the mismatch clearly
+
+        # Aggregate mismatches
+        if missing or extra or ab_mismatch:
+            msg = f"\nSample '{sample_id}':"
+            if missing:
+                msg += f"\n  Missing FASTQ files: {', '.join(missing)}"
+            if extra:
+                msg += f"\n  Extra FASTQ files: {', '.join(extra)}"
+            if ab_mismatch:
+                msg += f"\n  Antibiotics file mismatch: expected '{expected_ab}', found '{ab_file_name}'"
+            mismatches.append(msg)
+
+    if mismatches:
+        return True, "\n".join(mismatches)
+    return False, ""
+
+def compare_metadata_with_uploaded_files2(submission, metadata_df):
     """
     Compares resubmitted metadata with already uploaded files (FASTQ and antibiotics) for this submission.
     Returns: (has_mismatches: bool, mismatch_message: str)
@@ -2286,7 +2409,7 @@ def compare_metadata_with_uploaded_files(submission, metadata_df):
 
     uploaded_ab = {
         (f.sample_id or "").lower(): f.file.name.split("/")[-1]
-        for f in submission.uploadedfile_set.filter(file_type="antibiotics")
+        for f in submission.uploadedfile_set.filter(file_type="antibiotics_raw")
     }
 
     for idx, row in metadata_df.iterrows():
@@ -2324,93 +2447,211 @@ def compare_metadata_with_uploaded_files(submission, metadata_df):
     return False, ""
 
 
+
+def archive_file_to_submission_history1(submission, old_file_field, original_filename, file_type):
+    """
+    Move a file to: media/submissions/<username>/submission_<id>/history/resubmission_<n>/filename
+    """
+    username = submission.user.username
+    submission_id = submission.pk
+    src_path = old_file_field.path
+
+    # Count existing resubmissions for this file_type → gives resubmission number
+   #resubmission_count = FileHistory.objects.filter(submission=submission, file_type=f"{file_type}_raw").count() + 1
+    resubmission_count = FileHistory.objects.filter(submission=submission, file_type=file_type).count() + 1
+
+    # Build target path
+    target_path = os.path.join(
+        settings.MEDIA_ROOT,
+        'submissions',
+        username,
+        f'submission_{submission_id}',
+        'history',
+        f'resubmission_{resubmission_count}',
+        original_filename
+    )
+
+    os.makedirs(os.path.dirname(target_path), exist_ok=True)
+
+    # Move file
+    shutil.move(src_path, target_path)
+
+    # Return relative path for FileHistory (what goes into the FileField)
+    relative_path = os.path.join(
+        'submissions',
+        username,
+        f'submission_{submission_id}',
+        'history',
+        f'resubmission_{resubmission_count}',
+        original_filename
+    )
+
+    return relative_path
+
+
+def archive_file_to_submission_history(submission, old_file_field, original_filename, file_type, resubmission_count):
+    """
+    Move a file to: media/submissions/<username>/submission_<id>/history/resubmission_<n>/filename
+    """
+    username = submission.user.username
+    submission_id = submission.pk
+    src_path = old_file_field.path
+
+    # Build target path (same resubmission_count used for raw and cleaned)
+    target_path = os.path.join(
+        settings.MEDIA_ROOT,
+        'submissions',
+        username,
+        f'submission_{submission_id}',
+        'history',
+        f'resubmission_{resubmission_count}',
+        original_filename
+    )
+
+    os.makedirs(os.path.dirname(target_path), exist_ok=True)
+
+    # Move file
+    shutil.move(src_path, target_path)
+
+    # Return relative path for FileHistory (what goes into FileField)
+    relative_path = os.path.join(
+        'submissions',
+        username,
+        f'submission_{submission_id}',
+        'history',
+        f'resubmission_{resubmission_count}',
+        original_filename
+    )
+
+    return relative_path
+
+
 def resubmit_file_view(request, submission_id, file_type):
+     # Clear leftover messages (like from dashboard)
+    storage = messages.get_messages(request)
+    list(storage) # This will consume and clear any old messages
+
     submission = get_object_or_404(Submission, id=submission_id, user=request.user)
+    logger.info(f"file_type1: {file_type}")
 
     if request.method == "POST":
         form = UploadFileForm(request.POST, request.FILES)
         if form.is_valid():
             new_file = form.cleaned_data["file"]
             old = submission.uploadedfile_set.filter(file_type=f"{file_type}_raw").first()
+            logger.info(f"file_type2: {file_type}_raw")
 
             if old:
-                #store the reference in FileHistory
+                # === 1️⃣ Compute resubmission count ONCE ===
+                current_resubmission_count = FileHistory.objects.filter(
+                    submission=submission,
+                    file_type__endswith='_raw'
+                ).count() + 1
+
+                # === 2️⃣ Archive raw file ===
+                old_file_history_path = archive_file_to_submission_history(
+                    submission,
+                    old.file,
+                    os.path.basename(old.file.name),
+                    f"{file_type}_raw",
+                    current_resubmission_count
+                )
+
+                # === 3️⃣ Archive cleaned file if exists ===
+                if old.cleaned_file and old.cleaned_file.name:
+                    logger.info(f"OLD CLEANED FILE: {old.cleaned_file.name}")
+
+                    cleaned_file_history_path = archive_file_to_submission_history(
+                        submission,
+                        old.cleaned_file,
+                        os.path.basename(old.cleaned_file.name),
+                        f"{file_type}_cleaned",
+                        current_resubmission_count
+                    )
+
+                    # Remove cleaned_file reference so we can assign new cleaned safely
+                    old.cleaned_file.delete(save=False)
+                    old.cleaned_file = None
+                else:
+                    cleaned_file_history_path = None
+
+                # === 4️⃣ Save FileHistory entry ===
                 FileHistory.objects.create(
                     submission=submission,
                     file_type=f"{file_type}_raw",
-                    old_file=old.file,
-                    cleaned_file=old.cleaned_file if hasattr(old, "cleaned_file") else None,
+                    old_file=old_file_history_path,
+                    cleaned_file=cleaned_file_history_path,
                 )
-                # these delete calls:
-                #old.file.delete(save=False)
-                #if old.cleaned_file:
-                #    old.cleaned_file.delete(save=False)
-                #update to new file
+
+                # === 5️⃣ Update UploadedFile with new raw + new cleaned ===
                 old.file = new_file
 
+                # Guard sample_id if corrupted
+                if old.sample_id and len(old.sample_id) > 100:
+                    logger.warning(f"sample_id too long → trimming: {old.sample_id}")
+                    old.sample_id = old.sample_id[:100]
+
+                # === 6️⃣ Validate and generate cleaned file ===
                 if file_type == "metadata":
-                    valid, warnings, message, delimiter, df = validate_and_save_csv(new_file, METADATA_COLUMNS,ESSENTIAL_METADATA_COLUMNS)
+                    valid, warnings, message, delimiter, df = validate_and_save_csv(
+                        new_file, METADATA_COLUMNS, ESSENTIAL_METADATA_COLUMNS
+                    )
                     logger.info(f"METADATA validation: has warnings?: {warnings}")
 
                     if valid and df is not None:
                         mismatch, mismatch_msg = compare_metadata_with_uploaded_files(submission, df)
-                        #match sample id
                         sample_id = df.loc[0, "sample identifier"].strip()
-                        logger.info(f"######SAMPLE: {sample_id}")
+                        logger.info(f"###### SAMPLE: {sample_id}")
 
-                        # Get existing sample_id(s) from uploaded files in this submission
-                        #stored_sample_ids = submission.uploadedfile_set.values_list("sample_id", flat=True)
-                        #stored_sample_ids = list(set([sid.lower() for sid in stored_sample_ids if sid]))
-                        original_sample_ids = list(set([sid for sid in submission.uploadedfile_set.values_list("sample_id", flat=True) if sid]))
+                        original_sample_ids = list(set([
+                            sid for sid in submission.uploadedfile_set.values_list("sample_id", flat=True) if sid
+                        ]))
                         stored_sample_ids_lc = [sid.lower() for sid in original_sample_ids]
 
-                        #if stored_sample_ids and sample_id.lower() not in stored_sample_ids:
                         if stored_sample_ids_lc and sample_id.lower() not in stored_sample_ids_lc:
-
                             messages.error(request, f"Sample Identifier mismatch: '{sample_id}' does not match the sample identifier(s) of the existing uploaded file(s): {', '.join(original_sample_ids)}.\nPlease resubmit a corrected version.")
                             return redirect("resubmit_file", submission_id=submission.id, file_type=file_type)
 
                         if mismatch:
-                            #warnings = True
-                            #message += "\n\nFile mismatch warning:\n" + mismatch_msg
-                            #logger.warning(mismatch_msg)
-
                             logger.warning(f"Metadata resubmission failed due to file mismatch:\n{mismatch_msg}")
                             messages.error(request, f"Validation failed:\n{mismatch_msg}\nPlease resubmit a corrected version.")
                             return redirect("resubmit_file", submission_id=submission.id, file_type=file_type)
 
-                else:
-                    valid, warnings, message, delimiter, df = validate_and_save_csv(new_file, ANTIBIOTICS_COLUMNS)
-                    logger.info(f"ANTIBIOTICS validation: {warnings}")
+                    #else:  # antibiotics
+                    #    valid, warnings, message, delimiter, df = validate_and_save_csv(new_file, ANTIBIOTICS_COLUMNS)
+                    #    logger.info(f"ANTIBIOTICS validation: {warnings}")
 
+                    if not valid:
+                        messages.error(request, f"Validation failed: {message}")
+                        return redirect("resubmit_file", submission_id=submission.id, file_type=file_type)
 
-                if not valid:
-                    messages.error(request, f"Validation failed: {message}")
-                    return redirect("resubmit_file", submission_id=submission.id, file_type=file_type)
+                    if df is not None:
+                        cleaned = generate_cleaned_file(new_file.name, df)
+                        old.cleaned_file = cleaned
 
-                if df is not None:
-                    cleaned = generate_cleaned_file(new_file.name, df)
-                    old.cleaned_file = cleaned
+                # === DEBUG log before save ===
+                logger.info(f"DEBUG BEFORE SAVE → file.name={old.file.name}, cleaned_file={(old.cleaned_file.name if old.cleaned_file else 'None')}, sample_id={old.sample_id}, file_type={old.file_type}")
 
+                # === Save updated UploadedFile ===
                 old.save()
-                # ✅ Update resubmission flag depending on new result
-                logger.info(f"WARNINGS:{warnings}")
-                logger.info(f"MESSAGES:{message}")
 
+                logger.info(f"WARNINGS: {warnings}")
+                logger.info(f"MESSAGES: {message}")
                 logger.info(f"RESUBMISSION ALLOWED before: {submission.resubmission_allowed}")
 
-                if not warnings:
-                    submission.resubmission_allowed = False  # True if warnings, False if clean. should be false but keep it true for testing
+                if warnings:
+                    submission.metadata_warnings = message
                     submission.save()
-                    logger.info(f"RESUBMISSION ALLOWED after success: {submission.resubmission_allowed}")
-                    messages.success(request, "File resubmitted successfully.")
+                    messages.warning(request, "File resubmitted with warnings.")
                 else:
-                    messages.warning(request, f"File resubmitted with warnings:\n{message}")
+                    submission.resubmission_allowed = False
+                    submission.metadata_warnings = ""
+                    submission.save()
+                    messages.success(request, "File resubmitted successfully.")
 
-                form = UploadFileForm()  # Reset form for another submission
+                # Reset form for next resubmit
+                form = UploadFileForm()
                 logger.info(f"RESUBMISSION ALLOWED after validation: {submission.resubmission_allowed}")
-                #return redirect("dashboard")
-
 
     else:
         form = UploadFileForm()
@@ -2422,8 +2663,10 @@ def resubmit_file_view(request, submission_id, file_type):
         "submission": submission,
         "file_type": file_type,
         "history": history,
-        "can_resubmit": submission.resubmission_allowed,  # 👈 add this
+        "can_resubmit": submission.resubmission_allowed,
     })
+
+
 
 
 
@@ -2760,14 +3003,46 @@ def parse_metadata_antibiotics_info(metadata_path, target_sample_id=None):
     return {} if target_sample_id is None else None
 
 
+
+@login_required
+def request_submission_deletion(request, submission_id):
+    submission = get_object_or_404(Submission, id=submission_id, user=request.user)
+
+    if submission.deletion_requested:
+        messages.info(request, f"You have already requested deletion of submission #{submission.id}.")
+        return redirect('dashboard')
+    admin_email = settings.ADMINS[0][1] if settings.ADMINS else settings.DEFAULT_FROM_EMAIL
+    # Send email to admin...
+    send_mail(
+        subject=f"🚨 Deletion Request: Submission #{submission.id}",
+        message=f"User {request.user.email} has requested deletion of submission #{submission.id}.\n\n"
+                f"Submission created at: {submission.created_at}\n"
+                f"Bulk upload: {submission.is_bulk_upload}\n"
+                f"Submission ID: {submission.id}",
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        recipient_list=[admin_email],
+    )
+
+    submission.deletion_requested = True
+    submission.save()
+
+    messages.success(request, f"Deletion request for submission #{submission.id} has been sent to the admin.", extra_tags='dashboard')
+    return redirect('dashboard')
+
+
+
 @login_required
 def user_dashboard(request):
     logger.debug("Entering user_dashboard view")
     logger.debug(f"User: {request.user.username}")
 
     #submissions = Submission.objects.prefetch_related('uploadedfile_set', 'sample_files').filter(user=request.user).order_by('-created_at')
-    sample_files_qs = UploadedFile.objects.filter(file_type__in=["metadata_cleaned", "metadata"])
-    antibiotics_files_qs = UploadedFile.objects.filter(file_type="antibiotics")
+    #sample_files_qs = UploadedFile.objects.filter(file_type__in=["metadata_cleaned", "metadata"])
+    sample_files_qs = UploadedFile.objects.filter(file_type__in=["metadata_cleaned", "metadata_raw", "metadata"])
+
+    #antibiotics_files_qs = UploadedFile.objects.filter(file_type="antibiotics")
+    antibiotics_files_qs = UploadedFile.objects.filter(file_type__in=["antibiotics", "antibiotics_raw", "antibiotics_cleaned"])
+
     fastq_files_qs = UploadedFile.objects.filter(file_type="fastq")
     
     query_start = time.time()
@@ -2829,17 +3104,21 @@ def user_dashboard(request):
         logger.debug(f"🧬 FASTQ count: {len(fastq_files)} | 🧫 Antibiotics file count: {len(antibiotics_files)}")
 
         # Find cleaned_metadata ONCE here:
-        cleaned_metadata = None
-        for f in sample_files:
-            if f.file_type == "metadata_cleaned":
-                cleaned_metadata = f
-                break
+        cleaned_metadata = submission.uploadedfile_set.filter(file_type="metadata_cleaned").first()
         if not cleaned_metadata:
-            for f in sample_files:
-                if f.file_type == "metadata":
-                    cleaned_metadata = f
-                    break
-        
+            cleaned_metadata = submission.uploadedfile_set.filter(file_type="metadata_raw").first()
+
+        raw_metadata = submission.uploadedfile_set.filter(file_type="metadata_raw").first()
+        if cleaned_metadata:
+            logger.debug(f"🧼 Cleaned metadata file exists? {'Yes' if cleaned_metadata.cleaned_file else 'No'}")
+        else:
+            logger.debug(f"🧼 Cleaned metadata file exists? {'No'}")
+        logger.debug(f"🧾 Metadata files for submission {submission.id}:")
+        logger.debug(f"   - Cleaned: {cleaned_metadata.cleaned_file.name if cleaned_metadata and cleaned_metadata.cleaned_file else 'None'}")
+        logger.debug(f"   - Raw: {raw_metadata.file.name if raw_metadata and raw_metadata.file else 'None'}")
+
+
+                
         ### Timer 1 → grouping fastq_files
         grouping_start = time.time()
         grouped_fastq_files = {}
@@ -2885,10 +3164,6 @@ def user_dashboard(request):
             logger.debug("🔎 Attempting to parse antibiotics_info for single upload...")
 
             if not antibiotics_files:
-                #cleaned_metadata = (
-                #    submission.sample_files.filter(file_type="metadata_cleaned").first()
-                #    or submission.uploadedfile_set.filter(file_type__in=["metadata_cleaned", "metadata"]).first()
-                #)
                 logger.debug(f"🧼 Cleaned metadata exists: {bool(cleaned_metadata)}")
 
                 if cleaned_metadata and cleaned_metadata.file:
@@ -2915,14 +3190,11 @@ def user_dashboard(request):
         #elif not submission.is_bulk_upload:
         # bulk upload logic
         else:
-            #cleaned_metadata = (
-            #    submission.sample_files.filter(file_type="metadata_cleaned").first()
-            #    or submission.uploadedfile_set.filter(file_type__in=["metadata_cleaned", "metadata"]).first()
-            #)
-            logger.debug(f"🧼 Bulk: Cleaned metadata file found: {bool(cleaned_metadata)}")
-
+            logger.debug(f"🧼 Bulk: Cleaned metadata file found1: {bool(cleaned_metadata)}")
             if cleaned_metadata and cleaned_metadata.file:
                 try:
+                    logger.debug(f"🧼 Bulk: Cleaned metadata file found2: {bool(cleaned_metadata)}")
+
                     ### Timer 3 → cached_parse_metadata_antibiotics_info (only for bulk)
                     antibiotics_start = time.time()
                     full_info = cached_parse_metadata_antibiotics_info(cleaned_metadata.file.path)
