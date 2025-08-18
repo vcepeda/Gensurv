@@ -44,18 +44,19 @@ EOF
 Make sure your Django settings read from environment (e.g., via os.environ or django-environ).
 
 ### 5) Create Postgres DB & restore your dump
-```bash sudo -u postgres psql <<'SQL'
+```sql sudo -u postgres psql <<'SQL'
 CREATE USER myproject WITH PASSWORD 'supersecret';
 CREATE DATABASE myproject OWNER myproject;
 \q
 SQL
 ```
 
-Restore (pick the right command based on dump type):
-Plain SQL (file looks like readable SQL):
+#### Restore (pick the right command based on dump type):
+- Plain SQL (file looks like readable SQL):
 ```bash psql -U myproject -h 127.0.0.1 -d myproject -f /path/to/dump.sql
-Custom/Directory format (.dump/.custom from pg_dump -Fc):
-pg_restore -U myproject -h 127.0.0.1 -d myproject -c /path/to/dump.custom
+```
+- Custom/Directory format (.dump/.custom from pg_dump -Fc):
+```bash pg_restore -U myproject -h 127.0.0.1 -d myproject -c /path/to/dump.custom
 ```
 If you have uploaded media files, copy them into:
 /srv/myproject/media/
@@ -66,7 +67,7 @@ source /srv/myproject/venv/bin/activate
 cd /srv/myproject/app
 python manage.py collectstatic --noinput
 ```
-# If restoring a full DB snapshot that already has schema, you usually skip migrations.
+# If restoring a full DB snapshot that already has a schema, you usually skip migrations.
 # Otherwise, run:
 ```bash python manage.py migrate
 python manage.py check --deploy
@@ -75,7 +76,7 @@ python manage.py check --deploy
 
 ### 7) Gunicorn systemd unit
 Socket-based (recommended):
-```bash
+```vim
 /etc/systemd/system/gunicorn-myproject.socket
 [Unit]
 Description=gunicorn socket for myproject
