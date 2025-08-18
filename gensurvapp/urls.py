@@ -1,7 +1,7 @@
 from django.urls import path
 from . import views
 from .views import impressum, research, contact, datenschutz, accessibility,success_page, sample_csv, download_sample_csv, download_antibiotics_csv, detailed_metadata_fields, instructions
-from .views import success_page,upload, upload_files
+from .views import success_page,upload, upload_files, upload_files_dev
 from .views import submission_results
 from .views import test_page
 from django.conf import settings
@@ -14,10 +14,10 @@ urlpatterns = [
     path('datenschutz/', datenschutz, name='datenschutz'),
     path('accessibility/', accessibility, name='accessibility'),
     path('research/', research, name='research'),
-
     path('create/', views.create, name='create'),
     path('todos/', views.todos, name='todos'),
     path('upload/', upload_files, name='upload_files'),
+    path('upload_dev/', upload_files_dev, name='upload_files_dev'),
     path('resubmit/<int:submission_id>/<str:file_type>/', views.resubmit_file_view, name='resubmit_file'),
     path("submission/<int:submission_id>/request-delete/", views.request_submission_deletion, name="request_submission_deletion"),
     path('help/', views.help_view, name='help'),

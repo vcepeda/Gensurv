@@ -1505,6 +1505,7 @@ def generate_cleaned_file(original_filename, df):
 @login_required
 #@user_passes_test(admin_only_upload_test, login_url='/')  # Redirect non-admin users #comment out if not testing.
 def upload_files(request):
+    logger.info(f"UPLOAD STARTED: user={request.user.username}, POST keys={list(request.POST.keys())}, FILES keys={list(request.FILES.keys())}")
     maintenance_message = None
     #maintenance_message = "Upload functionality is temporarily disabled due to maintenance. Please do not upload data until this message is removed."
 
@@ -2240,7 +2241,8 @@ def upload_files(request):
             else:
                 bulk_error_message = f"Bulk upload form is invalid. Please correct the errors below.\n{bulk_form.errors}"
                 logger.error(f"Bulk form errors: {bulk_form.errors}")
-            
+
+    logger.info("Upload logic completed, rendering response.")        
     #finally after single or bulk upload processing:
     total_time = time.time() - start_time
     request.session['upload_duration'] = f"{total_time:.2f} seconds"
@@ -3055,8 +3057,6 @@ def user_dashboard(request):
     logger.debug("Entering user_dashboard view")
     logger.debug(f"User: {request.user.username}")
 
-    #submissions = Submission.objects.prefetch_related('uploadedfile_set', 'sample_files').filter(user=request.user).order_by('-created_at')
-    #sample_files_qs = UploadedFile.objects.filter(file_type__in=["metadata_cleaned", "metadata"])
     sample_files_qs = UploadedFile.objects.filter(file_type__in=["metadata_cleaned", "metadata_raw", "metadata"])
 
     #antibiotics_files_qs = UploadedFile.objects.filter(file_type="antibiotics")
@@ -3065,12 +3065,25 @@ def user_dashboard(request):
     fastq_files_qs = UploadedFile.objects.filter(file_type="fastq")
     
     query_start = time.time()
+    # old code without all users admin view
+    #submissions = Submission.objects.prefetch_related(
+    #    Prefetch('sample_files', queryset=sample_files_qs, to_attr='prefetched_sample_files'),
+    #    Prefetch('uploadedfile_set', queryset=antibiotics_files_qs, to_attr='prefetched_antibiotics_files'),
+    #    Prefetch('uploadedfile_set', queryset=fastq_files_qs, to_attr='prefetched_fastq_files')
+    #).filter(user=request.user).order_by('-created_at')
 
-    submissions = Submission.objects.prefetch_related(
+
+    base_qs = Submission.objects.prefetch_related(
         Prefetch('sample_files', queryset=sample_files_qs, to_attr='prefetched_sample_files'),
         Prefetch('uploadedfile_set', queryset=antibiotics_files_qs, to_attr='prefetched_antibiotics_files'),
         Prefetch('uploadedfile_set', queryset=fastq_files_qs, to_attr='prefetched_fastq_files')
-    ).filter(user=request.user).order_by('-created_at')
+    )
+
+    if admin_only_upload_test(request.user):
+        submissions = base_qs.order_by('-created_at')
+    else:
+        submissions = base_qs.filter(user=request.user).order_by('-created_at')
+
 
     query_elapsed = time.time() - query_start
     logger.debug(f"🏁 Submissions query took {query_elapsed:.4f} seconds")
@@ -3773,3 +3786,770 @@ def base_context(request):
     else:
         submissions = None
     return {'submissions': submissions}
+
+
+
+@user_passes_test(admin_only_upload_test, login_url='/')  # Redirect non-admin users #comment out if not testing.
+@login_required
+def upload_files_dev(request):
+    maintenance_message = None
+    #maintenance_message = "Upload functionality is temporarily disabled due to maintenance. Please do not upload data until this message is removed."
+
+    # Allow only admins to bypass maintenance mode
+    # Block non-admin users if maintenance mode is active
+    if not request.user.is_superuser and maintenance_message and request.method == "POST":
+        messages.error(request, "Uploads are currently disabled due to maintenance.")
+        return redirect('upload_files_dev')
+
+    # Session-passed values from redirect
+    upload_context = request.session.pop('upload_context', {})
+
+    
+    """Handle single and bulk file uploads with validation."""
+    single_error_message = None
+    single_success_message = None
+    bulk_error_message = None
+    bulk_success_message = None
+    single_form = FileUploadForm()
+    bulk_form = BulkUploadForm()
+    submission = None
+    warning_message = None
+    start_time = time.time()
+    if request.method == "POST":
+        if "single_upload" in request.POST:
+            single_form = FileUploadForm(request.POST, request.FILES)
+            if single_form.is_valid():
+                try:
+                    # Extract files from the form
+                    metadata_file = single_form.cleaned_data.get('metadata_file')
+                    # Logging with safety check
+                    if metadata_file:
+                        logger.debug(f"Processing uploaded metadata file: {metadata_file.name} (type: {type(metadata_file)})")
+                    else:
+                        raise ValueError("Metadata file is required but not provided.")  # Explicitly handle missing metadata
+                    uploaded_antibiotics_file = single_form.cleaned_data.get('antibiotics_file')
+                    if uploaded_antibiotics_file:
+                        logger.debug(f"Processing uploaded antibiotics file: {uploaded_antibiotics_file.name} (type: {type(uploaded_antibiotics_file)})")
+                    else:
+                        logger.debug("No antibiotics file uploaded.")  # Safe to proceed without raising an error
+                    fastq_files = request.FILES.getlist('fastq_files')
+                    if not fastq_files:
+                        raise ValueError(f"At least one sequencing file must be provided.")
+                    else:
+                        logger.debug(f"Processing {len(fastq_files)} uploaded FASTQ files.")
+                        for i, fastq_file in enumerate(fastq_files):
+                            logger.debug(f"Processing #${i+1} uploaded FASTQ file: {fastq_file.name} (type: {type(fastq_file)})")
+                    # ✅ Validate metadata file . this calls function to fix trail inside
+                    #warning: update for "quarentine" or reupload metadata if warnings are found.
+                    valid_metadata, metadata_warning, metadata_message, detected_delimiter_meta, metadata_df = validate_and_save_csv(metadata_file, METADATA_COLUMNS,ESSENTIAL_METADATA_COLUMNS)
+                    logger.debug(f"Detected delimiter: {detected_delimiter_meta}")
+
+                    if not valid_metadata:
+                        # Raise a single exception containing both error and warning messages
+                        raise ValueError(f"FATAL:\n{metadata_message}")
+                    elif metadata_warning:
+                        # No errors, just warnings — show to user but don't stop the process
+                        warning_message = f"Warnings in metadata file:\n{metadata_message}"
+                        logger.debug(f"Metadata file validated with warnings: {warning_message}")
+                    else:
+                        # No errors or warnings — proceed with the upload
+                        #single_success_message = "Metadata file validated successfully."
+                        logger.debug(f"Metadata file validated successfully: {metadata_file.name}")
+                
+                    # Loaded metadata into a DataFrame for validation
+                    logger.debug(f"Loaded metadata file into df: {metadata_file.name} (type: {type(metadata_file)})")
+                    if metadata_df.empty:
+                        single_error_message = "Metadata file is empty or incorrectly formatted."
+                        raise ValueError(single_error_message)
+                    # ✅ Normalize column names (fixes unexpected whitespace or case issues)
+                    metadata_df.columns = metadata_df.columns.str.lower().str.strip()
+                    logger.debug("Normalize column names (fixes unexpected whitespace or case issues")
+
+                    # Extract sample identifier from metadata
+                    sample_id = metadata_df.loc[0, "sample identifier"].strip()
+                    logger.debug("Extract sample identifier from metadata")
+
+                    ####################################
+                    # ✅ Valid file extensions
+                    valid_extensions = (".fastq", ".fq", ".bam", ".fastq.gz", ".fq.gz", ".bam.gz", ".bz2", ".xz", ".zip")
+                    # ✅ Extract uploaded FASTQ file names
+                    uploaded_fastq_files_names = {f.name.strip() for f in fastq_files}
+                    logger.debug(f"📁 Uploaded FASTQ filenames: {uploaded_fastq_files_names}")
+
+                    # ✅ Extract sequencing filenames from metadata
+                    illumina_r1 = metadata_df.loc[0, "illumina r1"].strip() if "illumina r1" in metadata_df.columns and pd.notna(metadata_df.loc[0, "illumina r1"]) else None
+                    illumina_r2 = metadata_df.loc[0, "illumina r2"].strip() if "illumina r2" in metadata_df.columns and pd.notna(metadata_df.loc[0, "illumina r2"]) else None
+                    nanopore    = metadata_df.loc[0, "nanopore"].strip()     if "nanopore"    in metadata_df.columns and pd.notna(metadata_df.loc[0, "nanopore"]) else None
+                    pacbio      = metadata_df.loc[0, "pacbio"].strip()       if "pacbio"      in metadata_df.columns and pd.notna(metadata_df.loc[0, "pacbio"]) else None
+
+                    # ✅ Build expected FASTQ file list
+                    expected_fastq_files = [f for f in [illumina_r1, illumina_r2, nanopore, pacbio] if f]
+
+                    # ✅ Log the metadata parsing results
+                    logger.debug("🔍 Checking sequencing files listed in metadata:")
+                    logger.debug(f"• Illumina R1: {illumina_r1 or 'None'}")
+                    logger.debug(f"• Illumina R2: {illumina_r2 or 'None'}")
+                    logger.debug(f"• Nanopore: {nanopore or 'None'}")
+                    logger.debug(f"• PacBio: {pacbio or 'None'}")
+                    logger.debug(f"📋 Final list of expected FASTQ files: {expected_fastq_files}")
+
+                    # ✅ At least one platform file must be present (excluding Illumina R2 alone)
+                    if not any([illumina_r1, nanopore, pacbio]):
+                        raise ValueError(f"Sample '{sample_id}': At least one sequencing platform file must be provided (Illumina R1, Nanopore, or PacBio).")
+
+                    # ✅ Illumina R2 is only valid if R1 is present
+                    if illumina_r2 and not illumina_r1:
+                        raise ValueError(f"Sample '{sample_id}': Illumina R2 file provided without Illumina R1.")
+
+                    # ✅ Validate extensions of expected files
+                    for file in expected_fastq_files:
+                        if not any(file.lower().endswith(valid_ext) for valid_ext in valid_extensions):
+                            raise ValueError(
+                                f"Sample '{sample_id}': File '{file}' has an invalid extension.\n"
+                                f"Allowed extensions: {', '.join(valid_extensions)}"
+                            )
+                        logger.debug(f"✅ File '{file}' passed extension check.")
+ 
+                    # ✅ Detect missing files
+                    missing_fastq_files = set(expected_fastq_files) - uploaded_fastq_files_names
+                    if missing_fastq_files:
+                        logger.error(f"❌ Missing FASTQ files: {missing_fastq_files}")
+                        raise ValueError(
+                            f"Sample '{sample_id}': Some FASTQ files listed in metadata are missing from the upload.\n"
+                            f"Missing files: {', '.join(sorted(missing_fastq_files))}\n"
+                            f"Expected: {', '.join(expected_fastq_files)}\n"
+                            f"Uploaded: {', '.join(uploaded_fastq_files_names)}"
+                        )
+                    
+                    # ✅ Warn about extra files
+                    extra_fastq_files = uploaded_fastq_files_names - set(expected_fastq_files)
+                    extra_fastq_warning = ""
+                    if extra_fastq_files:
+                        logger.warning(f"⚠️ Extra FASTQ files detected (ignored): {extra_fastq_files}")
+                        extra_fastq_warning = f"⚠️ Warning: Extra FASTQ file(s) were uploaded but ignored: {', '.join(extra_fastq_files)}."
+
+                    # ✅ Confirm presence of each expected file
+                    for expected_file in expected_fastq_files:
+                        if expected_file not in uploaded_fastq_files_names:
+                            raise ValueError(f"Sample '{sample_id}': Expected file '{expected_file}' is not found in uploaded files.")
+                        #matched_file = next((f for f in uploaded_fastq_files_names if f.strip() == expected_file), None)
+                        #if not matched_file:
+                        #    raise ValueError(f"Sample '{sample_id}': Expected sequencing file '{expected_file}' is missing from the uploaded files.")
+                        logger.debug(f"🧬 Matched expected file: {expected_file}")
+
+                    # ✅ Log success
+                    logger.info(f"✅ Sample '{sample_id}': All expected FASTQ files validated successfully.")
+                    ####################################ANTIBIOTICS
+
+                    # Extract antibiotics file name from metadata (if available)
+                    antibiotics_file_name = (
+                        metadata_df.loc[0, "antibiotics file"].strip()
+                        if "antibiotics file" in metadata_df.columns and not metadata_df["antibiotics file"].isna().iloc[0]
+                        else None
+                    )
+
+                    # Extract antibiotics info from metadata (if available)
+                    antibiotics_info = (
+                        metadata_df.loc[0, "antibiotics info"].strip()
+                        if "antibiotics info" in metadata_df.columns and not metadata_df["antibiotics info"].isna().iloc[0]
+                        else None
+                    )
+                    # ✅ Ensure either 'Antibiotics File' OR 'Antibiotics Info' is provided, but NOT both
+                    if antibiotics_file_name and antibiotics_info:
+                        logger.error(f"Sample '{sample_id}': Both 'Antibiotics File' and 'Antibiotics Info' are provided, which is not allowed.")
+                        raise ValueError(f"Sample '{sample_id}': Both 'Antibiotics File' (metadata) and 'Antibiotics Info' (metadata) cannot be provided simultaneously.")
+
+                    # ✅ Extract expected antibiotics file name from metadata
+                    expected_antibiotics_file = (
+                        metadata_df.loc[0, "antibiotics file"].strip()
+                        if "antibiotics file" in metadata_df.columns and not metadata_df["antibiotics file"].isna().iloc[0]
+                        else None
+                    )
+
+                    # ✅ Debug logs
+                    logger.debug(f"Expected Antibiotics File: {expected_antibiotics_file}")
+                    logger.debug(f"Uploaded Antibiotics File: {uploaded_antibiotics_file.name if uploaded_antibiotics_file else 'None'}")
+
+                    # ✅ Handle **missing** antibiotics file
+                    if expected_antibiotics_file and not uploaded_antibiotics_file:
+                        logger.error(f"Missing expected antibiotics file: {expected_antibiotics_file}")
+                        raise ValueError(f"Sample '{sample_id}': Expected antibiotics file '{expected_antibiotics_file}' is missing.")
+
+                    # ✅ Ensure antibiotics file name matches (if applicable)
+                    if expected_antibiotics_file and uploaded_antibiotics_file:
+                        if uploaded_antibiotics_file.name.strip() != expected_antibiotics_file.strip():
+                            logger.error(
+                                f"Sample '{sample_id}': Uploaded antibiotics file '{uploaded_antibiotics_file.name}' "
+                                f"does not match expected file '{expected_antibiotics_file}' in metadata."
+                            )
+                            raise ValueError(
+                                f"Sample '{sample_id}': Uploaded antibiotics file '{uploaded_antibiotics_file.name}' "
+                                f"does not match expected file '{expected_antibiotics_file}' in metadata."
+                            )
+
+
+                    # ✅ Validate the antibiotics file (if provided). This calls function to fix trail delimiters
+                    antibiotics_df= pd.DataFrame()
+                    ab_warning=None
+                    if uploaded_antibiotics_file:
+                        valid_antibiotics, ab_warning, antibiotics_message, detected_delimiter_anti, antibiotics_df = validate_and_save_csv(uploaded_antibiotics_file, ANTIBIOTICS_COLUMNS)
+                        logger.debug(f"Detected delimiter: {detected_delimiter_anti}")
+
+                        if not valid_antibiotics:
+                            logger.error(f"FATAL: Sample '{sample_id}': Antibiotics file validation failed: {antibiotics_message}")
+                            raise ValueError(f"FATAL: Sample '{sample_id}': Antibiotics file error: {antibiotics_message}")
+                        # ✅ Log successful validation
+                        elif ab_warning:
+                        # No errors, just warnings — show to user but don't stop the process
+                            logger.debug(f"Warnings in antibiotics file:\n{antibiotics_message}")
+                        else:
+                            logger.info(f"Sample '{sample_id}': Uploaded antibiotics file successfully validated: {uploaded_antibiotics_file.name}")
+
+
+                    # ✅ Logging for clarity
+                    if expected_antibiotics_file:
+                        logger.info(f"Sample '{sample_id}': Expected antibiotics file '{expected_antibiotics_file}' listed in metadata but not uploaded.")
+                    elif antibiotics_info:
+                        logger.info(f"Sample '{sample_id}': Using antibiotics info from metadata: {antibiotics_info}")
+                    else:
+                        logger.info(f"Sample '{sample_id}': No antibiotics file or info provided.")
+
+#########################
+                    # Loaded antibiotics into a DataFrame for validation
+                    if antibiotics_df.empty and uploaded_antibiotics_file:
+                        raise ValueError("Antibiotics file is empty or incorrectly formatted.")
+
+                    elif not antibiotics_df.empty and uploaded_antibiotics_file:
+                        # ✅ Normalize column names (fixes unexpected whitespace or case issues)
+                        antibiotics_df.columns = antibiotics_df.columns.str.lower().str.strip()
+                        logger.debug("Normalized antibiotics file column names (whitespace and case issues fixed)")
+#########################SUBMISION OF FILES
+                    
+                    # Save the submission and associated files
+                    submission = Submission(user=request.user)
+                    #if warning_message:
+                    if metadata_warning:
+                        submission.resubmission_allowed = True
+                        submission.metadata_warnings = metadata_message  # or warning_message if you want formatted output
+                        #submission.save()#not save twice
+                    else:
+                        submission.resubmission_allowed = False
+                    if ab_warning:
+                        submission.antibiotics_warnings = antibiotics_message
+                    if extra_fastq_files:
+                        submission.extra_fastq_warning = extra_fastq_warning
+
+                    submission.save()
+
+                    # Save metadata file
+                    # Generate cleaned file from DataFrame
+                    cleaned_file = generate_cleaned_file(metadata_file.name, metadata_df)
+
+                    # Save raw + cleaned metadata file in single UploadedFile row:
+                    UploadedFile.objects.create(
+                        submission=submission,
+                        file=metadata_file,
+                        cleaned_file=cleaned_file,
+                        file_type="metadata_raw",
+                        sample_id=sample_id
+                    )
+
+
+                    # ✅ Save sequencing files based on expected_fastq_files list
+                    for expected_file in expected_fastq_files:
+                        matched_file = next(
+                            (f for f in fastq_files if f.name == expected_file or f.name.startswith(expected_file)),
+                            None
+                        )
+
+                        if matched_file:
+                            UploadedFile.objects.create(
+                                submission=submission,
+                                file=matched_file,
+                                file_type="fastq",
+                                sample_id=sample_id
+                            )
+                            logger.debug(f"📥 Saved FASTQ file: {matched_file.name}")
+                        else:
+                            logger.warning(f"⚠️ Skipping missing sequencing file: {expected_file} for sample '{sample_id}'")
+
+
+                    # ✅ Save antibiotics file if present
+                    if uploaded_antibiotics_file:
+                        # Generate cleaned file from DataFrame
+                        cleaned_file = generate_cleaned_file(uploaded_antibiotics_file.name, antibiotics_df)
+
+                        UploadedFile.objects.create(
+                            submission=submission,
+                            file=uploaded_antibiotics_file,
+                            cleaned_file=cleaned_file,
+                            file_type="antibiotics_raw",
+                            sample_id=sample_id
+                        )
+
+                    else:
+                        logger.info(f"Sample '{sample_id}': No antibiotics file provided for submission upload.")
+
+                    #single_success_message = f"Single sample upload successful. {extra_fastq_warning}"
+                    single_success_message = f"Single sample upload successful."
+
+                    if warning_message:
+                        single_success_message = f"{single_success_message}\n{warning_message}"
+                    if extra_fastq_warning:
+                        single_success_message = f"{single_success_message}\n{extra_fastq_warning}"
+
+                    
+                    logger.info("Single sample upload completed successfully.")
+
+                except ValueError as ve:
+                    single_error_message = str(ve)  # Specific validation error message
+                    logger.warning(f"Validation error: {single_error_message}")
+                except Exception as e:
+                    single_error_message = f"An unexpected error occurred: {str(e)}"
+                    logger.error(f"Single upload error: {e}", exc_info=True)
+            else:
+                # Log form errors and notify the user
+                single_error_message = "Single upload form is invalid. Please correct the errors below."
+                logger.error(f"Form errors: {single_form.errors}")
+
+        elif "bulk_upload" in request.POST:
+            bulk_form = BulkUploadForm(request.POST, request.FILES)
+            bulk_error_message = None
+            metadata_warning_message = ""
+            antibiotics_warning_message = ""
+            extra_fastq_warning_message = ""
+
+            if bulk_form.is_valid():
+                try:
+                   # Extract files from the form
+                    metadata_file = bulk_form.cleaned_data.get('metadata_file')
+                    # Logging with safety check
+                    if metadata_file:
+                        logger.debug(f"Processing uploaded bulk metadata file: {metadata_file.name} (type: {type(metadata_file)})")
+                    else:
+                        raise ValueError("Metadata file is required but not provided.")  # Explicitly handle missing metadata
+                    uploaded_antibiotics_files = request.FILES.getlist('antibiotics_files')
+                    if uploaded_antibiotics_files:
+                        logger.debug(f"Processing {len(uploaded_antibiotics_files)} uploaded antibiotics file(s) .")
+                        for i, ab_file in enumerate(uploaded_antibiotics_files):
+                            logger.debug(f"• Antibiotics file #{i+1}: {ab_file.name} (type: {type(ab_file)})")
+                    else:
+                        logger.debug("No antibiotics files uploaded.")  # Safe to proceed without raising an error
+                    fastq_files = request.FILES.getlist('fastq_files')
+                    if not fastq_files:
+                        raise ValueError(f"At least one sequencing file must be provided.")
+                    else:
+                        logger.debug(f"Processing {len(fastq_files)} uploaded FASTQ file(s).")
+                        for i, fastq_file in enumerate(fastq_files):
+                            logger.debug(f"Processing #${i+1} uploaded FASTQ file: {fastq_file.name} (type: {type(fastq_file)})")
+                    
+                    # ✅ Validate metadata file . this calls function to fix trail inside
+                    valid_metadata, metadata_warning, metadata_message, detected_delimiter_meta, metadata_df = validate_and_save_csv(
+                    metadata_file, METADATA_COLUMNS, ESSENTIAL_METADATA_COLUMNS)
+                    logger.debug(f"Detected delimiter: {detected_delimiter_meta}")
+
+                    if not valid_metadata:
+                        raise ValueError(f"Metadata file error: {metadata_message}")
+                    elif metadata_warning:
+                        # No errors, just warnings — show to user but don't stop the process
+                        #metadata_warning_message += f"{metadata_message}\n" # do i need the + if its one metadata file per bulk submission?
+                        metadata_warning_message += f"{metadata_message}\n" 
+                        logger.debug(f"Metadata file validated with warnings: {metadata_message}")
+                    else:
+                        # No errors or warnings — proceed with the upload
+                        logger.debug(f"Metadata file validated successfully: {metadata_file.name}")
+                    
+                    # Loaded metadata into a DataFrame for validation
+                    logger.debug(f"Loaded metadata file into df: {metadata_file.name} (type: {type(metadata_file)})")
+                    if metadata_df.empty:
+                        bulk_error_message = "Metadata file is empty or incorrectly formatted."
+                        raise ValueError(bulk_error_message)
+                    # ✅ Normalize column names (fixes unexpected whitespace or case issues)
+                    metadata_df.columns = metadata_df.columns.str.lower().str.strip()
+                    logger.debug("Normalize column names (fixes unexpected whitespace or case issues")
+
+                    ####################################
+
+                    # ✅ Valid file extensions
+                    valid_extensions = (".fastq", ".fq", ".bam", ".fastq.gz", ".fq.gz", ".bam.gz", ".bz2", ".xz", ".zip")
+                    # ✅ Extract uploaded FASTQ file names
+                    uploaded_fastq_files_names = {f.name.strip() for f in fastq_files}
+                    extra_fastq_warning = ""
+
+                    logger.debug(f"📁 Uploaded FASTQ filenames: {uploaded_fastq_files_names}")
+
+                    #all_expected_fastq_files = set()
+                    matched_fastq_files = set()  # Track which FASTQ files were actually used
+
+                    for idx, row in metadata_df.iterrows():
+                        # Extract sample identifier from metadata
+                        raw_value = row.get("sample identifier", f"row {idx + 1}")
+                        sample_id = str(raw_value).strip()
+
+                        if not sample_id or sample_id.lower() == 'nan':
+                            logger.debug(f"Row {idx + 1}: Missing or invalid sample identifier.")
+                            raise ValueError(f"Row {idx + 1}: Missing or invalid sample identifier.")
+
+                        logger.debug(f"Extract sample identifier {sample_id} from metadata")
+
+                        # Extract filenames
+                        illumina_r1 = row["illumina r1"].strip() if pd.notna(row.get("illumina r1")) else None
+                        illumina_r2 = row["illumina r2"].strip() if pd.notna(row.get("illumina r2")) else None
+                        nanopore    = row["nanopore"].strip()    if pd.notna(row.get("nanopore")) else None
+                        pacbio      = row["pacbio"].strip()      if pd.notna(row.get("pacbio")) else None
+
+                        expected_fastq_files = [f for f in [illumina_r1, illumina_r2, nanopore, pacbio] if f]
+                        logger.debug(f"🔬 Sample '{sample_id}' expects FASTQ files: {expected_fastq_files}")
+
+                        logger.debug("🔍 Checking sequencing files listed in metadata:")
+                        logger.debug(f"\n🔬 Sample '{sample_id}' expects FASTQ files:")
+                        logger.debug(f"• Illumina R1: {illumina_r1 or 'None'}")
+                        logger.debug(f"• Illumina R2: {illumina_r2 or 'None'}")
+                        logger.debug(f"• Nanopore: {nanopore or 'None'}")
+                        logger.debug(f"• PacBio: {pacbio or 'None'}")
+                        logger.debug(f"📋 Final list of expected FASTQ files: {expected_fastq_files}")
+
+                        # ✅ At least one platform file must be present (excluding Illumina R2 alone)
+                        if not any([illumina_r1, nanopore, pacbio]):
+                            raise ValueError(f"Sample '{sample_id}': Must include at least one platform file (Illumina R1, Nanopore, or PacBio).")
+
+                        # Validation: Illumina R2 requires R1
+                        if illumina_r2 and not illumina_r1:
+                            raise ValueError(f"Sample '{sample_id}': Illumina R2 file provided without Illumina R1.")
+
+                        # Extension check of expected files
+                        for file in expected_fastq_files:
+                            if not any(file.lower().endswith(valid_ext) for valid_ext in valid_extensions):
+                                raise ValueError(
+                                    f"Sample '{sample_id}': File '{file}' has an invalid extension.\n"
+                                    f"Allowed extensions: {', '.join(valid_extensions)}"
+                                )
+                            matched_fastq_files.add(file)
+                            logger.debug(f"✅ File '{file}' passed extension check.")
+
+
+                        # ✅ Check for missing files for this sample
+                        missing_fastq_files = [f for f in expected_fastq_files if f not in uploaded_fastq_files_names]
+                        if missing_fastq_files:
+                            logger.error(f"❌ Missing FASTQ files: {missing_fastq_files}")
+                            raise ValueError(
+                                f"Sample '{sample_id}': Some FASTQ files listed in metadata are missing from the upload.\n"
+                                #f"Sample '{sample_id}': Missing FASTQ file(s): {', '.join(missing_fastq_files)}"
+                                f"Missing: {', '.join(sorted(missing_fastq_files))}\n"
+                                f"Expected: {', '.join(expected_fastq_files)}\n"
+                                #f"Uploaded: {', '.join(sorted(uploaded_fastq_files_names
+                            )
+
+                        # Log success
+                        logger.info(f"✅ Sample '{sample_id}': All expected FASTQ files validated successfully.")
+
+
+                    # ✅ Warn about extra files. Optional: log and ignore extras
+                    extra_fastq_files = uploaded_fastq_files_names - matched_fastq_files
+                    extra_fastq_warning = ""
+
+                    if extra_fastq_files:
+                        #extra_fastq_warning = f"⚠️ Warning: Extra FASTQ file(s) were uploaded but ignored: {', '.join(sorted(extra_fastq_files))}."
+                        extra_fastq_warning_message += f"Extra FASTQ file(s) ignored: {', '.join(sorted(extra_fastq_files))}\n"
+                        logger.warning(extra_fastq_warning_message)
+
+                    ###################ANTIBIOTICS FILE VALIDATION 
+                            
+                    # Extract antibiotics file name from metadata (if available)
+                    uploaded_antibiotics_filenames = {f.name.strip(): f for f in uploaded_antibiotics_files}
+                    logger.debug(f"📁 Uploaded antibiotics file names: {list(uploaded_antibiotics_filenames.keys())}")
+
+                    # ✅ Iterate over each sample in the metadata
+                    for idx, row in metadata_df.iterrows():
+                        ab_warning=None
+                        # Extract sample identifier from metadata
+                        raw_value = row.get("sample identifier", f"row {idx + 1}")
+                        sample_id = str(raw_value).strip()
+
+                        if not sample_id or sample_id.lower() == 'nan':
+                            logger.debug(f"Row {idx + 1}: Missing or invalid sample identifier.")
+                            raise ValueError(f"Row {idx + 1}: Missing or invalid sample identifier.")
+
+                        logger.debug(f"Extract sample identifier {sample_id} from metadata")
+                        # ✅ Extract expected antibiotics file name
+                        expected_ab_file = row.get("antibiotics file", "")
+                        expected_ab_file = expected_ab_file.strip() if pd.notna(expected_ab_file) else None
+
+                        # ✅ Extract antibiotics info string
+                        antibiotics_info = row.get("antibiotics info", "")
+                        antibiotics_info = antibiotics_info.strip() if pd.notna(antibiotics_info) else None
+
+                        # ✅ Ensure either 'Antibiotics File' OR 'Antibiotics Info' is provided, but NOT both
+                        if expected_ab_file and antibiotics_info:
+                            logger.error(f"Sample '{sample_id}': Both 'Antibiotics File' (metadata) and 'Antibiotics Info' (metadata) cannot be provided simultaneously.")
+                            raise ValueError(f"Sample '{sample_id}': Both 'Antibiotics File' (metadata) and 'Antibiotics Info' (metadata) cannot be provided simultaneously.")
+                        # ✅ Debug logs
+                        logger.debug(f"\n🧪 Sample '{sample_id}' → Expected antibiotics file: {expected_ab_file or 'None'}")
+                        logger.debug(f"  → Metadata antibiotics info: {antibiotics_info or 'None'}")
+
+                        antibiotics_df = pd.DataFrame()
+
+                        if expected_ab_file:
+                            uploaded_file = uploaded_antibiotics_filenames.get(expected_ab_file)
+
+                            if not uploaded_file:
+                                logger.error(f"❌ Sample '{sample_id}': Expected antibiotics file '{expected_ab_file}' not uploaded.")
+                                raise ValueError(f"Sample '{sample_id}': Missing expected antibiotics file '{expected_ab_file}'.")
+
+                            # ✅ Validate the antibiotics file
+                            valid, ab_warning, message, delimiter, antibiotics_df = validate_and_save_csv(uploaded_file, ANTIBIOTICS_COLUMNS)
+                            logger.debug(f"Detected delimiter: {delimiter}")
+
+                            if not valid:
+                                logger.error(f"❌ Sample '{sample_id}': Antibiotics file validation failed: {message}")
+                                raise ValueError(f"Sample '{sample_id}': Antibiotics file error: {message}")
+                            elif ab_warning:
+                                # No errors, just warnings — show to user but don't stop the process
+                                ab_message = f"Warnings in antibiotics file:\n{message}"
+                                logger.debug(f"Continue with warnings: {ab_message}")
+                            else:
+                                # ✅ Log success
+                                logger.info(f"✅ Sample '{sample_id}': Antibiotics file '{uploaded_file.name}' validated successfully.")
+
+                            # ✅ Normalize headers
+                            if not antibiotics_df.empty:
+                                antibiotics_df.columns = antibiotics_df.columns.str.lower().str.strip()
+                                logger.debug(f"Normalized antibiotics file headers for sample '{sample_id}'.")
+
+                        elif antibiotics_info:
+                            logger.info(f"ℹ️ Sample '{sample_id}': Using antibiotics info from metadata.")
+                        else:
+                            logger.info(f"ℹ️ Sample '{sample_id}': No antibiotics file or info provided.")
+#######################################
+# If there are errors, skip saving
+                    if bulk_error_message:
+                        logger.warning(f"Validation errors during bulk upload:\n{bulk_error_message}")
+                        raise ValueError(bulk_error_message)
+
+                    # If no errors, proceed with saving
+                    # Create a new Submission object
+#########################SUBMISION OF FILES
+
+                    # Save the submission and associated files
+                    submission = Submission(user=request.user,is_bulk_upload = True)
+                    #if warning_message:
+                    if metadata_warning_message:
+                        submission.resubmission_allowed = True
+                        submission.metadata_warnings = metadata_warning_message  # or warning_message if you want formatted output
+                        submission.save()
+                    else:
+                        submission.save()
+
+                    logger.debug(f"After setting is_bulk_upload: {submission.is_bulk_upload}")
+
+
+                    cleaned_file = generate_cleaned_file(metadata_file.name, metadata_df)
+
+                    # Save raw + cleaned metadata file in single UploadedFile row:
+                    UploadedFile.objects.create(
+                        submission=submission,
+                        file=metadata_file,
+                        cleaned_file=cleaned_file,
+                        file_type="metadata_raw",
+                        sample_id=sample_id
+                    )
+
+                    # ✅ Save sequencing files based on expected_fastq_files list
+                    for idx, row in metadata_df.iterrows():
+                        # Extract sample identifier from metadata
+                        raw_value = row.get("sample identifier", f"row {idx + 1}")
+                        sample_id = str(raw_value).strip()
+
+                        if not sample_id or sample_id.lower() == 'nan':
+                            logger.debug(f"Row {idx + 1}: Missing or invalid sample identifier.")
+                            raise ValueError(f"Row {idx + 1}: Missing or invalid sample identifier.")
+
+                        logger.debug(f"Extract sample identifier {sample_id} from metadata")
+
+                        # Extract filenames
+                        illumina_r1 = row["illumina r1"].strip() if pd.notna(row.get("illumina r1")) else None
+                        illumina_r2 = row["illumina r2"].strip() if pd.notna(row.get("illumina r2")) else None
+                        nanopore    = row["nanopore"].strip()    if pd.notna(row.get("nanopore")) else None
+                        pacbio      = row["pacbio"].strip()      if pd.notna(row.get("pacbio")) else None
+
+                        expected_fastq_files = [f for f in [illumina_r1, illumina_r2, nanopore, pacbio] if f]
+
+                        logger.debug(f"\n🔬 Sample '{sample_id}' expects FASTQ files:")
+                        logger.debug(f"• Illumina R1: {illumina_r1 or 'None'}")
+                        logger.debug(f"• Illumina R2: {illumina_r2 or 'None'}")
+                        logger.debug(f"• Nanopore: {nanopore or 'None'}")
+                        logger.debug(f"• PacBio: {pacbio or 'None'}")
+                        logger.debug(f"📋 Final list of expected FASTQ files: {expected_fastq_files}")
+
+
+                        # Save sequencing files per sample
+                        for seq_filename in expected_fastq_files:
+                            matched_seq_file = next(
+                                (f for f in fastq_files if f.name.strip() == seq_filename.strip()),
+                                None
+                            )
+                            if matched_seq_file:
+                                UploadedFile.objects.create(
+                                    submission=submission, 
+                                    file=matched_seq_file,
+                                    file_type="fastq",
+                                    sample_id=sample_id
+                                )
+                                logger.debug(f"Saved sequencing file '{matched_seq_file.name}' for sample '{sample_id}'")
+                            else:
+                                logger.warning(f"Skipping missing sequencing file: {seq_filename} for sample {sample_id}")
+
+                        # ✅ Extract expected antibiotics file name
+                        expected_ab_file = row.get("antibiotics file", "")
+                        expected_ab_file = expected_ab_file.strip() if pd.notna(expected_ab_file) else None
+
+                        # ✅ Extract antibiotics info string
+                        antibiotics_info = row.get("antibiotics info", "")
+                        antibiotics_info = antibiotics_info.strip() if pd.notna(antibiotics_info) else None
+
+                        # ✅ Ensure either 'Antibiotics File' OR 'Antibiotics Info' is provided, but NOT both
+                        if expected_ab_file and antibiotics_info:
+                            logger.error(f"Sample '{sample_id}': Both 'Antibiotics File' (metadata) and 'Antibiotics Info' (metadata) cannot be provided simultaneously.")
+                            raise ValueError(f"Sample '{sample_id}': Both 'Antibiotics File' (metadata) and 'Antibiotics Info' (metadata) cannot be provided simultaneously.")
+                        # ✅ Debug logs
+                        logger.debug(f"\n🧪 Sample '{sample_id}' → Expected antibiotics file: {expected_ab_file or 'None'}")
+                        logger.debug(f"           → Metadata antibiotics info: {antibiotics_info or 'None'}")
+
+                        antibiotics_df = pd.DataFrame()
+                        
+                        # Save antibiotics file per sample (if available)
+                        if expected_ab_file:
+                            uploaded_file = uploaded_antibiotics_filenames.get(expected_ab_file)
+
+                            if not uploaded_file:
+                                logger.error(f"❌ Sample '{sample_id}': Expected antibiotics file '{expected_ab_file}' not uploaded.")
+                                raise ValueError(f"Sample '{sample_id}': Missing expected antibiotics file '{expected_ab_file}'.")
+
+                            # ✅ Validate the antibiotics file
+                            valid, ab_warning, message, delimiter, antibiotics_df = validate_and_save_csv(uploaded_file, ANTIBIOTICS_COLUMNS)
+                            logger.debug(f"Detected delimiter: {delimiter}")
+
+                            if not valid:
+                                logger.error(f"❌ Sample '{sample_id}': Antibiotics file validation failed: {message}")
+                                raise ValueError(f"Sample '{sample_id}': Antibiotics file error: {message}")
+                            elif ab_warning:
+                                antibiotics_warning_message += f"Sample '{sample_id}': {message}\n"
+
+                            # ✅ Log success
+                            logger.info(f"✅ Sample '{sample_id}': Antibiotics file '{uploaded_file.name}' validated successfully.")
+
+                            # ✅ Normalize headers
+                            if not antibiotics_df.empty:
+                                antibiotics_df.columns = antibiotics_df.columns.str.lower().str.strip()
+                                logger.debug(f"Normalized antibiotics file headers for sample '{sample_id}'.")
+                                logger.debug(f"BULK ANTIBIOTICS FILe: expected={expected_ab_file},  uploaded_file name={uploaded_file.name},for sample {sample_id}")
+                                cleaned_file = generate_cleaned_file(uploaded_file.name, antibiotics_df)
+
+                                # Rewind the uploaded_file first (safety!)
+                                uploaded_file.seek(0)
+
+                                UploadedFile.objects.create(
+                                    submission=submission,
+                                    file=uploaded_file,            # Raw uploaded file
+                                    cleaned_file=cleaned_file,     # Cleaned CSV
+                                    file_type="antibiotics_raw",
+                                    sample_id=sample_id
+                                )
+
+                                logger.debug(f"✅ Saved antibiotics file anliverd cleaned version for sample '{sample_id}'")
+                            else:
+                                logger.warning(f"⚠️ Skipping missing antibiotics file: {expected_ab_file} for sample '{sample_id}'")
+
+                        elif antibiotics_info:
+                            logger.info(f"ℹ️ Sample '{sample_id}': Using antibiotics info from metadata.")
+                        else:
+                            logger.info(f"ℹ️ Sample '{sample_id}': No antibiotics file or info provided.")
+
+                    #bulk_success_message = "Bulk upload completed successfully."
+
+                    #if warning_message:
+                    if antibiotics_warning_message:
+                        submission.antibiotics_warnings = antibiotics_warning_message
+                    
+                    if extra_fastq_warning_message:
+                        submission.extra_fastq_warning = extra_fastq_warning_message
+                    submission.save()
+
+
+                    # Show summarized message to user
+                    success_messages = ["Bulk upload completed successfully."]
+                    if metadata_warning_message:
+                        success_messages.append("⚠️ Metadata file accepted with warnings.")
+                    if antibiotics_warning_message:
+                        success_messages.append("⚠️ Some antibiotics files accepted with warnings.")
+                    if extra_fastq_warning_message:
+                        success_messages.append("⚠️ Extra FASTQ files were ignored.")
+                    bulk_success_message = "\n".join(success_messages)
+                    messages.success(request, bulk_success_message, extra_tags='dashboard') #not sure where will be this used
+                    logger.info(f"{bulk_success_message}")
+
+                    logger.info("Bulk upload completed successfully.")
+
+                except ValueError as ve:
+                    bulk_error_message = str(ve)
+                    logger.warning(f"Validation error during bulk upload: {bulk_error_message}")
+                except Exception as e:
+                    bulk_error_message = f"An unexpected error occurred during bulk upload: {str(e)}"
+                    logger.error(f"Bulk upload error: {bulk_error_message}", exc_info=True)
+                
+            else:
+                bulk_error_message = f"Bulk upload form is invalid. Please correct the errors below.\n{bulk_form.errors}"
+                logger.error(f"Bulk form errors: {bulk_form.errors}")
+            
+    #finally after single or bulk upload processing:
+    total_time = time.time() - start_time
+    request.session['upload_duration'] = f"{total_time:.2f} seconds"
+    logger.info(f"⏱️ Server processing time: {total_time:.2f} seconds")
+    # Save to model
+    if submission:
+        submission.upload_duration = total_time
+
+    upload_start_time = request.POST.get("upload_start_time")
+    if upload_start_time:
+        try:
+            client_start = float(upload_start_time)
+            now = time.time()
+            client_total = now - client_start
+            network_delay = client_total - total_time
+
+            logger.info(f"✅ Total upload time (client-side): {client_total:.2f}s")
+            logger.info(f"📡 Upload + network delay (client-side): {network_delay:.2f}s")
+
+            request.session['client_total_upload_time'] = f"{client_total:.2f} seconds"
+            request.session['network_delay'] = f"{network_delay:.2f} seconds"
+            # Save to model
+            if submission:
+                submission.client_total_upload_time = client_total
+                submission.network_delay = network_delay
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to parse client timing info: {e}")
+    # Finalize
+    if submission:
+        submission.save()
+
+
+                
+    # Render the page with the appropriate messages and forms
+    response = render(request, 'gensurvapp/upload_dev.html', {
+        'single_form': single_form,
+        'bulk_form': bulk_form,
+        'single_error_message': single_error_message,
+        'single_success_message': single_success_message,
+        'bulk_error_message': bulk_error_message,
+        'bulk_success_message': bulk_success_message,
+        'maintenance_message': maintenance_message,  # Pass the message
+        "resubmission_allowed": submission.resubmission_allowed if submission else False,
+        'submission_id': submission.id if submission else None,
+    })
+
+    # Clean up session keys
+    for key in ['upload_duration', 'network_delay', 'client_total_upload_time']:
+        request.session.pop(key, None)
+    #also clean forms for rerendering. if raload page, it submits data again 
+
+    return response
