@@ -17,7 +17,7 @@ chmod 600 ~/.ssh/id_ed25519 ~/.ssh/id_ed25519.pub
 eval "$(ssh-agent -s)"
 ssh-add ~/.ssh/id_ed25519
 ```
-Add ~/.ssh/id_ed25519.pub to your Git host (GitHub/GitLab → SSH keys).
+Add ~/.ssh/id_ed25519.pub to your Git host (GitHub → Settings → SSH and GPG keys).
 
 ## 3) (Recommended) Lock the key to your host alias so Git always uses the right key:
 ``` bash
