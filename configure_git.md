@@ -28,15 +28,26 @@ Host github-personal
   IdentityFile ~/.ssh/id_ed25519
   IdentitiesOnly yes
 ```
+## 4) Work in your home dir (not a shared folder)
+
 Then clone with the alias:
 ``` bash
 git clone github-personal:USER/REPO.git
+#or
+git clone git@github.com:vcepeda/Gensurv.git
+
 ```
-## 4) Work in your home dir (not a shared folder)
-``` bash
-cd ~/code
-git clone github-personal:USER/REPO.git
+If you have permission problems and sudo rights:
+```bash
+REPO=reponame
+sudo install -d -m 755 -o $USER -g www-data /mnt/web_data/html/$REPO
+
+git clone github-personal:USER/REPO.git /mnt/web_data/html/uservicky
+or cd /mnt/web_data/html/$REPO
+git clone git@github.com:vcepeda/Gensurv.git .
+
 ```
+
 ## 5) (Optional, stronger proof it’s you) Sign commits with SSH:
 ```bash
 git config --global gpg.format ssh
