@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 # Checks OS deps, filters pip requirements, compares installed versions,
 # then (optionally) installs missing/out-of-spec packages.
+# keep it outside the web root (safer on servers) with ~/
 # Usage:
-#   ./preflight_py_env.sh -r requirements.txt -v .venv --check-only
-#   ./preflight_py_env.sh -r requirements.txt -v .venv --install-missing
-#   ./preflight_py_env.sh -r requirements.txt -v .venv --install-all
+#   ./preflight_py_env.sh -r requirements.txt -v  ~/venvs/Gensurv_venv --check-only
+#   ./preflight_py_env.sh -r requirements.txt -v  ~/venvs/Gensurv_venv --install-missing
+#   ./preflight_py_env.sh -r requirements.txt -v  ~/venvs/Gensurv_venv --install-all
 
 set -euo pipefail
 
 REQ="requirements.txt"
-VENV=".venv"
+VENV="Gensurv_venv"
 MODE="check" # check | install-missing | install-all
 
 while [[ $# -gt 0 ]]; do
