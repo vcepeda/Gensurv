@@ -2,7 +2,7 @@
 - End-to-end way to move Django + Gunicorn + Nginx + Postgres stack to a new server using your GitHub repo and a DB dump.
 
 ## 1) Prep the new server
-### system deps (Ubuntu/Debian example)
+### system deps (Ubuntu/Debian example) need admin rights
 ```bash sudo apt update
 sudo apt install -y python3 python3-venv python3-pip build-essential \
   libpq-dev nginx postgresql postgresql-contrib
@@ -18,7 +18,8 @@ sudo ufw enable
 sudo mkdir -p /srv/myproject/{app,venv,run,static,media}
 sudo chown -R myproject:myproject /srv/myproject
 ```
-
+### 3) Follow instructions to config git if needed:
+configure_git.md
 ### 3) Pull your code & set up Python env
 ```bash sudo -u myproject bash -lc '
 cd /srv/myproject/app
