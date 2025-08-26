@@ -1,17 +1,22 @@
 #!/usr/bin/env bash
-# Checks OS deps, filters pip requirements, compares installed versions,
-# then (optionally) installs missing/out-of-spec packages.
-# keep it outside the web root (safer on servers) with ~/
-# Usage:
-#   ./preflight_py_env.sh -r requirements.txt -v  ~/venvs/Gensurv_venv --check-only
-#   ./preflight_py_env.sh -r requirements.txt -v  ~/venvs/Gensurv_venv --install-missing
-#   ./preflight_py_env.sh -r requirements.txt -v  ~/venvs/Gensurv_venv --install-all
+# Preflight for Python env + optional Postgres (Ubuntu/Debian).
+# Modes:
+#   --check-only        : only check, don't install
+#   --install-missing   : install only what's missing
+#   --install-all       : pip install all filtered requirements
+# Postgres:
+#   --pg server|client|none   (default: none)
+#   --db-name NAME --db-user USER --db-pass PASS   (optional; for --pg server)
 
 set -euo pipefail
 
 REQ="requirements.txt"
-VENV="Gensurv_venv"
-MODE="check" # check | install-missing | install-all
+VENV=".venv"
+MODE="check"          # check | install-missing | install-all
+PG_MODE="none"        # none | client | server
+DB_NAME=""
+DB_USER=""
+DB_PASS=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -20,6 +25,10 @@ while [[ $# -gt 0 ]]; do
     --check-only)      MODE="check"; shift;;
     --install-missing) MODE="install-missing"; shift;;
     --install-all)     MODE="install-all"; shift;;
+    --pg)              PG_MODE="$2"; shift 2;;
+    --db-name)         DB_NAME="$2"; shift 2;;
+    --db-user)         DB_USER="$2"; shift 2;;
+    --db-pass)         DB_PASS="$2"; shift 2;;
     *) echo "Unknown arg: $1"; exit 1;;
   esac
 done
@@ -29,8 +38,17 @@ require() { command -v "$1" >/dev/null || { echo "Missing command: $1"; exit 1; 
 APT=0; command -v apt-get >/dev/null && APT=1
 OS_PKGS=(build-essential pkg-config libffi-dev libssl-dev libicu-dev libdbus-1-dev libgirepository1.0-dev libcairo2-dev libsystemd-dev libpq-dev)
 
+add_pg_pkgs() {
+  case "$PG_MODE" in
+    client) OS_PKGS+=("postgresql-client" "libpq5");;
+    server) OS_PKGS+=("postgresql" "postgresql-contrib" "postgresql-client" "libpq5");;
+    none|*) ;;
+  esac
+}
+
 check_apt() {
   [[ $APT -eq 1 ]] || { echo "[apt] not found; skipping OS package checks."; return; }
+  add_pg_pkgs
   local missing=()
   for p in "${OS_PKGS[@]}"; do
     dpkg-query -W -f='${Status}' "$p" 2>/dev/null | grep -q "install ok installed" || missing+=("$p")
@@ -40,16 +58,50 @@ check_apt() {
     if [[ "$MODE" != "check" ]]; then
       echo "[apt] Installing missing OS packages with sudo..."
       sudo apt-get update
-      sudo apt-get install -y "${missing[@]}"
+      sudo apt-get install -y --no-install-recommends "${missing[@]}"
     fi
   else
     echo "[apt] All OS packages present."
   fi
 }
 
+start_postgres_if_needed() {
+  [[ "$PG_MODE" == "server" ]] || return 0
+  if [[ "$MODE" != "check" ]]; then
+    if command -v systemctl >/dev/null; then
+      sudo systemctl enable --now postgresql || true
+    fi
+  fi
+  if command -v pg_isready >/dev/null; then
+    pg_isready || true
+  fi
+}
+
+create_db_user_if_requested() {
+  [[ "$PG_MODE" == "server" ]] || return 0
+  [[ -n "$DB_NAME" && -n "$DB_USER" && -n "$DB_PASS" ]] || { 
+    echo "[pg] DB creation skipped (set --db-name/--db-user/--db-pass to create)."; return 0; 
+  }
+  [[ "$MODE" == "check" ]] && { echo "[pg] Would create DB/user (check-only mode)."; return 0; }
+  echo "[pg] Creating role '$DB_USER' and database '$DB_NAME' if they don't exist..."
+  sudo -u postgres psql -v ON_ERROR_STOP=1 <<SQL
+DO \$\$
+BEGIN
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${DB_USER}') THEN
+    CREATE ROLE ${DB_USER} LOGIN PASSWORD '${DB_PASS}';
+  END IF;
+  IF NOT EXISTS (SELECT FROM pg_database WHERE datname = '${DB_NAME}') THEN
+    CREATE DATABASE ${DB_NAME} OWNER ${DB_USER};
+  END IF;
+END
+\$\$;
+SQL
+  echo "[pg] Done. Example URL: postgresql://${DB_USER}:********@localhost:5432/${DB_NAME}"
+}
+
 filter_requirements() {
   local in="$1" out="$2"
-  # Remove lines that should be installed via apt/snap (not pip)
+  # Remove OS-managed / non-pip lines
   grep -Ev '^(python-apt|ubuntu-pro-client|ufw|unattended-upgrades|language-selector|command-not-found|distro-info|dbus-python|PyGObject|systemd-python|iotop|sos|wadllib|python-debian|certbot|certbot-nginx)\b' \
     "$in" > "$out"
 }
@@ -76,7 +128,7 @@ with open(req_path) as f:
     s=line.strip()
     if not s or s.startswith('#'): continue
     m=pat.match(s)
-    if not m: 
+    if not m:
       print(f"[pip] WARN: skip '{s}'"); 
       continue
     name, _, ver = m.group(1), m.group(2), m.group(3)
@@ -109,21 +161,28 @@ main() {
   require python3; require grep
   echo "[info] Python: $(python3 --version)"
   check_apt
+  start_postgres_if_needed
+
   local tmpreq; tmpreq="$(mktemp)"
   filter_requirements "$REQ" "$tmpreq"
   echo "[pip] Filtered requirements -> $tmpreq"
+
   setup_venv
   local out; out="$(check_pip "$tmpreq")"
   echo "$out" | sed -n '1,200p'
   local MISSING_LIST OUTOFSPEC_LIST
   MISSING_LIST=$(echo "$out" | awk -F= '/^MISSING_LIST=/{print $2}')
   OUTOFSPEC_LIST=$(echo "$out" | awk -F= '/^OUTOFSPEC_LIST=/{print $2}')
+
   case "$MODE" in
-    check)            echo "[mode] check-only; not installing.";;
+    check)            echo "[mode] check-only; not installing pip packages.";;
     install-missing)  install_missing "$MISSING_LIST" "$OUTOFSPEC_LIST";;
     install-all)      pip install -r "$tmpreq";;
   esac
+
+  create_db_user_if_requested
   rm -f "$tmpreq"
   echo "[done]"
 }
 main
+
