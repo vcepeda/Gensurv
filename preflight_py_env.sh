@@ -27,7 +27,11 @@ done
 require() { command -v "$1" >/dev/null || { echo "Missing command: $1"; exit 1; }; }
 
 APT=0; command -v apt-get >/dev/null && APT=1
-OS_PKGS=(build-essential pkg-config libffi-dev libssl-dev libicu-dev libdbus-1-dev libgirepository1.0-dev libcairo2-dev libsystemd-dev libpq-dev)
+#OS_PKGS=(build-essential pkg-config libffi-dev libssl-dev libicu-dev libdbus-1-dev libgirepository1.0-dev libcairo2-dev libsystemd-dev libpq-dev)
+# Added two to OS_PKGS
+OS_PKGS=(build-essential pkg-config libffi-dev libssl-dev libicu-dev \
+         libdbus-1-dev libgirepository1.0-dev libcairo2-dev libsystemd-dev \
+         libpq-dev python3-venv python3-dev)
 
 check_apt() {
   [[ $APT -eq 1 ]] || { echo "[apt] not found; skipping OS package checks."; return; }
@@ -50,8 +54,11 @@ check_apt() {
 filter_requirements() {
   local in="$1" out="$2"
   # Remove lines that should be installed via apt/snap (not pip)
-  grep -Ev '^(python-apt|ubuntu-pro-client|ufw|unattended-upgrades|language-selector|command-not-found|distro-info|dbus-python|PyGObject|systemd-python|iotop|sos|wadllib|python-debian|certbot|certbot-nginx)\b' \
-    "$in" > "$out"
+  #grep -Ev '^(python-apt|ubuntu-pro-client|ufw|unattended-upgrades|language-selector|command-not-found|distro-info|dbus-python|PyGObject|systemd-python|iotop|sos|wadllib|python-debian|certbot|certbot-nginx)\b' \
+  #  "$in" > "$out"
+  # drop acme|josepy
+  grep -Ev '^(python-apt|ubuntu-pro-client|ufw|unattended-upgrades|language-selector|command-not-found|distro-info|dbus-python|PyGObject|systemd-python|iotop|sos|wadllib|python-debian|certbot|certbot-nginx|acme|josepy)\b' \
+  "$in" > "$out"
 }
 
 setup_venv() {
@@ -61,6 +68,7 @@ setup_venv() {
   # shellcheck disable=SC1090
   source "$VENV/bin/activate"
   python -m pip install -U pip wheel setuptools >/dev/null
+  echo "[venv] using: $(which python) ; pip: $(which pip)"
 }
 
 check_pip() {
@@ -95,11 +103,12 @@ print("OUTOFSPEC_LIST=" + " ".join(f"{n}=={v}" for n,v,c in outof))
 PY
 }
 
+# Use python -m pip everywhere
 install_missing() {
   local miss="$1" oo="$2"
   if [[ -n "$miss$oo" ]]; then
     echo "[pip] Installing: $miss $oo"
-    pip install $miss $oo
+    pip -m install $miss $oo
   else
     echo "[pip] Nothing to install."
   fi
@@ -109,9 +118,13 @@ main() {
   require python3; require grep
   echo "[info] Python: $(python3 --version)"
   check_apt
+  
   local tmpreq; tmpreq="$(mktemp)"
+  trap 'rm -f "$tmpreq"' EXIT
+
   filter_requirements "$REQ" "$tmpreq"
   echo "[pip] Filtered requirements -> $tmpreq"
+  
   setup_venv
   local out; out="$(check_pip "$tmpreq")"
   echo "$out" | sed -n '1,200p'
