@@ -27,6 +27,10 @@ python3 -m venv /srv/myproject/venv
 source /srv/myproject/venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
+#or:
+ ./preflight_py_env.sh -r requirements.txt -v  ~/venvs/Gensurv_venv --check-only
+
+
 '
 ```
 
