@@ -20,3 +20,4 @@ venv/
 .media/
 .data/
 ./bulk_upload.log
+settings.py
