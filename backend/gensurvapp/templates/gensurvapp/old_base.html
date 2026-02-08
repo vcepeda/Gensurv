@@ -1,0 +1,501 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" />
+    <style>
+        body {
+            display: grid;
+            grid-template-areas:
+                "header header header"
+                "sidebar-left main sidebar-right"
+                "footer footer footer";
+            /*grid-template-columns: 300px 1fr 300px;
+            grid-template-rows: auto 1fr auto;
+            height: 100vh;
+            margin: 0;*/
+            grid-template-columns: minmax(200px, 250px) 1fr minmax(200px, 250px); /* Set min and max for sidebars */
+            grid-template-rows: auto 1fr auto;
+            height: 100vh;
+            margin: 0;
+            padding: 0; /* Ensure no padding is added to the body */
+            /*  max-width: 100vw;Ensure it uses the full width of the screen */
+    width: 100%;
+    /* Remove overflow-x: hidden */
+    overflow-x: unset;  /* Allow horizontal scrolling if necessary, though the layout should prevent it */
+    overflow-y: auto;  /* Allow vertical scrolling */
+
+
+        }
+        html{
+                width: 100%;
+    /* Remove overflow-x: hidden */
+    overflow-x: unset;  /* Allow horizontal scrolling if necessary, though the layout should prevent it */
+    overflow-y: auto;  /* Allow vertical scrolling */
+        }
+        header {
+            grid-area: header;
+            background: linear-gradient(90deg, #4b79a1 0%, #003366 100%);
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: #fff;
+            width: 100%;
+            position: -webkit-sticky;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        header img {
+            height: 50px;
+            margin-right: 20px;
+        }
+        nav {
+            flex-grow: 1;
+            display: flex;
+            justify-content: space-between;
+        }
+        .nav-item a {
+            color: #fff;
+            text-decoration: none;
+            padding: 10px;
+            display: inline-block;
+            transition: color 0.3s ease;
+        }
+        .nav-item a:hover {
+            color: #ffcc00;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center; /* Ensures items in the nav are vertically aligned */
+            margin-right: 15px;  /* Optional: Adds space between items */
+        }
+
+        .nav-item span, .nav-item a {
+            display: flex;
+            align-items: center; /* Ensures text and icons inside each nav item are vertically aligned */
+        }
+
+        .sidebar-left,
+        .sidebar-right {
+            background-color: #e9ecef;
+            padding: 10px;
+            color: #000;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+        .sidebar-left a,
+        .sidebar-right a {
+            color: #000;
+            text-decoration: none;
+            display: block;
+            padding: 10px 15px;
+            border-radius: 5px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .sidebar-left a:hover,
+        .sidebar-right a:hover,
+        .dropdown-btn:hover  {
+            background-color: #cfd4da;
+            color: #003366;
+        }
+
+        .dropdown-container {
+            display: none;
+            background-color: #f1f1f1;
+            padding-left: 8px;
+        }
+
+        /* Active state for clicked items */
+        .sidebar-left a.active-item,
+        .dropdown-container a.active-item {
+            background-color: #cfd4da; /* Same as hover color */
+            color: #003366;
+        }
+
+        .dropdown-btn {
+            padding: 15px;
+            font-size: 16px;
+            color: black;
+            border: none;
+            background: none;
+            text-align: left;
+            cursor: pointer;
+            outline: none;
+            width: 100%;
+            position: relative;
+        }
+        .dropdown-btn:focus {
+            outline: none; /* Remove the blue border on focus */
+        }
+        .active-menu {
+            background-color: #cfd4da; /* Same color as hover */
+            color: #003366;
+        }
+        .dropdown-btn.active::after {
+            transform: rotate(180deg); /* Rotate the arrow when active */
+        }
+
+        .dropdown-btn::after {
+            content: '\25BC'; /* Unicode for down-pointing triangle */
+            font-size: 12px;
+            position: absolute;
+            right: 20px;
+            top: 18px; /* Adjust this value to align with your text */
+            transform: rotate(0deg);
+        }
+        main {
+    padding: 20px;  /* Consistent padding */
+    margin: 0 auto;  /* Center content */
+     /* max-width: 1200px; Set a max width to prevent too wide a section */
+    width: 100%;  /* Ensure it takes up the full available width */
+    box-sizing: border-box;  /* Include padding in the width calculation */
+    overflow: auto;  /* Allow vertical scrolling if necessary */
+        }
+
+        footer {
+            grid-area: footer;
+            background: linear-gradient(180deg, #003366 0%, #4b79a1 100%);
+            padding: 20px;
+            text-align: center;
+            color: #fff;
+            position: relative; /*  Ensure it scrolls with the content */
+            width: 100%;
+
+        }
+
+        .menu-item {
+            display: none; /* Hide all menu items by default */
+        }
+
+        .menu-item.active {
+            display: block; /* Show only the active menu item */
+        }
+
+        .dropdown-container {
+            display: block; /* Keep dropdowns visible within their menus */
+        }
+/* Media query for larger screens (like your wider screen) */
+@media (min-width: 1600px) {
+    main {
+        padding: 10px; /* Increases the content width on wider screens */
+        max-width: 100%px; /* Allows the text to expand up to 1800px */
+    }
+}
+    #ar-genes-table {
+        max-height: 300px; /* Adjust height as needed */
+        overflow-y: auto; /* Allow vertical scrolling */
+        border: 1px solid #ddd; /* Optional: Add a border */
+        padding: 5px; /* Optional: Add padding */
+        border-radius: 4px; /* Optional: Add rounded corners */
+    }
+
+    </style>
+    <title>
+        {% block title %}
+        Gensurv website
+        {% endblock %}
+    </title>
+    {% load static %}
+</head>
+<body>
+    <header>
+        <div class="d-flex align-items-center">
+            <a href="{% url 'home' %}"><img src="{% static 'gensurvapp/gensurv-removebg-preview.png' %}" alt="Logo"></a>
+            <nav class="nav">
+                <ul class="nav">
+                     <!--li class="nav-item"><a class="nav-link" href="{% url 'home' %}">Home</a></li>-->
+                     <!-- Home link in the header -->
+                    <li class="nav-item"><a class="nav-link" href="{% url 'home' %}" id="header-home-link">Home</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'upload_files' %}">Data Upload</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'search' %}">Search</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}">Analyses</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'help' %}">Help</a></li>
+                    <li class="nav-item"><a class="nav-link"href="{% url 'about' %}">About</a></li>
+                </ul>
+            </nav>
+        </div>
+        <div>
+            <ul class="nav">
+                {% if user.is_authenticated %}
+                    <li class="nav-item">
+                        <span class="nav-link">Welcome, {{ user.username }}!</span>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'logout' %}">Logout</a>
+                    </li>
+                {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'register' %}">Register</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'login' %}">Login</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+
+
+        <form method="get" action="{% url 'search' %}" class="form-inline">
+            <div class="input-group">
+                <div class="input-group-append">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                </div>
+                <input type="text" name="query" class="form-control" placeholder="Search...">
+            </div>
+        </form>
+    </header>
+
+
+<aside class="sidebar-left">
+    <!-- Home Menu -->
+    <div id="home-menu" class="menu-item">
+        <a class="dropdown-btn">Home <i class="fa fa-caret-down"></i></a>
+        <div class="dropdown-container">
+            <a href="{% url 'home' %}#overview">Overview</a>
+            <!--a href="{% url 'home' %}#contents">Contents</a-->
+            <a href="{% url 'home' %}#publications">Publications</a>
+            <a href="{% url 'home' %}#pipelines">Bioinformatics Pipelines</a>
+            <a href="{% url 'home' %}#collaborators">Collaborator Websites</a>
+        </div>
+    </div>
+
+    <!-- Data Upload Menu -->
+     {% if user.is_authenticated %}
+
+    <div id="upload-menu" class="menu-item">
+        <a class="dropdown-btn">Data Upload<i class="fa fa-caret-down"></i></a>
+        <div class="dropdown-container">
+            <a href="{% url 'upload_files' %}#single-upload">Single Sample Upload</a>
+            <a href="{% url 'upload_files' %}#bulk-upload">Bulk Upload</a>
+        </div>
+    </div>
+
+    <!-- View Samples Menu -->
+    <div id="samples-menu" class="menu-item">
+        <a class="dropdown-btn">View Samples <i class="fa fa-caret-down"></i></a>
+        <div class="dropdown-container">
+            <a href="{% url 'todos' %}#sample1">Sample 1</a>
+            <a href="{% url 'todos' %}#sample2">Sample 2</a>
+        </div>
+    </div>
+
+    <!-- Analyses Menu -->
+    <div id="analyses-menu" class="menu-item">
+        <a class="dropdown-btn">Analyses <i class="fa fa-caret-down"></i></a>
+        <div class="dropdown-container">
+            <a href="{% url 'dashboard' %}">Submissions Dashboard</a>
+        </div>
+    </div>
+    <!-- Dynamic Sample Results Menu
+    {% if request.resolver_match.url_name == 'sample_results' %}
+    <div id="sample-menu" class="menu-item active">
+        <a class="dropdown-btn">Sample Results <i class="fa fa-caret-down"></i></a>
+        <div class="dropdown-container">
+            <a href="#">Results Summary: {{ sample_id }}</a>
+            <a href="{% url 'sample_all_results' submission_id sample_id %}">Detailed Results: {{ sample_id }}</a>
+        </div>
+    </div>
+    {% endif %} -->
+    <!-- Dynamic Sample Results Menu -->
+    {% if request.resolver_match.url_name == 'sample_results' or request.resolver_match.url_name == 'sample_all_results' %}
+    <div id="sample-menu" class="menu-item active">
+        <a class="dropdown-btn">Sample Results <i class="fa fa-caret-down"></i></a>
+        <div class="dropdown-container">
+            <a href="{% url 'sample_results' submission_id sample_id %}">Results Summary: {{ sample_id }}</a>
+            <a href="{% url 'sample_all_results' submission_id sample_id %}">Detailed Results: {{ sample_id }}</a>
+        </div>
+    </div>
+    {% endif %}
+
+
+    <!-- Sample Search Menu 
+    <div id="search-menu" class="menu-item">
+        <a class="dropdown-btn">Sample Search<i class="fa fa-caret-down"></i></a>
+        <div class="dropdown-container">
+            <a href="{% url 'search' %}#search1">Search 1</a>
+            <a href="{% url 'search' %}#search2">Search 2</a>
+        </div>
+    </div>-->
+
+
+    <div id="search-menu" class="menu-item">
+        <a class="dropdown-btn">Sample Search<i class="fa fa-caret-down"></i></a>
+        <div class="dropdown-container">
+            <a href="{% url 'dashboard_and_search' %}">Dashboard and Sample Search</a>
+        </div>
+    </div>
+
+
+
+    <!-- Documentation Menu DELETE LATER-->
+    <div id="documentation-menu" class="menu-item">
+        <a class="dropdown-btn">Documentation <i class="fa fa-caret-down"></i></a>
+        <div class="dropdown-container">
+            <a href="{% url 'todos' %}#doc1">Documentation 1</a>
+            <a href="{% url 'todos' %}#doc2">Documentation 2</a>
+        </div>
+    </div>
+     <!-- Help Menu -->
+    <div id="help-menu" class="menu-item">
+        <a class="dropdown-btn">Help<i class="fa fa-caret-down"></i></a>
+        <div class="dropdown-container">
+            <a href="{% url 'help' %}#sample-ngs">NGS raw data</a>
+            <a href="{% url 'help' %}#sample-metadata">Metadata</a>
+            <a href="{% url 'help' %}#antibiotics-testing">Antibiotics Testing data</a>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- About Menu -->
+    <div id="about-menu" class="menu-item">
+        <a class="dropdown-btn">About <i class="fa fa-caret-down"></i></a>
+        <div class="dropdown-container">
+            <a href="{% url 'about' %}#publications-ukt">Publications UKT</a>
+            <a href="{% url 'about' %}#recent-papers">Recent Papers</a>
+            <a href="{% url 'about' %}#team">Our Team</a>
+            <a href="{% url 'about' %}#mission">Mission Statement</a>
+        </div>
+    </div>
+</aside>
+
+
+    <main>
+        {% block content %}
+        {% endblock %}
+        {% block search_results %}
+        {% endblock %}
+    </main>
+
+    <aside class="sidebar-right">
+        <!-- Right sidebar content here -->
+    </aside>
+
+    <footer>
+        <div class="footer-container">
+            <div class="footer-bottom">
+                <p>&copy; 2024 University Hospital and Faculty of Medicine Tübingen</p>
+                <p><a href="{% url 'impressum' %}">Impressum</a> | <a href="{% url 'contact' %}">Contact</a> | <a href="{% url 'datenschutz' %}">Privacy Policy</a> | <a href="{% url 'accessibility' %}">Accessibility</a></p>
+            </div>
+        </div>
+    </footer>
+
+<script>
+
+document.addEventListener('DOMContentLoaded', function() {
+    var dropdowns = document.querySelectorAll('.dropdown-btn');
+
+    dropdowns.forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            // Toggle the active class on the clicked dropdown button
+            this.classList.toggle('active');
+            // Toggle the visibility of the corresponding dropdown container
+            var dropdownContent = this.nextElementSibling;
+            if (dropdownContent.style.display === 'block') {
+                dropdownContent.style.display = 'none';
+            } else {
+                dropdownContent.style.display = 'block';
+            }
+        });
+    });
+
+    var allMenuItems = document.querySelectorAll('.menu-item');
+
+    // Function to hide all menus and show only the selected one
+    function showMenu(menuId) {
+        allMenuItems.forEach(function(menu) {
+            menu.classList.remove('active'); // Hide all menus
+        });
+        if (menuId) {
+            var selectedMenu = document.getElementById(menuId);
+            if (selectedMenu) {
+                selectedMenu.classList.add('active'); // Show the selected menu
+            }
+        }
+    }
+
+    // Attach event listeners to the top bar links
+    document.querySelectorAll('.nav-link').forEach(function(link) {
+        link.addEventListener("click", function(e) {
+            var href = this.getAttribute("href");
+
+            if (href.includes("/home/")) {
+                showMenu('home-menu');
+            } else if (href.includes("/upload/")) {
+                showMenu('upload-menu');
+            } else if (href.includes("/todos/") && this.innerText.includes("Samples")) {
+                showMenu('samples-menu');
+            } else if (href.includes("/dashboard/")) {
+                showMenu('analyses-menu');
+            } else if (href.includes("/search/")) {
+                showMenu('search-menu');
+            } else if (href.includes("/todos/") && this.innerText.includes("Documentation")) {
+                showMenu('documentation-menu');
+            } else if (href.includes("/about/")) {
+                showMenu('about-menu');
+            } else if (href.match(/\/submission\/\d+\/sample\/[^/]+/)) { // Match the sample_results pattern
+                showMenu('sample-menu');
+            } else if (href.includes("/register/") || href.includes("/login/")) {
+                showMenu(null); // Hide all menus
+            }
+        });
+    });
+
+    // Smooth scroll for internal links (anchors)
+    document.querySelectorAll('.dropdown-container a').forEach(function(link) {
+        link.addEventListener('click', function(e) {
+            var targetId = this.getAttribute('href').substring(1); // Remove the '#'
+            var targetElement = document.getElementById(targetId);
+            if (targetElement) {
+                window.scrollTo({
+                    top: targetElement.offsetTop - 100, // Adjust for header height
+                    behavior: 'smooth' // Smooth scrolling
+                });
+            }
+        });
+    });
+
+    // Show the correct menu on page load based on the current URL
+    var currentUrl = window.location.href;
+    if (currentUrl.includes("/home/")) {
+        showMenu('home-menu');
+    } else if (currentUrl.includes("/upload/")) {
+        showMenu('upload-menu');
+    } else if (currentUrl.includes("/todos/") && currentUrl.includes("Samples")) {
+        showMenu('samples-menu');
+    } else if (currentUrl.includes("/dashboard/")) {
+        showMenu('analyses-menu');
+    } else if (currentUrl.includes("/search/")) {
+        showMenu('search-menu');
+    } else if (currentUrl.includes("/help/")) {
+        showMenu('help-menu');
+    } else if (currentUrl.includes("/about/")) {
+        showMenu('about-menu');
+    } else if (currentUrl.match(/\/submission\/\d+\/sample\/[^/]+/)) { // Match the sample_results pattern
+        showMenu('sample-menu');
+    }else if (currentUrl.includes("/register/") || currentUrl.includes("/login/") || currentUrl.includes("/logout/")) {
+        showMenu(null); // Hide all menus
+    } else {
+        // Default to Home menu if no match is found
+        showMenu('home-menu');
+    }
+
+    // Auto-scroll to sections based on URL hash (for page reloads with anchor links)
+    if (currentUrl.includes("#bulk-upload")) {
+        document.querySelector("#bulk-upload").scrollIntoView({ behavior: 'smooth' });
+    } else if (currentUrl.includes("#single-upload")) {
+        document.querySelector("#single-upload").scrollIntoView({ behavior: 'smooth' });
+    } else if (currentUrl.includes("#sample-metadata")) {
+        document.querySelector("#sample-metadata").scrollIntoView({ behavior: 'smooth' });
+    } else if (currentUrl.includes("#antibiotics-testing")) {
+        document.querySelector("#antibiotics-testing").scrollIntoView({ behavior: 'smooth' });
+    }
+});
+
+</script>
+
+</body>
+</html>

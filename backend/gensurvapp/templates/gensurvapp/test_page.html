@@ -1,0 +1,20 @@
+{% extends "gensurvapp/base.html" %}
+
+{% block content %}
+<h2>Test Page for QC Report</h2>
+
+<!-- Link to load the QC Report -->
+<ul>
+    <li>
+        <a href="#"
+           onclick="loadIframe('{{ request.scheme }}://{{ request.get_host }}{{ bactopia_result.directory_path }}/{{ sample_id }}.fastq.gz/main/qc/summary/{{ sample_id }}.fastq.gz-final_NanoPlot-report.html'); return false;">
+           QC Report
+        </a>
+    </li>
+</ul>
+
+<!-- Iframe to display the QC Report -->
+<div id="iframe-container" style="margin-top: 20px;">
+    <iframe id="results-iframe" src="" style="width: 100%; height: 600px; border: none;"></iframe>
+</div>
+{% endblock %}

@@ -1,0 +1,4 @@
+Sample Identifier,Isolate Species,Subtype,Collection Date,Sampling Strategy,Sample Source,Collection Method,City,Postal Code,County,State,Country,Lab Identifier,Sex,Age Group,Country of Putative Exposure,Sequencing Platform,Sequencing Type,Library Preparation Kit,Sequencing Chemistry
+Sample_001,562,SerovarA,15-01-2023,surveillance,human clinical (hospital),swab,New York,10001,New York County,New York,USA,Lab_001,male,adult,USA,Illumina,whole genome sequencing,,NextSeq Chemistry
+Sample_002,28901,SerovarB,20-02-2023,suspected outbreak,animal,blood culture,Los Angeles,90001,Los Angeles County,California,USA,Lab_002,female,adult,USA,PacBio,whole genome sequencing,SMRTbell Express Kit 2.0,Sequel II Chemistry
+Sample_003,28901,SerovarB,20-02-2023,suspected outbreak,animal,blood culture,Los Angeles,90001,Los Angeles County,California,USA,Lab_002,female,adult,USA,PacBio,whole genome sequencing,SMRTbell Express Kit 2.0,Sequel II Chemistry

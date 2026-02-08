@@ -1,0 +1,32 @@
+<!-- gensurvapp/templates/gensurvapp/search.html -->
+{% extends "gensurvapp/base.html" %}
+
+{% block content %}
+<div class="text-center mb-5">
+    <h1 class="mb-4">Search Results</h1>
+    <form method="get" action="{% url 'search' %}" class="d-flex justify-content-center align-items-center gap-2" style="max-width: 600px; margin: 0 auto;">
+        <input type="text" name="query" value="{{ query }}" placeholder="Search..." class="form-control form-control-lg" style="flex: 1;">
+        <button type="submit" class="btn btn-primary btn-lg" style="padding: 0.5rem 1.5rem;">
+            <i class="fas fa-search"></i>
+        </button>
+    </form>
+</div>
+
+{% if query %}
+    <h2>Results for "{{ query }}":</h2>
+    <ul>
+    {% for result in results %}
+        <li>
+            <a href="{% url 'index' result.name %}">{{ result.name }}</a>
+            <ul>
+                {% for item in result.item_set.all %}
+                    <li>{{ item.text }}</li>
+                {% endfor %}
+            </ul>
+        </li>
+    {% empty %}
+        <li>No results found.</li>
+    {% endfor %}
+    </ul>
+{% endif %}
+{% endblock %}

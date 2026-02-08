@@ -1,0 +1,194 @@
+{% extends "gensurvapp/base.html" %}
+
+{% block title %}
+BACTERIAL AND VIRAL BIOINFORMATICS RESOURCE CENTER
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+<!-- <div class="container mt-5"> -->
+
+    <!-- Overview Section -->
+    <div class="text-center mb-4">
+        <h2>GENSURV BIOINFORMATICS RESOURCE CENTER</h2>
+    </div>
+
+    <div class="mb-5">
+        <h3 id="overview">Gensurv Overview</h3>
+        <p>
+            The Genomic pathogen surveillance in German initiative, also known as "GenSurv," is a public health initiative aimed at monitoring and tracking the spread of infectious diseases in Germany using genomic sequencing technology. The goal of GenSurv is to detect and identify emerging pathogens and outbreaks early, which can help public health officials respond more quickly to contain and control the spread of disease.
+        </p>
+        <p>
+            GenSurv involves sequencing the genomes of infectious agents, such as viruses and bacteria, found in patient samples collected from hospitals, clinics, and other healthcare facilities across Germany. The genomic data is then analyzed to identify patterns of transmission and genetic changes in the pathogens over time. This information can help researchers and public health officials understand how the disease is spreading, identify potential sources of infection, and develop strategies to prevent and control outbreaks.
+        </p>
+        <p>
+            Overall, the goal of GenSurv is to improve public health preparedness and response to infectious disease outbreaks in Germany by using genomic sequencing technology to track and monitor the spread of pathogens in real-time.
+        </p>
+        <p>
+            GenSurv is a collaborative effort between several institutions and organizations in Germany, including the Robert Koch Institute (RKI), the National Reference Center for Tropical Pathogens at the Bernhard Nocht Institute for Tropical Medicine (BNITM), and several university and hospital partners.
+        </p>
+    </div>
+
+    <!-- NUM Section -->
+    <div class="mb-5">
+        <h3  id="num">GenSurv and the Network of University Medicine (NUM)</h3>
+        <p>
+            GenSurv is part of the Network of University Medicine (NUM).
+        </p>
+        <p>
+            Within the NUM, all 36 German university hospitals are, for the first time, jointly carrying out large-scale interdisciplinary research projects. The network was launched in 2020 to coordinate COVID-19 research across all university hospitals. In the future, the NUM will research further diseases and involve as many partners as possible from medical science, health care, and society.
+        </p>
+        <p>
+            The NUM focuses in particular on clinical research, the results of which directly support patient care. One major area of NUM activity is the joint collection and use of complex medical research data. To this end, the network has set up research infrastructures with which it is helping to better prepare the German healthcare system for future pandemics and crises.
+        </p>
+        <p>
+            The NUM is funded by the German Federal Ministries of Education and Research and is coordinated by "Charité – Universitätsmedizin Berlin."
+        </p>
+        <p>
+            More information can be found at: <a href="https://www.netzwerk-universitaetsmedizin.de" target="_blank">https://www.netzwerk-universitaetsmedizin.de</a>.
+        </p>
+    </div>
+
+    <!-- Content Section -->
+    <!--div class="mb-5" id="contents">
+        <h3>Content</h3>
+        <ul>
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'upload_files' %}">Data Upload</a></li>
+            <li><a href="{% url 'todos' %}">View Samples</a></li>
+            <li><a href="{% url 'create' %}">Analyses</a></li>
+            <li><a href="{% url 'search' %}">Sample Search</a></li>
+            <li><a href="{% url 'todos' %}">Documentation</a></li>
+        </ul>
+    </div-->
+
+    <!-- Publications Section -->
+    <div class="card mb-5" id="publications">
+        <div class="card-header">Publications</div>
+        <div class="card-body">
+            <div id="publication-preview" class="mb-3 small-text">
+                <!-- Previews will be displayed here -->
+            </div>
+            <ul id="publication-list" class="d-none">
+                <li data-preview="<h6>Publications </h6><p> Analysis of a long-term outbreak of XDR Pseudomonas aeruginosa: a molecular epidemiological study. Willmann, M. et al. 2021</p><a href='/research/#research' target='_blank'>Read more</a>"> Analysis of a long-term outbreak of XDR Pseudomonas aeruginosa: a molecular epidemiological study.</li>
+                <li data-preview="<h6>Related Publications</h6><p>The genomic epidemiology of invasive pneumococcal disease in the United Kingdom prior to the introduction of the 13-valent pneumococcal conjugate vaccine. Miralles, M. T. et al. (2021).</p><a href='/about/#recent-papers' target='_blank'>Read more</a>">The genomic epidemiology of invasive pneumococcal disease in the United Kingdom prior to the introduction of the 13-valent pneumococcal conjugate vaccine</li>
+            </ul>
+            <div class="d-flex justify-content-center mt-3">
+                <div class="pagination" id="publication-pagination">
+                    <span class="dot" onclick="showPublicationPreview(0)"></span>
+                    <span class="dot" onclick="showPublicationPreview(1)"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pipelines Section -->
+    <div class="card mb-5" id="pipelines">
+        <div class="card-header">Bioinformatics Pipelines</div>
+        <div class="card-body small-text">
+            <div id="pipeline-preview" class="mb-3">
+                <!-- Previews will be displayed here -->
+            </div>
+            <ul id="pipeline-list" class="d-none">
+                <li data-preview="<h6>Bactopia</h6><p>Bactopia is a flexible bioinformatics pipeline for complete analysis of bacterial genomes.</p><a href='https://bactopia.github.io/latest/' target='_blank'>Read more</a>">Viralrecon</li>
+                <li data-preview="<h6>Viralrecon</h6><p>A bioinformatics pipeline for viral genome sequencing data.</p><a href='https://nf-co.re/viralrecon' target='_blank'>Read more</a>">Viralrecon</li>
+                <li data-preview="<h6>MAG</h6><p>A pipeline for metagenome-assembled genomes.</p><a href='https://nf-co.re/mag' target='_blank'>Read more</a>">MAG</li>
+                <li data-preview="<h6>plasmIDent</h6><p>A tool for identifying plasmids from sequencing data.</p><a href='https://github.com/imgag/plasmIDent' target='_blank'>Read more</a>">plasmIDent</li>
+                <li data-preview="<h6>COVID-19</h6><p>A pipeline for analyzing COVID-19 sequencing data.</p><a href='https://github.com/imgag/COVID-19' target='_blank'>Read more</a>">COVID-19</li>
+                <li data-preview="<h6>VIPR</h6><p>A viral pathogen identification and sequencing pipeline.</p><a href='https://nf-co.re/vipr' target='_blank'>Read more</a>">VIPR</li>
+            </ul>
+            <div class="d-flex justify-content-center mt-3">
+                <div class="pagination" id="pipeline-pagination">
+                    <span class="dot" onclick="showPipelinePreview(0)"></span>
+                    <span class="dot" onclick="showPipelinePreview(1)"></span>
+                    <span class="dot" onclick="showPipelinePreview(2)"></span>
+                    <span class="dot" onclick="showPipelinePreview(3)"></span>
+                    <span class="dot" onclick="showPipelinePreview(4)"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Collaborators Section -->
+    <div class="card mb-5" id="collaborators">
+        <div class="card-header">Collaborator Websites</div>
+        <div class="card-body small-text">
+            <div id="website-preview" class="mb-3">
+                <!-- Previews will be displayed here -->
+            </div>
+            <ul id="website-list" class="d-none">
+                <li data-preview="<h6>NUM Genomische Surveillance</h6><p>A project focused on genomic surveillance of infectious diseases in Germany.</p><a href='https://num-genomische-surveillance.de/' target='_blank'>Read more</a>">NUM Genomische Surveillance</li>
+                <li data-preview="<h6>Netzwerk Universitätsmedizin</h6><p>Collaborative research to improve healthcare and patient outcomes.</p><a href='https://www.netzwerk-universitaetsmedizin.de/en/projects/gensurv' target='_blank'>Read more</a>">Netzwerk Universitätsmedizin</li>
+                <li data-preview="<h6>UMG Forschung Corona</h6><p>Research initiatives on COVID-19 at UMG.</p><a href='https://www.umg.eu/en/forschung/corona/num/gensurv/' target='_blank'>Read more</a>">UMG Forschung Corona</li>
+                <li data-preview="<h6>Charité NUM Projekte</h6><p>Ongoing research projects at Charité related to NUM.</p><a href='https://num.charite.de/teilprojekte/laufende_projekte/gensurv/' target='_blank'>Read more</a>">Charité NUM Projekte</li>
+                <li data-preview="<h6>UMG Forschung Labore</h6><p>Laboratory research projects at UMG.</p><a href='https://hyg-infekt.umg.eu/forschung-labore/projekte/num3/' target='_blank'>Read more</a>">UMG Forschung Labore</li>
+            </ul>
+            <div class="d-flex justify-content-center mt-3">
+                <div class="pagination" id="community-news-pagination">
+                    <span class="dot" onclick="showPreview(0)"></span>
+                    <span class="dot" onclick="showPreview(1)"></span>
+                    <span class="dot" onclick="showPreview(2)"></span>
+                    <span class="dot" onclick="showPreview(3)"></span>
+                    <span class="dot" onclick="showPreview(4)"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function showPublicationPreview(index) {
+        const publicationList = document.querySelectorAll('#publication-list li');
+        const previewContainer = document.getElementById('publication-preview');
+        const selectedPublicationPreview = publicationList[index].getAttribute('data-preview');
+        previewContainer.innerHTML = selectedPublicationPreview;
+
+        // Update dot styles to indicate the active preview
+        document.querySelectorAll('#publication-pagination .dot').forEach((dot, i) => {
+            if (i === index) {
+                dot.style.backgroundColor = '#717171';
+            } else {
+                dot.style.backgroundColor = '#ddd';
+            }
+        });
+    }
+
+    function showPipelinePreview(index) {
+        const pipelineList = document.querySelectorAll('#pipeline-list li');
+        const previewContainer = document.getElementById('pipeline-preview');
+        const selectedPipelinePreview = pipelineList[index].getAttribute('data-preview');
+        previewContainer.innerHTML = selectedPipelinePreview;
+
+        // Update dot styles to indicate the active preview
+        document.querySelectorAll('#pipeline-pagination .dot').forEach((dot, i) => {
+            if (i === index) {
+                dot.style.backgroundColor = '#717171';
+            } else {
+                dot.style.backgroundColor = '#ddd';
+            }
+        });
+    }
+
+    function showPreview(index) {
+        const websiteList = document.querySelectorAll('#website-list li');
+        const previewContainer = document.getElementById('website-preview');
+        const selectedWebsitePreview = websiteList[index].getAttribute('data-preview');
+        previewContainer.innerHTML = selectedWebsitePreview;
+
+        // Update dot styles to indicate the active preview
+        document.querySelectorAll('#community-news-pagination .dot').forEach((dot, i) => {
+            if (i === index) {
+                dot.style.backgroundColor = '#717171';
+            } else {
+                dot.style.backgroundColor = '#ddd';
+            }
+        });
+    }
+
+    // Initialize with the first preview for all sections
+    showPublicationPreview(0);
+    showPipelinePreview(0);
+    showPreview(0);
+</script>
+
+{% endblock %}

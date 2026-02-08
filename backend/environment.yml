@@ -1,0 +1,13 @@
+name: gensurv
+channels: [conda-forge]
+dependencies:
+  - python=3.12
+  - pip
+  - libffi
+  - libiconv
+  - icu
+  - openssl
+  - postgresql  # cli libs, helpful for local
+  - pip:
+      - -r requirements.pip.txt
+

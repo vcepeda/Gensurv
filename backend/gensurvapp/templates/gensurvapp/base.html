@@ -1,0 +1,506 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" />
+
+  <style>
+    :root{
+      --nav-h: 70px;          
+      --right-w: 250px;
+    }
+
+    html, body {
+      width: 100%;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    body {
+        padding-top: var(--nav-h);
+        /* padding-right: var(--right-w); */
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Fixed header/nav */
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1050;
+      width: 100%;
+      padding: 0;
+    }
+
+    /* Custom navbar styling */
+    header .navbar {
+      background: linear-gradient(90deg, #4b79a1 0%, #003366 100%) !important;
+      padding: 10px 20px;
+    }
+    header .navbar-brand img { height: 50px; }
+    header .nav-link {
+      color: #fff !important;
+      padding: 10px 15px !important;
+      transition: color 0.3s ease;
+    }
+    header .nav-link:hover { color: #ffcc00 !important; }
+    header .navbar-toggler { border-color: rgba(255,255,255,.5); }
+    header .navbar-toggler-icon {
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.85%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+    }
+    header .btn-outline-primary { color: #fff; border-color: #fff; }
+    header .btn-outline-primary:hover { background-color: #fff; color: #003366; }
+    header .form-control { border: 1px solid rgba(255,255,255,.5); }
+    header .form-control:focus {
+      border-color: #fff;
+      box-shadow: 0 0 0 0.2rem rgba(255,255,255,.25);
+    }
+    @media (max-width: 991px) {
+      header .navbar-nav { align-items: flex-start !important; }
+    }
+
+    /* MAIN: container-like spacing */
+    main {
+        grid-area: main;
+        padding: 0.75rem 1rem 2rem;  /* top right/left bottom */
+        margin-top: 0;              /* ensure no extra margin */
+        flex: 1;
+    }
+
+        /* Also remove any default top margin on first heading inside main */
+    main > :first-child {
+        margin-top: 0 !important;
+    }
+    main h1:first-child,
+    main h2:first-child {
+        margin-top: 0;
+    }
+
+
+    /* Right sidebar: sticky (in flow) so footer aligns properly */
+    .sidebar-right {
+        position: fixed;
+        right: 0;
+        top: var(--nav-h);
+        width: var(--right-w);
+        height: calc(100vh - var(--nav-h));
+        overflow-y: auto;
+        background: #fff;
+        border-left: 1px solid #dee2e6;
+        padding: 0.75rem 1rem;
+        box-sizing: border-box;
+    }
+
+    /* Sidebar header/nav styling */
+    .sidebar-header {
+      background: linear-gradient(135deg, #4b79a1 0%, #003366 100%);
+      color: white;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .sidebar-header:hover {
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+      transform: translateY(-1px);
+    }
+    .sidebar-header h5 {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .sidebar-toggle-icon { transition: transform 0.3s ease; display: none; }
+
+    .sidebar-nav { list-style: none; padding: 0; margin: 0; }
+    .sidebar-nav li { margin-bottom: 0.5rem; }
+    .sidebar-nav a {
+      display: block;
+      padding: 0.5rem 0.75rem;
+      color: #495057;
+      text-decoration: none;
+      border-left: 3px solid transparent;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      font-size: 0.9rem;
+    }
+    .sidebar-nav a:hover {
+      background-color: #f8f9fa;
+      color: #003366;
+      border-left-color: #4b79a1;
+      padding-left: 1rem;
+    }
+    .sidebar-nav a.active {
+      background-color: #e7f1ff;
+      color: #003366;
+      border-left-color: #003366;
+      font-weight: 500;
+    }
+    .sidebar-nav ul { list-style: none; padding-left: 1.25rem; margin-top: 0.5rem; }
+    .sidebar-nav ul a { font-size: 0.85rem; padding: 0.4rem 0.75rem; }
+
+    /* Footer */
+    footer {
+        width: 100%;
+        box-sizing: border-box;
+        background: linear-gradient(90deg, #4b79a1 0%, #003366 100%);
+        color: white;
+        padding: 2.5rem 0;
+        margin-top: auto;
+    }
+    
+    footer .footer-copy,
+    footer .footer-links {
+        color: white;
+    }
+    
+    footer .footer-links a {
+        color: white;
+        text-decoration: none;
+        transition: color 0.3s ease;
+    }
+    
+    footer .footer-links a:hover {
+        color: #ffcc00;
+    }
+
+
+    /* Mobile responsive */
+    /* @media (max-width: 991px) {
+      body {
+        grid-template-areas:
+          "main"
+          "footer";
+        grid-template-columns: 1fr;
+      }
+      .sidebar-right { display: none; }
+      main { padding: 1.25rem 1rem; }
+
+      .sidebar-toggle-icon { display: block; }
+      .sidebar-nav { max-height: 0; overflow: hidden; transition: max-height 0.3s ease; }
+      .sidebar-nav.show { max-height: 70vh; overflow-y: auto; padding-bottom: 1rem; }
+      .sidebar-header[aria-expanded="true"] .sidebar-toggle-icon { transform: rotate(180deg); }
+    } */
+     @media (max-width: 991px) {
+        body { padding-right: 0; }
+        .sidebar-right { display: none; }
+    }
+
+    /* Misc content spacing */
+    #ar-genes-table {
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      padding: 5px;
+      border-radius: 4px;
+    }
+    h2 { margin-top: 40px; margin-bottom: 20px; }
+    h3 { margin-top: 30px; margin-bottom: 15px; }
+    p, ul, table { margin-bottom: 20px; }
+  </style>
+
+  <title>
+    {% block title %}Gensurv website{% endblock %}
+  </title>
+</head>
+
+<body>
+
+{% if maintenance_message %}
+  <!-- Maintenance Banner -->
+  <div class="alert alert-warning text-center fixed-top"
+       style="top: var(--nav-h); z-index: 1100; width: 100%; padding: 10px; margin: 0;">
+    <strong>Notice:</strong> {{ maintenance_message }}
+  </div>
+  <style>
+    body { padding-top: calc(var(--nav-h) + 50px); }
+  </style>
+
+{% elif request.resolver_match and request.resolver_match.url_name == "help" and help_banner_message %}
+  <!-- Help Banner -->
+  <div class="alert alert-info text-center fixed-top"
+       style="top: var(--nav-h); z-index: 1100; width: 100%; padding: 10px; margin: 0;">
+    <strong>Notice:</strong> {{ help_banner_message }}
+  </div>
+  <style>
+    body { padding-top: calc(var(--nav-h) + 50px); }
+  </style>
+{% endif %}
+
+<header>
+  <nav class="navbar navbar-expand-xl navbar-dark">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="{% url 'home' %}">
+        <img src="{% static 'gensurvapp/gensurv-removebg-preview.png' %}" alt="GenSurv Logo">
+      </a>
+
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+              data-bs-target="#navbarSupportedContent"
+              aria-controls="navbarSupportedContent"
+              aria-expanded="false"
+              aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <ul class="navbar-nav me-auto mb-0 align-items-center">
+          <li class="nav-item"><a class="nav-link" href="{% url 'home' %}" id="header-home-link">Home</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'upload_files' %}">Data Upload</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}">Analyses</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'search' %}">Search</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'help' %}">Help</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'about' %}">About</a></li>
+        </ul>
+
+        <ul class="navbar-nav mb-0 me-3 align-items-center">
+          {% if user.is_authenticated %}
+            <li class="nav-item"><span class="nav-link">Welcome, {{ user.username }}!</span></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'logout' %}">Logout</a></li>
+          {% else %}
+            <li class="nav-item"><a class="nav-link" href="{% url 'register' %}">Register</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">Login</a></li>
+          {% endif %}
+        </ul>
+
+        <form method="get" action="{% url 'search' %}" class="d-flex align-items-center mb-0" role="search">
+          <input class="form-control me-2" type="search" name="query" placeholder="Search..."
+                 aria-label="Search" style="width: 200px; height: 38px;" />
+          <button class="btn btn-outline-primary" type="submit" style="height: 38px; padding: 0 12px;">
+            <i class="fas fa-search"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+  </nav>
+</header>
+
+<main class="container">
+  {% block content %}{% endblock %}
+  {% block search_results %}{% endblock %}
+</main>
+
+<!-- <aside class="sidebar-right">
+  <div class="sidebar-header" role="button" tabindex="0" aria-expanded="false" id="sidebarHeader">
+    <h5><i class="bi bi-list-ul"></i> On this page</h5>
+    <i class="bi bi-chevron-down sidebar-toggle-icon"></i>
+  </div>
+
+  <nav class="sidebar-nav" id="sidebarNav">
+    <li id="home-menu" class="menu-item">
+      <a href="{% url 'home' %}#overview" class="d-flex align-items-center">
+        <i class="bi bi-house-door me-2"></i> GenSurv Overview
+      </a>
+      <ul>
+        <li><a href="{% url 'home' %}#num">Network of University Medicine</a></li>
+        <li><a href="{% url 'home' %}#publications">Publications</a></li>
+        <li><a href="{% url 'home' %}#pipelines">Bioinformatics Pipelines</a></li>
+        <li><a href="{% url 'home' %}#collaborators">Collaborator Websites</a></li>
+      </ul>
+    </li>
+
+    {% if user.is_authenticated %}
+      <li id="upload-menu" class="menu-item">
+        <a href="{% url 'upload_files' %}" class="d-flex align-items-center">
+          <i class="bi bi-cloud-upload me-2"></i> Data Upload
+        </a>
+        <ul>
+          <li><a href="{% url 'upload_files' %}#single-upload">Single Sample Upload</a></li>
+          <li><a href="{% url 'upload_files' %}#bulk-upload">Bulk Upload</a></li>
+        </ul>
+      </li>
+
+      <li id="samples-menu" class="menu-item">
+        <a href="{% url 'todos' %}" class="d-flex align-items-center">
+          <i class="bi bi-file-earmark-text me-2"></i> View Samples
+        </a>
+        <ul>
+          <li><a href="{% url 'todos' %}#sample1">Sample 1</a></li>
+          <li><a href="{% url 'todos' %}#sample2">Sample 2</a></li>
+        </ul>
+      </li>
+
+      <li id="analyses-menu" class="menu-item">
+        <a href="{% url 'dashboard' %}" class="d-flex align-items-center">
+          <i class="bi bi-graph-up me-2"></i> Analyses
+        </a>
+        <ul>
+          <li><a href="{% url 'dashboard' %}">Submissions Dashboard</a></li>
+        </ul>
+      </li>
+    {% endif %}
+
+    {% if request.resolver_match and request.resolver_match.url_name == 'sample_results' or request.resolver_match.url_name == 'sample_all_results' %}
+      <li id="sample-menu" class="menu-item active">
+        <a href="{% url 'sample_results' submission_id sample_id %}" class="d-flex align-items-center">
+          <i class="bi bi-clipboard-data me-2"></i> Sample Results
+        </a>
+        <ul>
+          <li><a href="{% url 'sample_results' submission_id sample_id %}#bac">Basic Bacterial Analyses</a></li>
+          <li><a href="{% url 'sample_results' submission_id sample_id %}#plas">Plasmid-Related Analyses</a></li>
+          <li><a href="{% url 'sample_all_results' submission_id sample_id %}">Detailed Results</a></li>
+        </ul>
+      </li>
+    {% endif %}
+
+    <li id="search-menu" class="menu-item">
+      <a href="{% url 'dashboard_and_search' %}" class="d-flex align-items-center">
+        <i class="bi bi-search me-2"></i> Sample Search
+      </a>
+    </li>
+
+    <li id="help-menu" class="menu-item">
+      <a href="{% url 'help' %}" class="d-flex align-items-center">
+        <i class="bi bi-question-circle me-2"></i> Help
+      </a>
+      <ul>
+        <li><a href="{% url 'help' %}#single-upload">Single Sample Upload</a></li>
+        <li><a href="{% url 'help' %}#bulk-upload">Bulk Upload</a></li>
+        <li><a href="{% url 'help' %}#details">Detailed Metadata Information</a></li>
+      </ul>
+    </li>
+
+    <li id="about-menu" class="menu-item">
+      <a href="{% url 'about' %}" class="d-flex align-items-center">
+        <i class="bi bi-info-circle me-2"></i> About
+      </a>
+      <ul>
+        <li><a href="{% url 'about' %}#team">Our Team</a></li>
+        <li><a href="{% url 'about' %}#mission">Mission Statement</a></li>
+      </ul>
+    </li>
+
+    <li id="research-menu" class="menu-item">
+      <a href="{% url 'research' %}" class="d-flex align-items-center">
+        <i class="bi bi-journal-medical me-2"></i> Research
+      </a>
+      <ul>
+        <li><a href="{% url 'research' %}#pub">Our Publications</a></li>
+        <li><a href="{% url 'research' %}#rela">Related Publications</a></li>
+      </ul>
+    </li>
+  </nav>
+</aside> -->
+
+<footer class="site-footer">
+  <div class="container">
+    <div class="row align-items-center justify-content-between">
+      <!-- Left logos -->
+      <div class="col-md-4 text-center text-md-start mb-3 mb-md-0">
+        <img src="{% static 'gensurvapp/NUM_u_BMBF_Querformat_en.jpg' %}"
+             alt="NUM / BMBF"
+             class="img-fluid"
+             style="max-height: 120px;">
+      </div>
+
+      <!-- Right text + links -->
+      <div class="col-md-7 text-center text-md-end">
+        <p class="footer-copy mb-2">
+          © 2024 University Hospital and Faculty of Medicine Tübingen
+        </p>
+
+        <p class="footer-links mb-0">
+          <a href="{% url 'impressum' %}">Impressum</a> |
+          <a href="{% url 'contact' %}">Contact</a> |
+          <a href="{% url 'datenschutz' %}">Privacy Policy</a> |
+          <a href="{% url 'accessibility' %}">Accessibility</a>
+        </p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const sidebarHeader = document.getElementById('sidebarHeader');
+  const sidebarNav = document.getElementById('sidebarNav');
+  const allMenuItems = document.querySelectorAll('.menu-item');
+
+  // Mobile toggle
+  if (sidebarHeader) {
+    sidebarHeader.addEventListener('click', function() {
+      const isExpanded = this.getAttribute('aria-expanded') === 'true';
+      this.setAttribute('aria-expanded', !isExpanded);
+      sidebarNav.classList.toggle('show');
+    });
+  }
+
+  function showMenu(menuId) {
+    allMenuItems.forEach(menu => menu.style.display = 'none');
+    if (menuId) {
+      const selectedMenu = document.getElementById(menuId);
+      if (selectedMenu) selectedMenu.style.display = 'block';
+    }
+  }
+
+  // Highlight active link on scroll
+  const observerOptions = { root: null, rootMargin: '-20% 0px -35% 0px', threshold: 0 };
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const id = entry.target.getAttribute('id');
+        document.querySelectorAll('.sidebar-nav a').forEach(link => {
+          link.classList.remove('active');
+          const href = link.getAttribute('href') || '';
+          if (href.includes('#' + id)) link.classList.add('active');
+        });
+      }
+    });
+  }, observerOptions);
+
+  document.querySelectorAll('main [id]').forEach(section => observer.observe(section));
+
+  // Smooth scroll for anchors
+  document.querySelectorAll('.sidebar-nav a[href*="#"]').forEach(link => {
+    link.addEventListener('click', function(e) {
+      const href = this.getAttribute('href');
+      const targetId = href.split('#')[1];
+      const targetElement = document.getElementById(targetId);
+
+      if (targetElement) {
+        e.preventDefault();
+        window.scrollTo({ top: targetElement.offsetTop - 100, behavior: 'smooth' });
+
+        if (window.innerWidth < 992) {
+          sidebarNav.classList.remove('show');
+          sidebarHeader.setAttribute('aria-expanded', 'false');
+        }
+      }
+    });
+  });
+
+  // Choose menu by URL
+  const currentUrl = window.location.href;
+  if (currentUrl.includes("/home/")) showMenu('home-menu');
+  else if (currentUrl.includes("/upload/")) showMenu('upload-menu');
+  else if (currentUrl.includes("/dashboard/")) showMenu('analyses-menu');
+  else if (currentUrl.includes("/search/") || currentUrl.includes("/dashboard_and_search/")) showMenu('search-menu');
+  else if (currentUrl.includes("/help/")) showMenu('help-menu');
+  else if (currentUrl.includes("/about/")) showMenu('about-menu');
+  else if (currentUrl.includes("/research/")) showMenu('research-menu');
+  else if (currentUrl.match(/\/submission\/\d+\/sample\/[^/]+/)) showMenu('sample-menu');
+  else showMenu('home-menu');
+});
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

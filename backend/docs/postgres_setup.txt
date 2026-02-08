@@ -1,0 +1,23 @@
+
+
+WSGI_APPLICATION = 'gensurv_project.wsgi.application'
+
+
+# Database
+# https://docs.djangoproject.com/en/5.0/ref/settings/#databases
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'gensurv_db',
+        'USER': 'gensurv_user',
+        'PASSWORD': 'your_password',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
+}
+
+CREATE USER gensurv_user WITH PASSWORD 'your_password';
+CREATE DATABASE gensurv_db OWNER gensurv_user;
+\q
+SQL

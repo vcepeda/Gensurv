@@ -1,0 +1,88 @@
+{% extends 'gensurvapp/base.html' %}
+{% load custom_tags %}
+
+{% block title %}
+    Dashboard and Search
+{% endblock %}
+
+{% block content %}
+    <h2>Dashboard</h2>
+    <div class="dashboard">
+        {% if user_submissions %}
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Submission Date</th>
+                        <th>Metadata File</th>
+                        <th>Antibiotics File</th>
+                        <th>FASTQ Files</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for submission in user_submissions %}
+                        <tr>
+                            <td>{{ submission.created_at }}</td>
+			    <td><a href="{{ submission.metadata_file.url }}">{{ submission.metadata_file.name }}</a><i class="fas fa-download"></i></td>
+                            <td>
+                                {% if submission.antibiotics_file %}
+                                    <a href="{{ submission.antibiotics_file.url }}">{{ submission.antibiotics_file.name }}</a><i class="fas fa-download"></i>
+                                {% else %}
+                                    N/A
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% for fastq_file in submission.fastq_files.all %}
+                                    <a href="{{ fastq_file.file.url }}">{{ fastq_file.file.name }}</a><i class="fas fa-download"></i><br/>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+	    {% if page_obj %}
+            	<div class="pagination">
+                    <span class="step-links">
+                        {% if page_obj.has_previous %}
+                            <a href="?page=1">&laquo; first</a>
+                            <a href="?page={{ page_obj.previous_page_number }}">previous</a>
+                        {% endif %}
+
+                        <span class="current">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+
+                        {% if page_obj.has_next %}
+                            <a href="?page={{ page_obj.next_page_number }}">next</a>
+                            <a href="?page={{ page_obj.paginator.num_pages }}">last &raquo;</a>
+                        {% endif %}
+                    </span>
+                </div>
+            {% endif %}
+        {% else %}
+            <p>No submissions found.</p>
+        {% endif %}
+    </div>
+
+    <h2>Sample Search</h2>
+    <form method="get" action="{% url 'dashboard_and_search' %}">
+        <input type="text" name="query" value="{{ query }}" placeholder="Search for samples...">
+        <button type="submit">Search</button>
+    </form>
+
+    <div class="search-results">
+        {% if query %}
+            <h3>Search Results for "{{ query }}"</h3>
+            <ul>
+                {% if search_results %}
+                    {% for result in search_results %}
+                        <li>{{ result.name }}</li>
+                    {% endfor %}
+                {% else %}
+		    <li>No results found matching "{{ query }}".</li>
+                {% endif %}
+            </ul>
+	{% else %}
+           <p>Enter a search term to find specific samples.</p>
+	{% endif %}
+    </div>
+{% endblock %}

@@ -1,0 +1,2 @@
+sample identifier,illumina r1,illumina r2,nanopore,pacbio,antibiotics file,antibiotics info
+SAMPLE_001,sample001_R1.fastq.gz,sample001_R2.fastq.gz,,,sample001_antibiotics.csv,
