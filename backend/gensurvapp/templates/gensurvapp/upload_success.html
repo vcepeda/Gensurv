@@ -1,0 +1,85 @@
+{% extends 'gensurvapp/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+
+    <!-- Page Header -->
+    <div class="text-center mb-5">
+        <h1>Upload Status</h1>
+        <p class="lead">Here is the result of your file upload:</p>
+    </div>
+
+    <!-- Metadata File Section -->
+    <div id="metadata-file" class="col-lg-12 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white text-center">
+                <h4>Metadata File</h4>
+            </div>
+            <div class="card-body">
+                {% if metadata_file %}
+                <ul>
+                    <li>{{ metadata_file }}</li>
+                </ul>
+                {% else %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <strong>Warning:</strong> The metadata file is missing.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- FASTQ Files Section -->
+    <div id="fastq-files" class="col-lg-12 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white text-center">
+                <h4>Uploaded FASTQ Files</h4>
+            </div>
+            <div class="card-body">
+                {% if fastq_files %}
+                <ul>
+                    {% for fastq_file in fastq_files %}
+                    <li>{{ fastq_file }}</li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <strong>Warning:</strong> The FASTQ file(s) are missing.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Antibiotics File Section -->
+    <div id="antibiotics-file" class="col-lg-12 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white text-center">
+                <h4>Antibiotics File</h4>
+            </div>
+            <div class="card-body">
+                {% if antibiotics_file %}
+                <ul>
+                    <li>{{ antibiotics_file }}</li>
+                </ul>
+                {% else %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <strong>Warning:</strong> The antibiotics file is missing.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Return Button -->
+    <div class="text-center">
+        <a href="{% url 'upload_files' %}" class="btn btn-info btn-lg mt-3">
+            <i class="fas fa-arrow-left"></i> Go Back to Upload Page
+        </a>
+    </div>
+
+</div>
+{% endblock %}

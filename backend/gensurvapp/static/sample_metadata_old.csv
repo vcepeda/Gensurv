@@ -1,0 +1,3 @@
+Sample Identifier,Isolate Species,Subtype,Collection Date,Sampling Strategy,Sample Source,Collection Method,City,Postal Code,County,State,Country,Lab Identifier,Sex,Age Group,Country of Putative Exposure,Sequencing Platform,Sequencing Type,Library Preparation Kit,Sequencing Chemistry
+Sample123,Pseudomonas aeruginosa,O157:H7,01/01/2023,Surveillance,Human clinical (hospital),Swab,Tübingen,72072,BW,BW,Germany,Lab123,Male,Adult,Germany,Illumina,Whole genome sequencing,Nextera XT,V2.5
+Sample456,Pseudomonas aeruginosa,MRSA,02/01/2023,Suspected outbreak,Human clinical (community),Blood culture,Tübingen,72072,BW,BW,Germany,Lab456,Female,Pediatric,USA,PacBio,Amplicon sequencing,SMRTbell,V1.0

@@ -1,0 +1,57 @@
+{% extends "gensurvapp/base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-center">Accessibility Statement</h1>
+    <p class="lead text-center">
+        In compliance with Section 10 Paragraph 1 of the State Disability Equality Act, the University Hospital 
+        and Medical Faculty of the Eberhard Karls University of Tübingen works to make its website accessible without obstacles (L-BGG).
+    </p>
+    <p class="text-center">
+        This accessibility statement applies to the main UKT website at the following link: 
+        <a href="https://www.medizin.uni-tuebingen.de/de/" target="_blank">https://www.medizin.uni-tuebingen.de/de/</a>
+    </p>
+
+    <h2>Status of Compatibility with the Requirements</h2>
+    <p>This website is only partially compatible with Section 10(1) of the L-BGG due to the following incompatibilities:</p>
+
+    <h3>Non-Accessible Content</h3>
+    <p>The content listed below is not accessible for the following reasons:</p>
+
+    <h4>a) Incompatibility with Section 10(1) L-BGG</h4>
+    <ul>
+        <li>BITV 9.1.1.1 a: Several control elements lack alternate texts</li>
+        <li>BITV 9.1.1.1 b: A few incorrect and many missing alternative texts for graphics</li>
+        <li>BITV 9.1.1.1 c: Layout components are not used with empty alt attributes</li>
+        <li>BITV 9.1.2.3: Missing audio description or full text alternative for videos</li>
+        <li>BITV 9.1.2.5: Missing audio description for videos</li>
+        <li>BITV 9.1.3.1 a: Incorrectly used HTML structural elements for headings</li>
+        <li>BITV 9.1.3.1 b: No correct HTML structure elements for lists</li>
+        <li>BITV 9.1.3.1 d: Structural elements are not correctly used to structure the content</li>
+        <li>BITV 9.1.3.1 d: For layout tables, no structural markup is used</li>
+        <li>BITV 9.1.3.1 e: Form element labeling cannot be determined programmatically</li>
+        <li>BITV 9.1.3.5: User data entry fields do not indicate their intended use</li>
+        <li>BITV 9.1.4.1: Not entirely usable without colors</li>
+        <li>BITV 9.1.4.3: Contrasts of texts not sufficient in the ratio 1:4.5</li>
+        <li>BITV 9.1.4.5: Partial use of font graphics</li>
+        <li>BITV 9.1.4.11: Contrasts for graphics and graphic control elements insufficient (1:3)</li>
+        <li>BITV 9.1.4.13: Faded-in contents partly not operable</li>
+        <li>BITV 9.2.2.2: Moving content cannot be switched off</li>
+        <li>BITV 9.2.4.7: Current position of focus partly not clear</li>
+        <li>BITV 9.2.5.3: Visible caption not always part of accessible name</li>
+        <li>BITV 9.3.1.1: Main language not indicated on some pages</li>
+        <li>BITV 9.3.1.2: Other language not marked</li>
+        <li>BITV 9.3.2.3: Navigation inconsistent on a few pages</li>
+        <li>BITV 9.3.3.1: Insufficient error detection</li>
+        <li>BITV 12.1.1: Missing documentation of compatibility and accessibility</li>
+    </ul>
+    <p>Additionally, all PDFs included on the website are not accessible according to the PAC standard.</p>
+    <p>There is a lack of description in plain language and, if applicable, a variant in sign language.</p>
+
+    <h4>b) Disproportionate Burden</h4>
+    <p>The barrier-free implementation of the PDFs contained on the website and the creation of the discussion in plain language currently represent a disproportionate burden. They are therefore an exception.</p>
+
+    <h4>c) Content Outside Applicable Legislation</h4>
+    <p>A version in sign language is not mandatory.</p>
+</div>
+{% endblock %}

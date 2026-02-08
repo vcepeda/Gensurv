@@ -1,0 +1,58 @@
+{% extends "gensurvapp/base.html" %}
+{% block title %}
+Resubmit File
+{% endblock %}
+{% block content %}
+
+<h2 class="mb-3">Resubmit Metadata</h2>
+<h3>Submission #{{ submission.id }}</h3>
+
+{% if messages %}
+  <div class="mt-3">
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        {{ message|linebreaks }}
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+{% if submission.metadata_warnings %}
+  <div class="alert alert-warning mt-3 p-2">
+    <strong>Previous Warning:</strong><br>
+    {{ submission.metadata_warnings|linebreaksbr }}
+  </div>
+{% endif %}
+
+{% if can_resubmit %}
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-warning mt-2">Upload New Metadata File</button>
+  </form>
+{% else %}
+  <div class="alert alert-info mt-3">
+    ✅ This file was successfully validated and resubmission is no longer required.
+  </div>
+{% endif %}
+
+{% if history %}
+  <h4 class="mt-4">Previous Versions:</h4>
+  <ul>
+    {% for entry in history %}
+      <li>{{ entry.timestamp|date:"Y-m-d H:i" }} - 
+        <a href="{{ entry.old_file.url }}">Raw</a>
+        {% if entry.cleaned_file %} | <a href="{{ entry.cleaned_file.url }}">Cleaned</a>{% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+{% endif %}
+
+<div class="mt-4">
+  <a href="{% url 'dashboard' %}" class="btn btn-secondary">Back to Dashboard</a>
+</div>
+
+{% endblock %}

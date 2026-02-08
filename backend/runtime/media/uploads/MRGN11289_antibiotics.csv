@@ -1,0 +1,23 @@
+﻿Testing Method;Tested Antibiotic;Observed Antibiotic Resistance SIR;Observed Antibiotic Resistance MIC (mg/L)
+Vitek;Gentamicin;R ;4
+Vitek;Tobramycin;R ;>=16
+Vitek;Piperacillin;R ;>=128
+Vitek;Piperacillin/Tazobactam;R ;>=128
+Vitek;Cefpodoxim;R ;>=8
+Vitek;Cefotaxim;R ;>=64
+Vitek;Ceftazidim;R ;>=64
+E-Test;Ceftazidim/Avibactam;R ;>256
+E-Test;Ceftolozan/Tazobactam;R ;>256
+E-Test;Cefiderocol;S;0,38
+E-Test;Aztreonam;I;2
+E-Test;Tigecyclin;R ;6
+Vitek;Cotrimoxazol;R ;>=320
+Vitek;Levofloxacin;R ;4
+Vitek;Ciprofloxacin;R ;2
+E-Test;Meropenem;S;1,5
+Vitek;Cefepim;R ;>=64
+E-Test;Fosfomycin;S;2
+Broth microdilution;Colistin;S;0,25
+E-Test;Amikacin;R ;16
+E-Test;Ertapenem;S;0,5
+E-Test;Imipenem;I;4

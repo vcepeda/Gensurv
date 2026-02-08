@@ -1,0 +1,9 @@
+{% extends 'gensurvapp/base.html' %}
+
+{% block content %}
+<h1>Sample CSV Format</h1>
+<p>Please follow the format shown below for your data.</p>
+<textarea rows="20" cols="100">{{ csv_data }}</textarea>
+<br>
+<a href="{% url 'download_sample_csv' %}" class="btn btn-primary">Download Sample CSV</a>
+{% endblock %}

@@ -1,0 +1,40 @@
+server {
+    server_name gensurv.de 49.13.219.197;
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+
+    # Django
+    location /static/ {
+        alias /home/ahcepev1/projects/gensurv_project/staticfiles/;
+    }
+
+    location /api/ {
+        include proxy_params;
+        proxy_pass http://unix:/home/ahcepev1/projects/gensurv_project/gensurv_project.sock;
+    }
+
+    location /admin/ {
+        include proxy_params;
+        proxy_pass http://unix:/home/ahcepev1/projects/gensurv_project/gensurv_project.sock;
+    }
+
+    location /password_reset/ { 
+        include proxy_params; proxy_pass http://unix:/home/ahcepev1/projects/gensurv_project/gensurv_project.sock; 
+        }
+    location /reset/ { 
+        include proxy_params; proxy_pass http://unix:/home/ahcepev1/projects/gensurv_project/gensurv_project.sock; 
+        }
+
+    root /home/ahcepev1/projects/frontend/dist;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    listen 443 ssl; # managed by Certbot
+    ssl_certificate /etc/letsencrypt/live/gensurv.de/fullchain.pem; # managed by Certbot
+    ssl_certificate_key /etc/letsencrypt/live/gensurv.de/privkey.pem; # managed by Certbot
+    include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem; # managed by Certbot
+}

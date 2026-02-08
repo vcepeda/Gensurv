@@ -1,0 +1,146 @@
+{% extends "gensurvapp/base.html" %}
+{% load custom_tags %}
+
+{% block content %}
+<h1>Single Sample Upload</h1>
+
+<h3>Sample Metadata</h3>
+<p>Please follow the format shown below for your data.</p>
+
+<!-- Legend for colors -->
+<div class="mb-3">
+    <p><strong>Legend:</strong></p>
+    <div>
+        <span style="display:inline-block; width:20px; height:20px; background-color:#ffd1d1; border:1px solid #dee2e6; margin-right:5px;"></span>
+        <span>Mandatory Fields</span>
+    </div>
+    <div>
+        <span style="display:inline-block; width:20px; height:20px; background-color:#ffffe0; border:1px solid #dee2e6; margin-right:5px;"></span>
+        <span>Optional Fields</span>
+    </div>
+</div>
+
+
+
+<div class="table-responsive">
+    <table class="table table-striped table-bordered" style="font-size: 12px;">
+        <thead class="table-header">
+            <!-- Titles Row in grayscale -->
+            <tr>
+                <th colspan="3" style="background-color: #d3d3d3; color: #000;">Sample and Isolate Information</th>
+                <th colspan="4" style="background-color: #d3d3d3; color: #000;">Sample Collection Data</th>
+                <th colspan="6" style="background-color: #d3d3d3; color: #000;">Sample Collection Facility</th>
+                <th colspan="3" style="background-color: #d3d3d3; color: #000;">Patient/Host Details</th>
+                <th colspan="4" style="background-color: #d3d3d3; color: #000;">Sequencing Details</th>
+            </tr>
+            <!-- Headers Row -->
+            <tr>
+                <th style="background-color: #ffd1d1; color: #000;">Sample Identifier</th>
+                <th style="background-color: #ffd1d1; color: #000;">Isolate Species</th>
+                <th style="background-color: #ffffe0;">Subtype</th>
+                <th style="background-color: #ffd1d1; color: #000;">Collection Date</th>
+                <th style="background-color: #ffffe0;">Sampling Strategy</th>
+                <th style="background-color: #ffd1d1; color: #000;">Sample Source</th>
+                <th style="background-color: #ffffe0;">Collection Method</th>
+                <th style="background-color: #ffd1d1; color: #000;">City</th>
+                <th style="background-color: #ffd1d1; color: #000;">Postal Code</th>
+                <th style="background-color: #ffd1d1; color: #000;">County</th>
+                <th style="background-color: #ffd1d1; color: #000;">State</th>
+                <th style="background-color: #ffd1d1; color: #000;">Country</th>
+                <th style="background-color: #ffffe0;">Lab Identifier</th>
+                <th style="background-color: #ffffe0;">Sex</th>
+                <th style="background-color: #ffffe0;">Age Group</th>
+                <th style="background-color: #ffffe0;">Country of Putative Exposure</th>
+                <th style="background-color: #ffd1d1; color: #000;">Sequencing Platform</th>
+                <th style="background-color: #ffd1d1; color: #000;">Sequencing Type</th>
+                <th style="background-color: #ffffe0;">Library Preparation Kit</th>
+                <th style="background-color: #ffffe0;">Sequencing Chemistry</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in sample_data %}
+            <tr>
+                <td>{{ row|get_item:"Sample Identifier" }}</td>
+
+                <td>{{ row|get_item:"Isolate Species" }}</td>
+                <td>{{ row|get_item:"Subtype" }}</td>
+                <td>{{ row|get_item:"Collection Date" }}</td>
+                <td>{{ row|get_item:"Sampling Strategy" }}</td>
+                <td>{{ row|get_item:"Sample Source" }}</td>
+                <td>{{ row|get_item:"Collection Method" }}</td>
+                <td>{{ row|get_item:"City" }}</td>
+                <td>{{ row|get_item:"Postal Code" }}</td>
+                <td>{{ row|get_item:"County" }}</td>
+                <td>{{ row|get_item:"State" }}</td>
+                <td>{{ row|get_item:"Country" }}</td>
+                <td>{{ row|get_item:"Lab Identifier" }}</td>
+                <td>{{ row|get_item:"Sex" }}</td>
+                <td>{{ row|get_item:"Age Group" }}</td>
+                <td>{{ row|get_item:"Country of Putative Exposure" }}</td>
+                <td>{{ row|get_item:"Sequencing Platform" }}</td>
+                <td>{{ row|get_item:"Sequencing Type" }}</td>
+                <td>{{ row|get_item:"Library Preparation Kit" }}</td>
+                <td>{{ row|get_item:"Sequencing Chemistry" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+    </table>
+</div>
+<a href="{% url 'download_sample_csv' %}" class="btn btn-primary">Download Sample CSV</a>
+<h3>Sample Antibiotics Testing Data</h3>
+<p>Please follow the format shown below for your data.</p>
+
+<div class="table-responsive">
+    <table class="table table-striped table-bordered" style="font-size: 12px;">
+        <thead class="table-header">
+            <tr>
+                <th style="background-color: #ffffe0;">Testing Method</th>
+                <th style="background-color: #ffd1d1; color: #000;">Tested Antibiotic</th>
+                <th style="background-color: #ffd1d1; color: #000;">Observed Antibiotic Resistance SIR</th>
+                <th style="background-color: #ffffe0;">Observed Antibiotic Resistance MIC (mg/L)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in antibiotics_data %}
+            <tr>
+                <td>{{ row|get_item:"Testing Method" }}</td>
+                <td>{{ row|get_item:"Tested Antibiotic" }}</td>
+                <td>{{ row|get_item:"Observed Antibiotic Resistance SIR" }}</td>
+                <td>{{ row|get_item:"Observed Antibiotic Resistance MIC (mg/L)" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+<a href="{% url 'download_antibiotics_csv' %}" class="btn btn-secondary">Download Antibiotics Testing CSV</a>
+
+
+
+<p><a href="{% url 'detailed_metadata_fields' %}">Click here</a> to view detailed metadata and antibiotics csv fields description.</p>
+
+{% endblock %}
+
+<!-- Custom CSS for the table header -->
+<style>
+    .table-header {
+        background-color: #003366;
+        color: #fff;
+    }
+    /* Light pastel colors for mandatory and optional fields */
+    th[style*="background-color: #ffd1d1"] {
+        background-color: #ffd1d1 !important;
+    }
+    th[style*="background-color: #ffffe0"] {
+        background-color: #ffffe0 !important;
+    }
+    /* Add vertical lines between columns */
+    .table-bordered th, .table-bordered td {
+        border: 1px solid #dee2e6;
+    }
+    /* Smaller font size for table */
+    .table {
+        font-size: 12px;
+    }
+</style>
