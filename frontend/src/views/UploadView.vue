@@ -11,6 +11,38 @@
       </p>
     </div>
 
+    <div class="row mb-4">
+      <div class="col-lg-12">
+        <div class="card shadow-sm">
+          <div class="card-body">
+            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-md-center gap-3">
+              <span class="fw-semibold">Submission Type:</span>
+              <div class="form-check form-check-inline">
+                <input
+                  class="form-check-input"
+                  id="submission_type_bacteria"
+                  type="radio"
+                  value="bacteria"
+                  v-model="submissionType"
+                />
+                <label class="form-check-label" for="submission_type_bacteria">Bacteria</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input
+                  class="form-check-input"
+                  id="submission_type_virus"
+                  type="radio"
+                  value="virus"
+                  v-model="submissionType"
+                />
+                <label class="form-check-label" for="submission_type_virus">Virus</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- SINGLE -->
     <div class="row">
       <div class="col-lg-12 mb-4">
@@ -30,7 +62,7 @@
                 <input ref="singleMetadataInput" class="form-control" type="file" @change="onSingleMetadata" required />
               </div>
 
-              <div class="mb-3">
+              <div class="mb-3" v-if="submissionType === 'bacteria'">
                 <label class="form-label">Antibiotics file (optional)</label>
                 <input ref="singleAntibioticsInput" class="form-control" type="file" @change="onSingleAntibiotics" />
               </div>
@@ -104,7 +136,7 @@
                 <input ref="bulkMetadataInput" class="form-control" type="file" @change="onBulkMetadata" required />
               </div>
 
-              <div class="mb-3">
+              <div class="mb-3" v-if="submissionType === 'bacteria'">
                 <label class="form-label">Antibiotics files (optional, multiple)</label>
                 <input ref="bulkAntibioticsInput" class="form-control" type="file" multiple @change="onBulkAntibiotics" />
               </div>
@@ -169,9 +201,9 @@
 <script setup>
 import axios from "axios";
 import apiClinet from "../api/client"
-import { reactive, ref } from "vue";
+import { reactive, ref, watch } from "vue";
 
-axios.defaults.withCredentials = true; // needed for Django session auth if same-site/cors configured
+axios.defaults.withCredentials = true;
 
 // File input refs
 const singleMetadataInput = ref(null);
@@ -180,6 +212,7 @@ const singleFastqInput = ref(null);
 const bulkMetadataInput = ref(null);
 const bulkAntibioticsInput = ref(null);
 const bulkFastqInput = ref(null);
+const submissionType = ref("bacteria");
 
 const single = reactive({
   metadata: null,
@@ -233,7 +266,7 @@ async function submitSingle() {
   fd.append("upload_start_time", String(start));
 
   try {
-    const res = await apiClinet.post("/api/upload/single/", fd, {
+    const res = await apiClinet.post(`/api/upload/single/?type=${submissionType.value}`, fd, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     single.success = res.data.message;
@@ -281,7 +314,7 @@ async function submitBulk() {
   fd.append("upload_start_time", String(start));
 
   try {
-    const res = await apiClinet.post("/api/upload/bulk/", fd, {
+    const res = await apiClinet.post(`/api/upload/bulk/?type=${submissionType.value}`, fd, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     bulk.success = res.data.message;
@@ -310,4 +343,13 @@ async function submitBulk() {
     bulk.loading = false;
   }
 }
+
+watch(submissionType, (value) => {
+  if (value === "virus") {
+    single.antibiotics = null;
+    bulk.antibiotics = [];
+    if (singleAntibioticsInput.value) singleAntibioticsInput.value.value = "";
+    if (bulkAntibioticsInput.value) bulkAntibioticsInput.value.value = "";
+  }
+});
 </script>

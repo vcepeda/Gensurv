@@ -43,7 +43,14 @@ class SingleUploadAPIView(APIView):
 
     def post(self, request):
         serializer = SingleUploadSerializer(data=request.data)
+        submission_type = request.query_params.get("type", "bacteria")
         
+        if submission_type not in ("bacteria", "virus"):
+            return Response(
+                {"success": False, "error": "Invalid type. Use 'bacteria' or 'virus'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         if not serializer.is_valid():
             return Response(
                 {
@@ -66,7 +73,8 @@ class SingleUploadAPIView(APIView):
                 metadata_file=metadata_file,
                 uploaded_antibiotics_file=antibiotics_file,
                 fastq_files=fastq_files,
-                submit_to_pipeline=submit_to_pipeline
+                submit_to_pipeline=submit_to_pipeline,
+                submission_type=submission_type
             )
 
             response_data = {
@@ -124,6 +132,13 @@ class BulkUploadAPIView(APIView):
 
     def post(self, request):
         serializer = BulkUploadSerializer(data=request.data)
+        submission_type = request.query_params.get("type", "bacteria")
+
+        if submission_type not in ("bacteria", "virus"):
+            return Response(
+                {"success": False, "error": "Invalid type. Use 'bacteria' or 'virus'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         
         if not serializer.is_valid():
             return Response(
@@ -148,7 +163,8 @@ class BulkUploadAPIView(APIView):
                 metadata_file=metadata_file,
                 antibiotics_files=antibiotics_files,
                 fastq_files=fastq_files,
-                submit_to_pipeline=submit_to_pipeline
+                submit_to_pipeline=submit_to_pipeline,
+                submission_type=submission_type
             )
 
             # Calculate timing metrics if client sent start time
@@ -247,6 +263,7 @@ class DashboardAPIView(APIView):
                 "username": s.user.username,
                 "submission_id": s.id,
                 "created_at": s.created_at,
+                "submission_type": s.submission_type,
 
                 "metadata": {
                     "files": file_obj(cleaned) or file_obj(raw),
