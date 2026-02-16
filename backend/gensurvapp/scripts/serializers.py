@@ -59,12 +59,13 @@ class SubmissionDashboardRowSerializer(serializers.Serializer):
     username = serializers.CharField()
     submission_id = serializers.IntegerField()
     created_at = serializers.DateTimeField()
+    submission_type = serializers.CharField(required=False, default="bacteria")
 
-    metadata = serializers.DictField()  # { raw: {url,name}, cleaned:{url,name}, warnings, resub_count, can_resubmit }
-    antibiotics = serializers.DictField()  # { files: [...], info: {...}, warnings }
-    fastq = serializers.DictField()  # { grouped: {sample_id: [ {url,name} ] } , extra_warning }
-    analysis = serializers.DictField()  # { statuses: {sample_id: "completed|failed|pending"} }
-    deletion = serializers.DictField()  # { requested: bool }
+    metadata = serializers.DictField()
+    antibiotics = serializers.DictField()
+    fastq = serializers.DictField()
+    analysis = serializers.DictField()
+    deletion = serializers.DictField()
 
 class SubmissionSampleListSerializer(serializers.Serializer):
     submission_id = serializers.IntegerField()

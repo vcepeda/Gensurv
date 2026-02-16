@@ -40,6 +40,11 @@ class Submission(models.Model):
     resubmission_allowed = models.BooleanField(default=False)
     deletion_requested = models.BooleanField(default=False)
     submit_to_pipeline = models.BooleanField(default=False)
+    submission_type = models.CharField(
+        max_length=20,
+        choices=[("bacteria", "Bacteria"), ("virus", "Virus")],
+        default="bacteria",
+    )
 
     metadata_warnings = models.TextField(blank=True, null=True)
     antibiotics_warnings = models.TextField(blank=True, null=True)

@@ -42,7 +42,17 @@
           <tbody>
             <tr v-for="row in rows" :key="row.submission_id">
               <td>{{ row.username }}</td>
-              <td>{{ row.submission_id }}</td>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <span>{{ row.submission_id }}</span>
+                  <span 
+                    class="badge" 
+                    :class="row.submission_type === 'virus' ? 'text-bg-primary' : 'text-bg-success'"
+                  >
+                    {{ row.submission_type || 'bacteria' }}
+                  </span>
+                </div>
+              </td>
               <td>{{ formatDate(row.created_at) }}</td>
 
               <!-- Metadata -->

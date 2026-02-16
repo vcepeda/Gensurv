@@ -10,15 +10,29 @@ from gensurvapp.constants import METADATA_COLUMNS, ESSENTIAL_METADATA_COLUMNS, A
 import logging
 logger = logging.getLogger(__name__)
 
+def normalize_submission_type(value):
+    if not value:
+        return "bacteria"
+    normalized = str(value).strip().lower()
+    if normalized not in ("bacteria", "virus"):
+        raise ValueError("Invalid submission_type. Use 'bacteria' or 'virus'.")
+    return normalized
+
+
 
 @transaction.atomic
-def handle_single_upload(*, user, metadata_file, uploaded_antibiotics_file, fastq_files, submit_to_pipeline=False):
+def handle_single_upload(*, user, metadata_file, uploaded_antibiotics_file, fastq_files, submission_type, submit_to_pipeline=False):
 
     server_start = time.time()
 
     warning_message = None
     extra_fastq_warning = ""
     antibiotics_message = None
+
+    submission_type = normalize_submission_type(submission_type)
+
+    if submission_type == "virus" and uploaded_antibiotics_file:
+        raise ValueError("Virus submissions do not accept antibiotics files.")
 
     if not metadata_file:
         raise ValueError("Metadata file is required but not provided.")
@@ -58,6 +72,15 @@ def handle_single_upload(*, user, metadata_file, uploaded_antibiotics_file, fast
     # normalize headers
     metadata_df.columns = metadata_df.columns.str.lower().str.strip()
 
+    def _safe_str(x):
+        if x is None:
+            return None
+        s = str(x).strip()
+        if not s or s.lower() == "nan":
+            return None
+        return s
+    
+
     # sample id
     if "sample identifier" not in metadata_df.columns:
         raise ValueError("Metadata missing required column: 'sample identifier'.")
@@ -65,6 +88,12 @@ def handle_single_upload(*, user, metadata_file, uploaded_antibiotics_file, fast
     sample_id = str(metadata_df.loc[0, "sample identifier"]).strip()
     if not sample_id or sample_id.lower() == "nan":
         raise ValueError("Metadata has missing/invalid 'sample identifier' in first row.")
+    
+    if submission_type == "virus":
+        ab_file_val = _safe_str(metadata_df.loc[0, "antibiotics file"]) if "antibiotics file" in metadata_df.columns else None
+        ab_info_val = _safe_str(metadata_df.loc[0, "antibiotics info"]) if "antibiotics info" in metadata_df.columns else None
+        if ab_file_val or ab_info_val:
+            raise ValueError(f"Sample '{sample_id}': Virus submissions must not include antibiotics fields.")
 
     valid_extensions = (".fastq", ".fq", ".bam", ".fastq.gz", ".fq.gz", ".bam.gz", ".bz2", ".xz", ".zip")
 
@@ -178,6 +207,7 @@ def handle_single_upload(*, user, metadata_file, uploaded_antibiotics_file, fast
         antibiotics_df.columns = antibiotics_df.columns.str.lower().str.strip()
 
     submission = Submission(user=user)
+    submission.submission_type = submission_type
     submission.resubmission_allowed = bool(metadata_warning)
     if metadata_warning:
         submission.metadata_warnings = metadata_message
@@ -238,7 +268,12 @@ def handle_single_upload(*, user, metadata_file, uploaded_antibiotics_file, fast
     }
 
 @transaction.atomic
-def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, submit_to_pipeline=False):
+def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, submission_type, submit_to_pipeline=False):
+
+    submission_type = normalize_submission_type(submission_type)
+
+    if submission_type == "virus" and antibiotics_files:
+        raise ValueError("Virus submissions do not accept antibiotics files.")
 
     server_start = time.time()
 
@@ -358,6 +393,12 @@ def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, s
         expected_ab_file = _safe_str(row.get("antibiotics file"))
         antibiotics_info = _safe_str(row.get("antibiotics info"))
 
+        # inside handle_bulk_upload loop that processes antibiotics fields
+        if submission_type == "virus":
+            if expected_ab_file or antibiotics_info:
+                raise ValueError(f"Sample '{sample_id}': Virus submissions must not include antibiotics fields.")
+            continue
+
         if expected_ab_file and antibiotics_info:
             raise ValueError(
                 f"Sample '{sample_id}': Both 'Antibiotics File' (metadata) and 'Antibiotics Info' (metadata) cannot be provided simultaneously."
@@ -386,6 +427,7 @@ def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, s
             logger.info(f"Sample '{sample_id}': No antibiotics file or info provided.")
 
     submission = Submission(user=user, is_bulk_upload=True)
+    submission.submission_type = submission_type 
     submission.resubmission_allowed = bool(metadata_warning_message.strip())
     if metadata_warning_message.strip():
         submission.metadata_warnings = metadata_warning_message.strip()
