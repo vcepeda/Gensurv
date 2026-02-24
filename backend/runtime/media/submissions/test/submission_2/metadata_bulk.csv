@@ -1,3 +1,0 @@
-sample identifier,illumina r1,illumina r2,nanopore,pacbio,antibiotics file,antibiotics info
-BULK_001,bulk001_R1.fastq.gz,bulk001_R2.fastq.gz,,,bulk001_ab.csv,
-BULK_002,,,bulk002_nanopore.fastq.gz,,,Given empirically (no file)
