@@ -21,3 +21,4 @@ venv/
 .data/
 ./bulk_upload.log
 ./gensurv_project/settings*.py
+DBBACKUP_STORAGE/gensurv_db_03.09.25.dump
