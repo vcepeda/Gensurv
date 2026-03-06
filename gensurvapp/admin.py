@@ -1,11 +1,9 @@
 from django.contrib import admin
-from .models import TodoItem, Item, Submission, UploadedFile
+from .models import Submission, UploadedFile
 from .models import BactopiaResult, PlasmidIdentResult
 
 
 # Register your models here.
-admin.site.register(TodoItem)
-admin.site.register(Item)
 
 # Customize the admin display for the UploadedFile
 class UploadedFileInline(admin.TabularInline):

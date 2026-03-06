@@ -348,7 +348,6 @@ footer a:hover {
                      <!-- Home link in the header -->
                     <li class="nav-item"><a class="nav-link" href="{% url 'home' %}" id="header-home-link">Home</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'upload_files' %}">Data Upload</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'search' %}">Search</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'dashboard' %}">Analyses</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'help' %}">Help</a></li>
                     <li class="nav-item"><a class="nav-link"href="{% url 'about' %}">About</a></li>
@@ -375,15 +374,6 @@ footer a:hover {
             </ul>
         </div>
 
-
-        <form method="get" action="{% url 'search' %}" class="form-inline">
-            <div class="input-group">
-                <div class="input-group-append">
-                    <span class="input-group-text"><i class="fas fa-search"></i></span>
-                </div>
-                <input type="text" name="query" class="form-control" placeholder="Search...">
-            </div>
-        </form>
     </header>
 
 
@@ -413,13 +403,7 @@ footer a:hover {
     </div>
 
     <!-- View Samples Menu -->
-    <div id="samples-menu" class="menu-item">
-        <a class="dropdown-btn">View Samples <i class="fa fa-caret-down"></i></a>
-        <div class="dropdown-container">
-            <a href="{% url 'todos' %}#sample1">Sample 1</a>
-            <a href="{% url 'todos' %}#sample2">Sample 2</a>
-        </div>
-    </div>
+
 
     <!-- Analyses Menu -->
     <div id="analyses-menu" class="menu-item">
@@ -428,16 +412,7 @@ footer a:hover {
             <a href="{% url 'dashboard' %}">Submissions Dashboard</a>
         </div>
     </div>
-    <!-- Dynamic Sample Results Menu
-    {% if request.resolver_match.url_name == 'sample_results' %}
-    <div id="sample-menu" class="menu-item active">
-        <a class="dropdown-btn">Sample Results <i class="fa fa-caret-down"></i></a>
-        <div class="dropdown-container">
-            <a href="#">Results Summary: {{ sample_id }}</a>
-            <a href="{% url 'sample_all_results' submission_id sample_id %}">Detailed Results: {{ sample_id }}</a>
-        </div>
-    </div>
-    {% endif %} -->
+
     <!-- Dynamic Sample Results Menu -->
     {% endif %}
 
@@ -466,32 +441,10 @@ footer a:hover {
 
     {% endif %}
 
-
-    <!-- Sample Search Menu 
-    <div id="search-menu" class="menu-item">
-        <a class="dropdown-btn">Sample Search<i class="fa fa-caret-down"></i></a>
-        <div class="dropdown-container">
-            <a href="{% url 'search' %}#search1">Search 1</a>
-            <a href="{% url 'search' %}#search2">Search 2</a>
-        </div>
-    </div>-->
-
-
-    <div id="search-menu" class="menu-item">
-        <a class="dropdown-btn">Sample Search<i class="fa fa-caret-down"></i></a>
-        <div class="dropdown-container">
-            <a href="{% url 'dashboard_and_search' %}">Dashboard and Sample Search</a>
-        </div>
-    </div>
-
-
-
     <!-- Documentation Menu DELETE LATER-->
     <div id="documentation-menu" class="menu-item">
         <a class="dropdown-btn">Documentation <i class="fa fa-caret-down"></i></a>
         <div class="dropdown-container">
-            <a href="{% url 'todos' %}#doc1">Documentation 1</a>
-            <a href="{% url 'todos' %}#doc2">Documentation 2</a>
         </div>
     </div>
      <!-- Help Menu -->
@@ -630,18 +583,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 showMenu('home-menu');
             } else if (href.includes("/upload/")) {
                 showMenu('upload-menu');
-            } else if (href.includes("/todos/") && this.innerText.includes("Samples")) {
-                showMenu('samples-menu');
             } else if (href.includes("/dashboard/")) {
                 showMenu('analyses-menu');
-            } else if (href.includes("/search/")) {
-                showMenu('search-menu');
-            } else if (href.includes("/todos/") && this.innerText.includes("Documentation")) {
-                showMenu('documentation-menu');
-            } else if (href.includes("/about/")) {
+            }else if (href.includes("/about/")) {
                 showMenu('about-menu');
-            } else if (href.includes("/research/")) {
-                showMenu('research-menu');
             }else if (href.match(/\/submission\/\d+\/sample\/[^/]+/)) { // Match the sample_results pattern
                 showMenu('sample-menu');
             } else if (href.includes("/register/") || href.includes("/login/")) {
@@ -670,12 +615,8 @@ document.addEventListener('DOMContentLoaded', function() {
         showMenu('home-menu');
     } else if (currentUrl.includes("/upload/")) {
         showMenu('upload-menu');
-    } else if (currentUrl.includes("/todos/") && currentUrl.includes("Samples")) {
-        showMenu('samples-menu');
     } else if (currentUrl.includes("/dashboard/")) {
         showMenu('analyses-menu');
-    } else if (currentUrl.includes("/search/")) {
-        showMenu('search-menu');
     } else if (currentUrl.includes("/help/")) {
         showMenu('help-menu');
     } else if (currentUrl.includes("/about/")) {
