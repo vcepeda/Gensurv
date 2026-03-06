@@ -13,23 +13,6 @@ from django.dispatch import receiver
 # Create your models here.
 from django.conf import settings  # use settings to reference AUTH_USER_MODEL
 
-class TodoItem(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="todoitem", null=True)
-    name = models.CharField(max_length=200)
-
-    def __str__(self):
-        return self.name
-
-class Item(models.Model):
-    todolist = models.ForeignKey(TodoItem, on_delete=models.CASCADE)
-    text = models.CharField(max_length=300)
-    complete = models.BooleanField(default=False)
-
-    def __str__(self):
-        return self.text
-
-
-
 # Function to generate dynamic file paths
 def user_submission_path(instance, filename):
     """
