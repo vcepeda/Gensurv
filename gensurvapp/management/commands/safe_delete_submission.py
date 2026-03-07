@@ -1,7 +1,7 @@
 # safe_delete_submission.py
 
 from django.core.management.base import BaseCommand
-from gensurvapp.models import Submission, SampleFile, UploadedFile, FileHistory, BactopiaResult, PlasmidIdentResult
+from gensurvapp.models import Submission, UploadedFile, FileHistory, BactopiaResult, PlasmidIdentResult
 import os
 import shutil
 
@@ -40,12 +40,6 @@ class Command(BaseCommand):
 
         if not dry_run:
             os.makedirs(trash_dir, exist_ok=True)
-
-        # SampleFile
-        for sample_file in submission.sample_files.all():
-            self._move_file(sample_file.file.path, trash_dir, dry_run)
-            if not dry_run:
-                sample_file.delete()
 
         # UploadedFile
         for uploaded_file in submission.uploadedfile_set.all():
