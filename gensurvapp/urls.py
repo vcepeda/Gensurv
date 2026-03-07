@@ -3,7 +3,6 @@ from . import views
 from .views import impressum, research, contact, datenschutz, accessibility,success_page, sample_csv, download_sample_csv, download_antibiotics_csv, detailed_metadata_fields
 from .views import success_page,upload, upload_files, upload_files_dev
 from .views import submission_results
-from .views import test_page
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -27,8 +26,6 @@ urlpatterns = [
     path('detailed_metadata_fields/', detailed_metadata_fields, name='detailed_metadata_fields'),
     path('about/', views.about, name='about'),  # Add this line
     path('dashboard/', views.user_dashboard, name='dashboard'),
-    #path('dashboard/', views.submission_list, name='submission_list'),
-#   path('test/<int:submission_id>/<str:sample_id>/', test_page, name='test_page'),
     path('submissions/', views.submission_list, name='submission_list'),
     path('submission/<int:submission_id>/sample/<str:sample_id>/details/', views.sample_all_results, name='sample_all_results'),
     path('submission/<int:submission_id>/results/', views.submission_results, name='submission_results'),

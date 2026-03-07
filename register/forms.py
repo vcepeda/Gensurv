@@ -13,3 +13,9 @@ class RegisterForm(UserCreationForm):
     class Meta:
         model = CustomUser
         fields = ["username", "name", "email", "institution", "password1", "password2","message"]
+
+        def save(self, commit=True):
+            user = super().save(commit=False)
+            if commit:
+                user.save()
+            return user

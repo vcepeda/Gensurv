@@ -11,7 +11,9 @@ from django.dispatch import receiver
 
 
 # Create your models here.
-from django.conf import settings  # use settings to reference AUTH_USER_MODEL
+from django.conf import settings  # use settings to reference AUTH_USER_MODE
+
+
 
 # Function to generate dynamic file paths
 def user_submission_path(instance, filename):
@@ -43,7 +45,13 @@ class Submission(models.Model):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='submissions'
     )
-    metadata_file = models.FileField(upload_to=user_submission_path, max_length=255)
+    # ADD these two new fields to Submission:
+    submit_to_pipeline = models.BooleanField(default=False)
+    submission_type = models.CharField(
+        max_length=20,
+        choices=[("bacteria", "Bacteria"), ("virus", "Virus")],
+        default="bacteria",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     is_bulk_upload = models.BooleanField(default=False)
     resubmission_allowed = models.BooleanField(default=False)
@@ -57,71 +65,6 @@ class Submission(models.Model):
 
 
     from django.core.files.base import ContentFile
-
-    def save_files(self, metadata_file, cleaned_metadata_file, antibiotics_file=None, cleaned_antibiotics_file=None, fastq_files=None):
-        """
-        Save raw and cleaned versions of metadata and antibiotics, and any FASTQ files.
-        """
-        if metadata_file:
-            SampleFile.objects.create(
-                submission=self,
-                sample_id="metadata",
-                file_type='metadata_raw',
-                file=metadata_file
-            )
-
-        if cleaned_metadata_file:
-            SampleFile.objects.create(
-                submission=self,
-                sample_id="metadata",
-                file_type='metadata_cleaned',
-                file=cleaned_metadata_file
-            )
-
-        if antibiotics_file:
-            SampleFile.objects.create(
-                submission=self,
-                sample_id="antibiotics",
-                file_type='antibiotics_raw',
-                file=antibiotics_file
-            )
-
-        if cleaned_antibiotics_file:
-            SampleFile.objects.create(
-                submission=self,
-                sample_id="antibiotics",
-                file_type='antibiotics_cleaned',
-                file=cleaned_antibiotics_file
-            )
-
-        if fastq_files:
-            for fastq_file in fastq_files:
-                SampleFile.objects.create(
-                    submission=self,
-                    sample_id="fastq",
-                    file_type='fastq',
-                    file=fastq_file
-                )
-
-
-
-class SampleFile(models.Model):
-    submission = models.ForeignKey(
-        Submission, related_name='sample_files', on_delete=models.CASCADE
-    )
-    sample_id = models.CharField(max_length=100)
-    file_type = models.CharField(max_length=30, choices=[
-        ('metadata_raw', 'Metadata Raw'),
-        ('metadata_cleaned', 'Metadata Cleaned'),
-        ('antibiotics_raw', 'Antibiotics Raw'),
-        ('antibiotics_cleaned', 'Antibiotics Cleaned'),
-        ('fastq', 'FASTQ'),
-    ])
-    file = models.FileField(upload_to=user_submission_path)
-
-    def __str__(self):
-        return f"{self.file_type} for Sample {self.sample_id}"
-
 
 
 class UploadedFile(models.Model):
@@ -148,27 +91,16 @@ class FileHistory(models.Model):
 
 
 class AnalysisResult(models.Model):
-    sample = models.OneToOneField(
-        SampleFile,
-        on_delete=models.CASCADE,
-        related_name='analysis_result',
-        limit_choices_to={'file_type': 'fastq'},
-        null=True,  # Allow null values temporarily
-        blank=True  # Allow blank values in forms
-    )
-    result_directory = models.CharField(max_length=255, default="not_set")  # Provide a default value
-    status = models.CharField(max_length=20, choices=[
-        ('pending', 'Pending'),
-        ('processing', 'Processing'),
-        ('completed', 'Completed'),
-        ('error', 'Error')
-    ], default='pending')
-    
+    sample_id = models.CharField(max_length=100)
+
+    result_directory = models.CharField(max_length=255, default="not_set")
+    status = models.CharField(max_length=20)  # NO choices
+
     completion_date = models.DateTimeField(null=True, blank=True)
     error_message = models.TextField(null=True, blank=True)
 
     def __str__(self):
-        return f"Analysis for {self.sample.sample_id if self.sample else 'Unknown'} - {self.status}"
+        return f"Analysis for {self.sample_id} - {self.status}"
 
 
 class BactopiaResult(models.Model):

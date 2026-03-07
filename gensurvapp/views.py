@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, HttpResponse
 from django.http import HttpResponseNotFound, HttpResponseRedirect
 from django.http import Http404
 from .models import Submission,FileHistory
-from .models import SampleFile, UploadedFile, AnalysisResult 
+from .models import UploadedFile, AnalysisResult 
 import re
 from django.db.models import Q
 from .forms import CreateNewList, FileUploadForm ,SearchForm
@@ -1269,61 +1269,6 @@ def validate_and_save_csv(file, expected_columns,essential_columns=None):
     #return is_valid: bool, warning: bool, message: str, delimiter: str, dataframe: Optional[pd.DataFrame]
     return True, False, "Validation successful.", delimiter, df
 
-
-def handle_single_upload(form, user):
-    """Process single upload."""
-    metadata_file = form.cleaned_data['metadata_file']
-    antibiotics_file = form.cleaned_data['antibiotics_file']
-    fastq_files = form.cleaned_data['fastq_files']
-
-    # Create submission instance
-    submission = Submission.objects.create(user=user, metadata_file=metadata_file, is_bulk_upload=False)
-
-    # Save related files
-    SampleFile.objects.create(submission=submission, sample_id="SingleSample", file_type='metadata', file=metadata_file)
-    SampleFile.objects.create(submission=submission, sample_id="SingleSample", file_type='antibiotics', file=antibiotics_file)
-
-    for fastq_file in fastq_files:
-        SampleFile.objects.create(submission=submission, sample_id="SingleSample", file_type='fastq', file=fastq_file)
-
-    return submission
-
-def handle_bulk_upload(form, user):
-    """Process bulk upload."""
-    metadata_file = form.cleaned_data['metadata_file']
-    antibiotics_files = form.cleaned_data['antibiotics_files']
-    fastq_files = form.cleaned_data['fastq_files']
-
-    # Create submission instance
-    submission = Submission.objects.create(user=user, metadata_file=metadata_file, is_bulk_upload=True)
-
-    # Parse sample IDs from metadata file
-    sample_ids = extract_sample_ids_from_metadata(metadata_file)
-
-    # Match files to sample IDs
-    for sample_id in sample_ids:
-        matched_antibiotics = [f for f in antibiotics_files if sample_id in f.name]
-        matched_fastqs = [f for f in fastq_files if sample_id in f.name]
-
-        if not matched_antibiotics:
-            raise ValueError(f"Missing antibiotics file for sample ID: {sample_id}")
-        if not matched_fastqs:
-            raise ValueError(f"Missing FASTQ files for sample ID: {sample_id}")
-
-        # Save files for each sample ID
-        SampleFile.objects.create(
-            submission=submission, sample_id=sample_id, file_type='metadata', file=metadata_file
-        )
-        for antib_file in matched_antibiotics:
-            SampleFile.objects.create(
-                submission=submission, sample_id=sample_id, file_type='antibiotics', file=antib_file
-            )
-        for fastq_file in matched_fastqs:
-            SampleFile.objects.create(
-                submission=submission, sample_id=sample_id, file_type='fastq', file=fastq_file
-            )
-
-    return submission
 
 def extract_sample_ids(file):
     """
@@ -3206,24 +3151,6 @@ def user_dashboard(request):
     logger.debug(f"🏁 TOTAL dashboard build time: {overall_elapsed:.4f} seconds")
 
     return render(request, 'gensurvapp/dashboard.html', {'submissions': context})
-
-# View for the list of samples in a submission
-def submission_resultsx(request, submission_id):
-    submission = get_object_or_404(Submission, id=submission_id)
-    bactopia_results = BactopiaResult.objects.filter(submission=submission)
-    plasmid_ident_results = PlasmidIdentResult.objects.filter(submission=submission)
-
-    # Combine sample IDs from both result types to ensure all samples are shown
-    sample_ids = set(bactopia_results.values_list("sample_id", flat=True)) | set(
-        plasmid_ident_results.values_list("sample_id", flat=True)
-    )
-
-    context = {
-        'submission': submission,
-        'sample_ids': sample_ids,  # Pass all sample IDs for the menu
-    }
-    return render(request, 'gensurvapp/submissions/submission_results.html', context)
-
 
 
 # View for the list of samples in a submission
