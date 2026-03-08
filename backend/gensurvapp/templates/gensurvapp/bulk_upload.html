@@ -1,0 +1,61 @@
+{% extends "gensurvapp/base.html" %}
+{% load custom_tags %}
+
+{% block content %}
+<h1>Bulk Upload Your Data Files</h1>
+<form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Upload</button>
+</form>
+
+{% if error_message %}
+    <div class="alert alert-danger">
+        {{ error_message }}
+    </div>
+{% endif %}
+
+<h2>Column Information</h2>
+<div class="table-responsive">
+    <table class="table table-striped table-bordered">
+        <thead>
+            <tr>
+                <th>Column Name</th>
+                <th>Description</th>
+                <th>Mandatory/Optional</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for column in columns_data %}
+            <tr> 
+                <td>{{ column|get_item:"Column Name" }}</td>
+                <td>{{ column|get_item:"Description" }}</td>
+                <td>{{ column|get_item:"Mandatory/Optional" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}
+
+
+<!-- Custom CSS for the table header and styling -->
+<style>
+    .table-header {
+        background-color: #003366;
+        color: #fff;
+    }
+    th[style*="background-color: #ffd1d1"] {
+        background-color: #ffd1d1 !important;
+    }
+    th[style*="background-color: #ffffe0"] {
+        background-color: #ffffe0 !important;
+    }
+    .table-bordered th, .table-bordered td {
+        border: 1px solid #dee2e6;
+    }
+    .table {
+        font-size: 12px;
+    }
+</style>

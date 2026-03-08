@@ -1,0 +1,176 @@
+{% extends "gensurvapp/base.html" %}
+{% load custom_tags %}
+
+{% block content %}
+<div class="container fluid">
+
+    <!-- Page Header -->
+    <div class="text-center mb-5">
+        <h1>Upload Your Data Files</h1>
+        <p class="lead">Choose between single sample upload or bulk upload options to upload your data.</p>
+                <p><a href="{% url 'help' %}">Click here</a> to view detailed help on metadata and antibiotics testing formats.</p>
+
+    </div>
+
+    <div class="row">
+        <!-- Single Sample Upload Section -->
+        <div id="single-upload" class="col-lg-12 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white text-center">
+                    <h4>Single Sample Upload</h4>
+                </div>
+                <div class="card-body">
+                    <p>Use this option to upload data for a single sample. Include the metadata file, antibiotics file, and one or more FASTQ files.</p>
+
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {{ single_form.as_p }}
+
+                        <!-- Clickable Box -->
+                        <div class="form-check mb-4" style="font-size: 1.1em; text-align: left;">
+                            <input type="checkbox" class="form-check-input" id="single_analysis_pipeline" name="single_analysis_pipeline">
+                            <label class="form-check-label" for="single_analysis_pipeline">
+                                I want to submit this data to the bioinformatics analysis pipeline.
+                            </label>
+                        </div>
+
+                        <!-- Upload Button -->
+
+                        <div class="text-center">
+                            <button type="submit" name="single_upload" class="btn btn-info btn-lg mt-3">
+                                <i class="fas fa-upload"></i> Upload Single Sample
+                            </button>
+                        </div>
+                        <!-- Upload Time Message -->
+                        <div id="single-upload-time" class="mt-2 text-center font-weight-bold"></div>
+                    </form>
+
+                    <!-- Single Upload Message Handling -->
+                    {% if single_error_message %}
+                    <div class="alert alert-danger mt-3">
+                        <i class="fas fa-exclamation-circle"></i> {{ single_error_message|linebreaks }}
+                    </div>
+                    {% endif %}
+                    {% if single_success_message %}
+                     {% if request.session.upload_duration %}
+                        <div class="alert alert-info mt-2">
+                            ⚙️ Processing duration (server): {{ request.session.upload_duration }}
+                        </div>
+                    {% endif %}
+                    <div class="alert alert-success mt-3">
+                        <i class="fas fa-check-circle"></i> {{ single_success_message|linebreaks }}
+                    </div>
+                        {% if resubmission_allowed %}
+                        <div class="alert alert-warning mt-2">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Warning:</strong> Metadata validated with warnings. You may
+                            resubmit corrected metadata from your
+                            <a href="{% url 'dashboard' %}#submission-{{ submission_id }}" class="alert-link">
+                                Submission #{{ submission_id }}
+                            </a> in the dashboard.
+                        </div>
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Bulk Upload Section -->
+        <div id="bulk-upload" class="col-lg-12 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white text-center">
+                    <h4>Bulk Upload</h4>
+                </div>
+                <div class="card-body">
+                    <p>If you have multiple samples to upload, use the bulk upload option below.</p>
+
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {{ bulk_form.as_p }}
+
+                        <!-- Clickable Box -->
+                        <div class="form-check mb-4" style="font-size: 1.1em; text-align: left;">
+                            <input type="checkbox" class="form-check-input" id="single_analysis_pipeline" name="single_analysis_pipeline">
+                            <label class="form-check-label" for="single_analysis_pipeline">
+                                I want to submit this data to the bioinformatics analysis pipeline.
+                            </label>
+                        </div>
+
+                        <!-- Upload Button -->
+
+                        <div class="text-center">
+                            <button type="submit" name="bulk_upload" class="btn btn-info btn-lg mt-3">
+                                <i class="fas fa-file-upload"></i> Upload Bulk Data
+                            </button>
+                        </div>
+
+                        <!-- Upload Time Message -->
+                        <div id="bulk-upload-time" class="mt-2 text-center font-weight-bold"></div>
+                    </form>
+
+
+                    <!-- Bulk Upload Message Handling -->
+                    {% if bulk_error_message %}
+                    <div class="alert alert-danger mt-3">
+                        <i class="fas fa-exclamation-circle"></i> {{ bulk_error_message|linebreaks }}
+                    </div>
+                    {% endif %}
+                        {% if bulk_success_message %}
+                        {% if request.session.upload_duration %}
+                        <div class="alert alert-info mt-2">
+                            ⚙️ Processing duration (server): {{ request.session.upload_duration }}
+                        </div>
+                        {% endif %}
+                        <div class="alert alert-success mt-3">
+                            <i class="fas fa-check-circle"></i> {{ bulk_success_message }}
+                        </div>
+                            {% if resubmission_allowed %}
+                            <div class="alert alert-warning mt-2">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <strong>Warning:</strong> Metadata validated with warnings. You may
+                                resubmit corrected metadata from your
+                                <a href="{% url 'dashboard' %}#submission-{{ submission_id }}" class="alert-link">
+                                    Submission #{{ submission_id }}
+                                </a> in the dashboard.
+                            </div>
+                            {% endif %}
+
+                    {% endif %}
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+  document.querySelectorAll("form").forEach(form => {
+    form.addEventListener("submit", function () {
+      localStorage.setItem("uploadStartTime", Date.now());
+      const isSingle = form.querySelector("button[type='submit']").name === "single_upload";
+      localStorage.setItem("uploadFormType", isSingle ? "single" : "bulk");
+    });
+  });
+
+  window.addEventListener("load", function () {
+    const startTime = localStorage.getItem("uploadStartTime");
+    const formType = localStorage.getItem("uploadFormType");
+    let displayElement = null;
+    if (formType === "single") {
+      displayElement = document.getElementById("single-upload-time");
+    } else if (formType === "bulk") {
+      displayElement = document.getElementById("bulk-upload-time");
+    }
+
+    if (startTime && displayElement) {
+      const totalSeconds = Math.floor((Date.now() - parseInt(startTime)) / 1000);
+      displayElement.innerText = `✅ Total upload time: ${totalSeconds}s`;
+      localStorage.removeItem("uploadStartTime");
+      localStorage.removeItem("uploadFormType");
+    }
+  });
+</script>
+
+
+{% endblock %}
