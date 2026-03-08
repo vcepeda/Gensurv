@@ -1,0 +1,798 @@
+{% extends 'gensurvapp/base.html' %}
+{% load custom_tags %}
+
+{% block content %}
+  <div class="container-fluid">
+<!-- Page Header -->
+<div class="mb-5">
+  <h1 class="text-center">Help: Data Format and Upload Instructions</h1>
+  <p class="lead">
+    This section provides detailed guidelines for uploading single or multiple samples, including the required formats for 
+    <strong>Sample Metadata</strong>, <strong>Antibiotic Testing Results</strong>, and <strong>NGS Data</strong>. Please carefully follow these 
+    instructions to ensure successful uploads.
+  </p>
+</div>
+
+<!-- Single Sample Upload -->
+<h2 id="single-upload" class="text-info">Single Sample Upload</h2>
+<p>For single sample uploads, ensure that your files adhere to the following format requirements:</p>
+
+<h3 id="single-files">Required Files</h3>
+<ul>
+  <li>
+    <strong>Sample Metadata File:</strong>
+    <ul>
+      <li>A CSV, TSV, or Excel (<code>.xlsx</code>) file containing the sample's identifier, collection details, sequencing file names, and other metadata.</li>
+      <li>
+        <strong>File Naming:</strong> You may name your metadata file freely. The FASTQ file names must be listed in the appropriate metadata fields (see below).
+      </li>
+      <li>
+        <strong>Format:</strong> The file may use <code>,</code> (comma), <code>;</code> (semicolon), or <code>\t</code> (tab) as delimiters — these will be auto-detected. File extensions allowed: <code>.csv</code>, <code>.tsv</code>, <code>.txt</code>, <code>.xlsx</code>.
+      </li>
+      <li>
+        <strong>FASTQ File Fields:</strong> You must list the FASTQ file names in one or more of the following fields:
+        <ul>
+          <li><code>Illumina R1</code> — required if using Illumina platform (paired-end R1 file).</li>
+          <li><code>Illumina R2</code> — optional; must be provided only if <code>Illumina R1</code> is provided (paired-end R2 file).</li>
+          <li><code>Nanopore</code> — required if using Oxford Nanopore platform.</li>
+          <li><code>PacBio</code> — required if using PacBio platform.</li>
+        </ul>
+        <strong>Important:</strong> FASTQ file names must exactly match the actual uploaded file names (case-sensitive).
+      </li>
+      <li>Ensure all <strong>mandatory metadata fields</strong> are included.</li>
+    </ul>
+  </li>
+
+  <li>
+    <strong>Antibiotic Testing Information (Optional):</strong>
+    <ul>
+      <li>You may provide antibiotic testing data in <code>one</code> of the following ways:
+        <ul>
+          <li><strong>Antibiotics File:</strong> A <strong>CSV</strong>, <strong>TSV</strong>, or <strong>Excel (.xlsx)</strong> file containing antibiotic testing results.</li>
+          <li><strong>Antibiotics Info:</strong> A text field in the metadata file summarizing the antibiotic testing information.</li>
+        </ul>
+      </li>
+      <li>
+        <strong>Important:</strong> You <strong>must not</strong> provide both <code>"Antibiotics File"</code> and <code>"Antibiotics Info"</code> at the same time.
+        If an <code>"Antibiotics File"</code> is provided, its filename must match exactly what is entered in the <code>"Antibiotics File"</code> field of the metadata file.
+      </li>
+      <li>
+        <strong>Format (For Antibiotics File):</strong> The file may use <code>,</code> (comma), <code>;</code> (semicolon), or <code>\t</code> (tab) as delimiters — these will be auto-detected. File extensions allowed: <code>.csv</code>, <code>.tsv</code>, <code>.txt</code>, <code>.xlsx</code>.
+      </li>
+      <li>If an <code>"Antibiotics File"</code> is provided, it must include all mandatory antibiotic testing columns.</li>
+    </ul>
+  </li>
+</ul>
+
+</p>
+  </li>
+
+
+<li>
+<strong>NGS Data:</strong>
+<p>There must be at least one of the following files or a combination of two or more of them:</p>
+<ul>
+  <li>
+    <strong>Illumina:</strong> FASTQ files (<code>.fastq</code>, <code>.fq</code>), either two paired-end files 
+    (e.g., <code>sample_R1.fastq.gz</code>, <code>sample_R2.fastq.gz</code>) or one single-end file.
+  </li>
+  <li>
+    <strong>Nanopore:</strong> FASTQ files (<code>.fastq</code>, <code>.fq</code>) or unaligned BAM file (<code>.bam</code>).
+  </li>
+  <li>
+    <strong>PacBio:</strong> FASTQ files (<code>.fastq</code>, <code>.fq</code>) or Subreads BAM file (<code>subreads.bam</code>).
+  </li>
+  <li>
+    <strong>Multiple:</strong> A combination of files from the above platforms.
+  </li>
+  <li>
+    <strong>File Naming:</strong> No specific naming requirements, but a meaningful name is recommended for better tracking
+    (e.g., <code>sample_ID_1.fastq.gz</code>, <code>sample_ID_2.fastq.gz</code>, <code>sample_ID.fastq.gz</code>). The filename must match exactly as specified in the <code>"NGS Files"</code> field of the metadata file. 
+  </li>
+</ul>
+<!-- Note on Compression -->
+<p class="text-muted">
+    <strong>Note:</strong> Compression is accepted. Supported compressed file formats include <code>.gz</code>, <code>.bz2</code>, and <code>.zip</code>. For example: <code>sample.fastq.gz</code>, <code>subreads.bam.bz2</code>.
+</p>
+  </li>
+</ul>
+
+<!-- NGS Files Formatting Guide -->
+<h3 id="ngs-formatting-guide">📌 Example of NGS Files inputs</h3>
+<p>
+    The <code>"Illumina R1", "Illumina R2", "Nanopore", and "PacBio"</code> fields in the metadata file must follow a structured format to indicate sequencing platforms and their corresponding files.
+</p>
+
+<!-- Formatting Rules Table -->
+<div class="table-responsive">
+    <table class="table table-bordered">
+        <thead class="thead-dark">
+            <tr>
+                <th>Examples of accepted NGS inputs</th>
+                <th>Illumina R1</th>
+                <th>Illumina R2</th>
+                <th>Nanopore</th>
+                <th>PacBio</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Single Platform: <code>Paired-end Illumina</code></td>
+                <td>sample_001_R1.fastq.gz</td>
+                <td>sample_001_R1.fastq.gz</td>
+                <td></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>Single Platform: <code>Single-end Illumina</code></td>
+                <td>sample_001_R1.fastq.gz</td>
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>Single Platform: <code>Nanopore</code></td>
+                <td></td>
+                <td></td>
+                <td>sample_ont.fastq.gz</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>Single Platform: <code>PacBio</code></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>Multiple Platforms: <code>Paired-end Illumina</code> and <code>Nanopore</code></td>
+                <td>sample_001_R1.fastq.gz</td>
+                <td>sample_001_R1.fastq.gz</td>
+                <td>sample_ont.fastq.gz</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>Multiple Platforms: <code>Paired-end Illumina</code> and <code>PacBio</code></td>
+                <td>sample_001_R1.fastq.gz</td>
+                <td>sample_001_R1.fastq.gz</td>
+                <td></td>
+                <td>sample_pacbio.fastq.gz</td>
+            </tr>
+            <tr>
+                <td>Multiple Platforms: <code>Nanopore</code> and <code>PacBio</code></td>
+                <td></td>
+                <td></td>
+                <td>sample_ont.fastq.gz</td>
+                <td>sample_pacbio.fastq.gz</td>
+            </tr>
+            <tr>
+                <td>Multiple Platforms: <code>Paired-end Illumina</code>, <code>Nanopore</code> and <code>PacBio</code></td>
+                <td>sample_001_R1.fastq.gz</td>
+                <td>sample_001_R1.fastq.gz</td>
+                <td>sample_ont.fastq.gz</td>
+                <td>sample_pacbio.fastq.gz</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+
+
+<!-- Additional Notes -->
+<h4>🛠 Additional Notes</h4>
+<ul>
+    <li>✔ If submitting hybrid sequencing data, you must list all platforms separately.</li>
+    <li>✔ File extensions must be correct (e.g., <code>.fastq</code>, <code>.fq</code>, <code>.bam</code>).</li>
+    <li>✔ Compressed files are accepted, including <code>.gz</code>, <code>.bz2</code>, and <code>.zip</code> formats.</li>
+</ul>
+
+
+
+    <h3 id="single-examples">Example of Single Upload Submission</h3>
+    <div class="table-responsive">
+      <table class="table table-striped table-bordered" style="font-size: 14px;">
+          <thead class="table-header">
+            <tr>
+              <th style="background-color: #d3d3d3; color: #000;">Metadata File</th>
+              <th style="background-color: #d3d3d3; color: #000;">Antibiotic Testing Files</th>
+              <th style="background-color: #d3d3d3; color: #000;">FASTQ Files</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>sample_001_metadata.csv</td>
+              <td>sample_001_antibiotics.csv</td>
+              <td>
+                sample_001_R1.fastq.gz<br />
+                sample_001_R2.fastq.gz
+              </td>
+            </tr>
+          </tbody>
+        </table>
+    </div>
+
+    <!-- Bulk Upload Instructions -->
+    <h2 id="bulk-upload" class="text-info">Bulk Upload</h2>
+    <p>For bulk uploads, the following guidelines must be followed:</p>
+    <h3 id="bulk-files">Required Files</h3>
+
+<ol>
+    <li>
+        Ensure that all required files are prepared and correctly labeled for each sample:
+        <ul>
+            <li>One metadata file in CSV format, following the single upload metadata format.</li>
+            <li>At least one FASTQ file per sample, with filenames matching exactly as listed in the <code>"NGS Files"</code> field of the metadata file.</li>
+            <li>
+                Antibiotic testing data per sample (optional):
+                <ul>
+                    <li><strong>Antibiotics File:</strong> If provided, the filename must match exactly as listed in the <code>"Antibiotics File"</code> field of the metadata file.</li>
+                    <li><strong>Antibiotics Info:</strong> If no file is provided, antibiotic testing details can be entered as text in the <code>"Antibiotics Info"</code> field of the metadata file.</li>
+                    <li><strong>Important:</strong> You may provide <code>either</code> an <code>"Antibiotics File"</code> <strong>or</strong> <code>"Antibiotics Info"</code>, but <strong>not both</strong>.</li>
+                </ul>
+            </li>
+        </ul>
+    </li>
+    <li>The metadata file must specify the expected filenames for FASTQ files in the <code>"NGS Files"</code> field and, if applicable, for antibiotics testing files in the <code>"Antibiotics File"</code> field.</li>
+    <li>Uploaded FASTQ files must match the filenames listed in the metadata file. If an antibiotics file is provided, it must also match the filename listed in the metadata file.</li>
+    <li>Upload the metadata file, all FASTQ files, and, if applicable, any antibiotics files directly through the bulk upload form.</li>
+</ol>
+
+
+    <p>Once all files are validated and uploaded, the system will associate them based on sample identifiers and process the submission.</p>
+
+    <!-- Examples Section -->
+    <h3 id="bulk-examples">Examples of Bulk Submissions</h3>
+    <p>The following examples demonstrate how to organize and name your files for a bulk submission:</p>
+    <p>Adhering to these examples and guidelines will help ensure your bulk uploads are processed correctly.</p>
+
+    <div class="table-responsive">
+      <table class="table table-striped table-bordered" style="font-size: 14px;">
+          <thead class="table-header">
+        <tr>
+          <th style="background-color: #d3d3d3; color: #000;">Metadata File</th>
+          <th style="background-color: #d3d3d3; color: #000;">Antibiotic Testing Files</th>
+          <th style="background-color: #d3d3d3; color: #000;">FASTQ Files</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>eco_meta_modified.csv</td>
+          <td>
+            Eco05232_amr.csv<br />
+            Eco05239_amr.csv<br />
+            Eco05243_amr.csv<br />
+            Eco05250_amr.csv<br />
+            Eco05274_amr.csv
+          </td>
+          <td>
+            <strong>Eco05232:</strong><br />
+            Eco05232-240828_1.fastq.gz<br />
+            Eco05232-240828_2.fastq.gz<br />
+            <strong>Eco05239:</strong><br />
+            Eco05239-240828_1.fastq.gz<br />
+            Eco05239-240828_2.fastq.gz<br />
+            <strong>Eco05243:</strong><br />
+            Eco05243-240828_1.fastq.gz<br />
+            Eco05243-240828_2.fastq.gz<br />
+            <strong>Eco05250:</strong><br />
+            Eco05250-240828_1.fastq.gz<br />
+            Eco05250-240828_2.fastq.gz<br />
+            <strong>Eco05274:</strong><br />
+            Eco05274-240828_1.fastq.gz<br />
+            Eco05274-240828_2.fastq.gz
+          </td>
+        </tr>
+        <tr>
+          <td>sample_metadata.csv</td>
+          <td>
+            Sample_001_antibiotics.csv<br />
+            Sample_002_antibiotics.csv
+          </td>
+          <td>
+            <strong>Sample_001:</strong><br />
+            Sample_001.fastq<br />
+            <strong>Sample_002:</strong><br />
+            Sample_002.fastq
+          </td>
+        </tr>
+        <tr>
+          <td>sample_metadata.csv</td>
+          <td>sample_antibiotics.csv</td>
+          <td>
+            <strong>Sample_001:</strong><br />
+            test1.fastq
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+    <h2 id="details" class="text-info">Detailed Metadata and Antibiotics Information</h2>
+    <p>
+      This section provides detailed descriptions of the required fields for Sample Metadata and Antibiotic Testing Results. 
+      The tables below outline the specific fields, their descriptions, expected content, and whether they are mandatory or optional. 
+      Use this information as a reference when preparing your metadata and antibiotic testing files for upload.
+  </p>
+
+    <!-- Sample Metadata Table -->
+    <h3 id="sample-meta">Sample Metadata for Single Upload</h3>
+    <p>Please follow the format shown below for your metadata.</p>
+
+    <!-- Legend for colors -->
+    <div class="mb-3">
+      <p>
+        <strong>Legend: Field Requirements</strong>
+      </p>
+      <div>
+        <span style="display:inline-block; width:20px; height:20px; background-color:#ffd1d1; border:1px solid #dee2e6; margin-right:5px;"></span>
+        <span>Mandatory Fields</span>
+      </div>
+      <div>
+        <span style="display:inline-block; width:20px; height:20px; background-color:#ffffe0; border:1px solid #dee2e6; margin-right:5px;"></span>
+        <span>Optional Fields</span>
+      </div>
+    <div>
+      <span style="display:inline-block; width:20px; height:20px; background-color:#ffe5b4; border:1px solid #dee2e6; margin-right:5px;"></span>
+      <span>At least one required among the group</span>
+    </div>
+
+    </div>
+
+    <!-- Metadata Table -->
+<div class="table-responsive">
+    <table class="table table-striped table-bordered" style="font-size: 12px;">
+        <thead class="table-header">
+            <tr>
+                <th colspan="3" style="background-color: #d3d3d3; color: #000;">Sample and Isolate Information</th>
+                <th colspan="4" style="background-color: #d3d3d3; color: #000;">Sample Collection Data</th>
+                <th colspan="6" style="background-color: #d3d3d3; color: #000;">Sample Collection Facility</th>
+                <th colspan="3" style="background-color: #d3d3d3; color: #000;">Patient/Host Details</th>
+                <th colspan="8" style="background-color: #d3d3d3; color: #000;">Sequencing Details</th>
+                <th colspan="2" style="background-color: #d3d3d3; color: #000;">Antibiotics Details</th>
+
+            </tr>
+            <tr>
+                <th style="background-color: #ffd1d1; color: #000;">Sample Identifier</th>
+                <th style="background-color: #ffd1d1; color: #000;">Isolate Species</th>
+                <th style="background-color: #ffffe0;">Subtype</th>
+                <th style="background-color: #ffd1d1; color: #000;">Collection Date</th>
+                <th style="background-color: #ffffe0;">Sampling Strategy</th>
+                <th style="background-color: #ffd1d1; color: #000;">Sample Source</th>
+                <th style="background-color: #ffffe0;">Collection Method</th>
+                <th style="background-color: #ffd1d1; color: #000;">City</th>
+                <th style="background-color: #ffd1d1; color: #000;">Postal Code</th>
+                <th style="background-color: #ffffe0; color: #000;">County</th>
+                <th style="background-color: #ffd1d1; color: #000;">State</th>
+                <th style="background-color: #ffd1d1; color: #000;">Country</th>
+                <th style="background-color: #ffffe0;">Lab Identifier</th>
+                <th style="background-color: #ffffe0;">Sex</th>
+                <th style="background-color: #ffffe0;">Age Group</th>
+                <th style="background-color: #ffffe0;">Country of Putative Exposure</th>
+                <th style="background-color: #ffffe0;">Sequencing Platform</th>
+                <th style="background-color: #ffd1d1; color: #000;">Sequencing Type</th>
+                <th style="background-color: #ffffe0;">Library Preparation Kit</th>
+                <th style="background-color: #ffffe0;">Sequencing Chemistry</th>
+                <th style="background-color: #ffe5b4; color: #000;">Illumina R1</th>
+                <th style="background-color: #ffe5b4; color: #000;">Illumina R2</th>
+                <th style="background-color: #ffe5b4; color: #000;">Nanopore</th>
+                <th style="background-color: #ffe5b4; color: #000;">Pacbio</th>
+                <th style="background-color: #ffffe0;">Antibiotics File</th>
+                <th style="background-color: #ffffe0;">Antibiotics Info</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in sample_data %}
+                <tr>
+                    <td>{{ row|get_item:'Sample Identifier' }}</td>
+                    <td>{{ row|get_item:'Isolate Species' }}</td>
+                    <td>{{ row|get_item:'Subtype' }}</td>
+                    <td>{{ row|get_item:'Collection Date' }}</td>
+                    <td>{{ row|get_item:'Sampling Strategy' }}</td>
+                    <td>{{ row|get_item:'Sample Source' }}</td>
+                    <td>{{ row|get_item:'Collection Method' }}</td>
+                    <td>{{ row|get_item:'City' }}</td>
+                    <td>{{ row|get_item:'Postal Code' }}</td>
+                    <td>{{ row|get_item:'County' }}</td>
+                    <td>{{ row|get_item:'State' }}</td>
+                    <td>{{ row|get_item:'Country' }}</td>
+                    <td>{{ row|get_item:'Lab Identifier' }}</td>
+                    <td>{{ row|get_item:'Sex' }}</td>
+                    <td>{{ row|get_item:'Age Group' }}</td>
+                    <td>{{ row|get_item:'Country of Putative Exposure' }}</td>
+                    <td>{{ row|get_item:'Sequencing Platform' }}</td>
+                    <td>{{ row|get_item:'Sequencing Type' }}</td>
+                    <td>{{ row|get_item:'Library Preparation Kit' }}</td>
+                    <td>{{ row|get_item:'Sequencing Chemistry' }}</td>
+                    <td>{{ row|get_item:'NGS Files' }}</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td>{{ row|get_item:'Antibiotics File' }}</td>
+                    <td>{{ row|get_item:'Antibiotics Info' }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+
+
+
+    <!-- Download CSV Button -->
+    <a href="{% url 'download_sample_csv' %}" class="btn btn-secondary">Download Sample CSV</a>
+
+    <br /><br />
+    <!-- Antibiotics Testing Table -->
+    <h3 id="sample_anti">Antibiotic Testing Results for Single Upload</h3>
+    <p>Please follow the format shown below for your antibiotics testing data.</p>
+
+    <div class="table-responsive">
+      <table class="table table-striped table-bordered" style="font-size: 12px;">
+        <thead class="table-header">
+          <tr>
+            <th style="background-color: #ffffe0;">Testing Method</th>
+            <th style="background-color: #ffd1d1; color: #000;">Tested Antibiotic</th>
+            <th style="background-color: #ffd1d1; color: #000;">Observed Antibiotic Resistance SIR</th>
+            <th style="background-color: #ffffe0;">Observed Antibiotic Resistance MIC (mg/L)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in antibiotics_data %}
+            <tr>
+              <td>{{ row|get_item:'Testing Method' }}</td>
+              <td>{{ row|get_item:'Tested Antibiotic' }}</td>
+              <td>{{ row|get_item:'Observed Antibiotic Resistance SIR' }}</td>
+              <td>{{ row|get_item:'Observed Antibiotic Resistance MIC (mg/L)' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Download Antibiotics CSV Button -->
+    <a href="{% url 'download_antibiotics_csv' %}" class="btn btn-secondary">Download Antibiotics Testing CSV</a>
+  </div>
+
+  <br />
+  <h3 id="detailed-meta">Detailed Metadata Fields</h3>
+  <p class="lead">This table outlines the required and optional metadata fields for sample uploads, as well as their descriptions and conditions.</p>
+
+  <!-- Metadata Table -->
+<!-- Detailed Metadata Fields Link -->
+<div class="table-responsive">
+  <table class="table table-striped table-bordered" style="font-size: 12px;">
+    <thead class="thead-dark">
+      <tr>
+        <th>Field</th>
+        <th>Description</th>
+        <th>Content</th>
+        <th>Condition</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- Sample and Isolate Information -->
+      <tr class="table-primary">
+        <td colspan="4">
+          <strong>Sample and Isolate Information</strong>
+        </td>
+      </tr>
+      <tr>
+        <td>Sample Identifier</td>
+        <td>Unique ID for tracking the sample.</td>
+        <td>Unique ID</td>
+        <td style="background-color: #ffd1d1;">Mandatory</td>
+      </tr>
+      <tr>
+        <td>Isolate Species</td>
+        <td>NCBI Taxonomy ID.</td>
+        <td>NCBI taxonomy ID</td>
+        <td style="background-color: #ffd1d1;">Mandatory</td>
+      </tr>
+      <tr>
+        <td>Subtype</td>
+        <td>Sequence type, strain, serotype, etc.</td>
+        <td>Text</td>
+        <td style="background-color: #ffffe0;">Optional</td>
+      </tr>
+
+      <!-- Sample Collection Data -->
+      <tr class="table-primary">
+        <td colspan="4">
+          <strong>Sample Collection Data</strong>
+        </td>
+      </tr>
+      <tr>
+        <td>Collection Date</td>
+        <td>When the sample was collected.</td>
+        <td>Day/Month/Year</td>
+        <td style="background-color: #ffd1d1;">Mandatory</td>
+      </tr>
+      <tr>
+        <td>Sampling Strategy</td>
+        <td>Reason for sampling.</td>
+        <td>Surveillance, suspected outbreak, sequencing for diagnostic purposes, other [Text]</td>
+        <td style="background-color: #ffffe0;">Optional</td>
+      </tr>
+      <tr>
+        <td>Sample Source</td>
+        <td>Type of sample source.</td>
+        <td>Human clinical (hospital), human screening (hospital), medical devices, etc.</td>
+        <td style="background-color: #ffd1d1;">Mandatory</td>
+      </tr>
+      <tr>
+        <td>Collection Method</td>
+        <td>Method used to collect the sample.</td>
+        <td>Text</td>
+        <td style="background-color: #ffffe0;">Optional</td>
+      </tr>
+
+      <!-- Sample Collection Facility -->
+      <tr class="table-primary">
+        <td colspan="4">
+          <strong>Sample Collection Facility</strong>
+        </td>
+      </tr>
+      <tr>
+        <td>City</td>
+        <td>City where the sample was collected.</td>
+        <td>Text</td>
+        <td style="background-color: #ffd1d1;">Mandatory</td>
+      </tr>
+      <tr>
+        <td>Postal Code</td>
+        <td>Postal code where the sample was collected.</td>
+        <td>Number</td>
+        <td style="background-color: #ffd1d1;">Mandatory</td>
+      </tr>
+      <tr>
+        <td>County</td>
+        <td>County where the sample was collected.</td>
+        <td>Text</td>
+        <td style="background-color: #ffffe0;">Optional</td>
+      </tr>
+      <tr>
+        <td>State</td>
+        <td>State where the sample was collected.</td>
+        <td>Text</td>
+        <td style="background-color: #ffd1d1;">Optional</td>
+      </tr>
+      <tr>
+        <td>Country</td>
+        <td>Country where the sample was collected.</td>
+        <td>Text</td>
+        <td style="background-color: #ffd1d1;">Mandatory</td>
+      </tr>
+      <tr>
+        <td>Lab Identifier</td>
+        <td>Unique identifier for the laboratory handling the sample.</td>
+        <td>Text</td>
+        <td style="background-color: #ffffe0;">Optional</td>
+      </tr>
+
+      <!-- Patient/Host Details -->
+      <tr class="table-primary">
+        <td colspan="4">
+          <strong>Patient/Host Details</strong>
+        </td>
+      </tr>
+      <tr>
+        <td>Sex</td>
+        <td>Biological sex of the host. Use "Other" to specify additional information if needed.</td>
+        <td>Male, Female, Other</td>
+        <td style="background-color: #ffffe0;">Optional</td>
+      </tr>
+      <tr>
+        <td>Age Group</td>
+        <td>Age range of the host.</td>
+        <td>Neonate [0-1 years], Pediatric [1-17], Adult [18-59], Elder [>=65]</td>
+        <td style="background-color: #ffffe0;">Optional</td>
+      </tr>
+      <tr>
+        <td>Country of Putative Exposure</td>
+        <td>Country where the host was likely exposed, based on epidemiological data or travel history.</td>
+        <td>Text</td>
+        <td style="background-color: #ffffe0;">Optional</td>
+      </tr>
+
+      <!-- Sequencing Details -->
+      <tr class="table-primary">
+        <td colspan="4">
+          <strong>Sequencing Details</strong>
+        </td>
+      </tr>
+      <tr>
+        <td>Sequencing Platform</td>
+        <td>Platform(s) used for sequencing. Can be more than one.</td>
+        <td>Illumina, PacBio, ONT, other [Text]</td>
+        <td style="background-color: #ffffe0;">Optional</td>
+      </tr>
+      <tr>
+        <td>Sequencing Type</td>
+        <td>Type of sequencing performed. Add free-text details for additional types if necessary.</td>
+        <td>Whole genome sequencing, Amplicon sequencing, Metagenome sequencing, RNA-sequencing, other [Text]</td>
+        <td style="background-color: #ffd1d1;">Mandatory</td>
+      </tr>
+      <tr>
+        <td>Library Preparation Kit</td>
+        <td>Kit used for preparing the sequencing library. Examples include Nextera XT, TruSeq DNA, SMRTbell, and others.</td>
+        <td>Text</td>
+        <td style="background-color: #ffffe0;">Optional</td>
+      </tr>
+      <tr>
+        <td>Sequencing Chemistry</td>
+        <td>Chemistry used for sequencing, such as Illumina (e.g., V2.5), PacBio (e.g., SMRTbell), ONT (e.g., R9.4).</td>
+        <td>Text</td>
+        <td style="background-color: #ffffe0;">Optional</td>
+      </tr>
+      <tr>
+        <td>Illumina R1</td>
+        <td> Read 1 or "forward" read file of illumina paired-end reads, or single-end FASTQ illumina. The filename must match exactly as specified in the metadata.</td>
+        <td><code>Sample_001.fastq</code></td>
+        <td style="background-color: #ffe5b4; text-align: center; vertical-align: middle;" rowspan="4">At least one required among the group</td>
+      </tr>
+      <tr>
+        <td>Illumina R2</td>
+        <td> Read 2 or "reverse" read file of illumina paired-end reads. The filename must match exactly as specified in the metadata.</td>
+        <td><code>Sample_002.fastq</code></td>
+      </tr>
+      <td>Nanopore</td>
+      <td>Nanopore FASTQ file or unaligned BAM file. The filename must match exactly as specified in the metadata.</td>
+      <td><code>Sample_ont.fastq</code></td>
+      </tr>
+      <td>PacBio</td>
+      <td>PacBio FASTQ file or subreads BAM file. The filename must match exactly as specified in the metadata.</td>
+      <td><code>Sample_pacbio.fastq</code></td>
+      </tr>
+
+
+
+      <!-- Antibiotics Testing -->
+      <tr class="table-primary">
+        <td colspan="4">
+          <strong>Antibiotics Details</strong>
+        </td>
+      </tr>
+      <tr>
+        <td>Antibiotics File</td>
+        <td>A CSV or TSV file containing antibiotic testing results for the sample. The filename must match exactly as specified in the metadata.</td>
+        <td><code>Sample_antibiotics.csv</code> [CSV, TSV]</td>
+        <td style="background-color: #ffffe0;">Optional</td>
+      </tr>
+      <tr>
+        <td>Antibiotics Info</td>
+        <td>Text-based antibiotic resistance information, provided directly in the metadata instead of a separate file.</td>
+        <td><code>Resistant to ampicillin and tetracycline</code> [Text]</td>
+        <td style="background-color: #ffffe0;">Optional</td>
+      </tr>
+
+    </tbody>
+  </table>
+</div>
+
+  
+   <h3 id="detailed-anti">Detailed Antibiotic Testing Results Fields</h3>
+    <p>
+        This section provides detailed descriptions of the required fields for Antibiotic Testing Results. 
+        The table below outlines the specific fields, their descriptions, expected content, and whether they are mandatory or optional. 
+        Use this information as a reference when preparing your antibiotic testing files for upload.
+    </p>
+
+    <p class="lead">
+        Antibiotic resistance data can be included using one of two methods:
+    </p>
+
+    <ul>
+        <li><strong>Antibiotics File:</strong> A structured CSV or TSV file containing antibiotic susceptibility test results for each sample.</li>
+        <li>
+            <strong>Antibiotics Info:</strong> A free-text field within the metadata file that provides antibiotic resistance details.  
+            <ul>
+                <li><strong>Example Entries:</strong>
+                    <ul>
+                        <li><code>"Resistant to beta-lactams"</code></li>
+                        <li><code>"Multidrug-resistant strain"</code></li>
+                        <li><code>"SIR results pending, MIC tested at 2 mg/L for Ciprofloxacin"</code></li>
+                    </ul>
+                </li>
+            </ul>
+        </li>
+    </ul>
+
+    <p><strong>Important:</strong> Only one method should be used per sample. Do not provide both an <code>Antibiotics File</code> and <code>Antibiotics Info</code> for the same sample.</p>
+
+
+
+
+  <!-- Antibiotics Metadata Table -->
+  <div class="table-responsive">
+      <table class="table table-striped table-bordered" style="font-size: 12px;">
+          <thead class="thead-dark">
+              <tr>
+                  <th>Field</th>
+                  <th>Description</th>
+                  <th>Accepted Content</th>
+                  <th>Condition</th>
+              </tr>
+          </thead>
+          <tbody>
+              <tr>
+                  <td>Testing Method</td>
+                  <td>Method used to determine resistance.</td>
+                  <td>e.g., Disk diffusion, Vitek</td>
+                  <td style="background-color: #ffffe0;">Optional</td>
+              </tr>
+              <tr>
+                  <td>Tested Antibiotic</td>
+                  <td>Name of the antibiotic tested.</td>
+                  <td>e.g., Ampicillin, Ciprofloxacin</td>
+                  <td style="background-color: #ffd1d1;">Mandatory</td>
+              </tr>
+              <tr>
+                  <td>Observed Antibiotic Resistance SIR</td>
+                  <td>Resistance classification based on guidelines.</td>
+                  <td>Susceptible (S), Intermediate (I), Resistant (R)</td>
+                  <td style="background-color: #ffd1d1;">Mandatory</td>
+              </tr>
+              <tr>
+                  <td>Observed Antibiotic Resistance MIC (mg/L)</td>
+                  <td>Minimum Inhibitory Concentration (quantitative).</td>
+                  <td>e.g., 0.5, >=4.0</td>
+                  <td style="background-color: #ffffe0;">Optional</td>
+              </tr>
+
+          </tbody>
+      </table>
+  </div>  
+
+<!-- Resubmission Instructions -->
+<h2 id="resubmission" class="text-info">Resubmission of Metadata Files</h2>
+
+<p>
+    If your metadata file was accepted with <strong>warnings</strong>, you will be allowed to resubmit a corrected version of that file.
+</p>
+
+<p>
+    The system will notify you immediately after upload if resubmission is allowed. You can also check the 
+    <a href="{% url 'dashboard' %}">Dashboard</a> at any time to view the current status of your submissions.
+</p>
+
+<ul>
+    <li>Only <strong>metadata files</strong> can be resubmitted. If accepted with warnings, a <strong>Resubmit Metadata</strong> option will be shown in the dashboard.</li>
+    <li>To resubmit, upload your corrected file using the provided resubmission link. The system will validate it and update the submission accordingly.</li>
+    <li>Once your file passes validation <strong>without warnings</strong>, resubmission will no longer be required and the resubmit button will disappear.</li>
+    <li>⚠️ If your submission includes warnings for <strong>antibiotics</strong> or <strong>FASTQ</strong> files, those will also be shown in the dashboard, but <strong>they cannot be resubmitted</strong>.</li>
+    <li>If you wish to correct antibiotics or FASTQ data, you must create a new submission.</li>
+    <li>The Submission ID is displayed after upload — you can use it to track and manage resubmissions later.</li>
+</ul>
+
+<p>
+    For a full overview of your submissions, including file statuses, warnings, and resubmission options, visit your 
+    <a href="{% url 'dashboard' %}">Dashboard</a>.
+</p>
+
+
+  
+{% endblock %}
+
+<!-- Custom CSS for the table header -->
+<style>
+  .table-header {
+    background-color: #003366;
+    color: #fff;
+  }
+  /* Light pastel colors for mandatory and optional fields */
+  th[style*='background-color: #ffd1d1'] {
+    background-color: #ffd1d1 !important;
+  }
+  th[style*='background-color: #ffffe0'] {
+    background-color: #ffffe0 !important;
+  }
+  /* Add vertical lines between columns */
+  .table-bordered th,
+  .table-bordered td {
+    border: 1px solid #dee2e6;
+  }
+  /* Smaller font size for table */
+  .table {
+    font-size: 12px;
+  }
+</style>

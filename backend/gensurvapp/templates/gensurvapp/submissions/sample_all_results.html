@@ -1,0 +1,202 @@
+{% extends "gensurvapp/base.html" %}
+{% load custom_tags %}
+{% block content %}
+
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="mb-5">
+        <h1 id="top" class="text-center">Detailed Results: Sample {{ sample_id }}</h1>
+        <p class="lead">
+            Explore comprehensive bacterial and plasmid-related analyses for the sample.</p>
+        </p>
+    </div>
+
+    <!-- Add the Sample Results Menu -->
+    <div id="sample-menu" class="menu-item active">
+        <a class="dropdown-btn">Sample Results <i class="fa fa-caret-down"></i></a>
+        <div class="dropdown-container">
+            <a href="{% url 'sample_results' submission_id sample_id %}">Results Summary: {{ sample_id }}</a>
+            <a href="{% url 'sample_all_results' submission_id sample_id %}">Detailed Results: {{ sample_id }}</a>
+        </div>
+    </div>
+
+    <!-- Bactopia Results -->
+    <h2 id="bac" class="text-info">Basic Bacterial Analyses: Results from Bactopia</h2>
+    <p>
+        This section provides insights into the sample's quality, assembly, genomic features, antimicrobial resistance, and taxonomic classification.
+    </p>
+
+    {% if bactopia_result %}
+        <!-- Bactopia Summary -->
+        <div class="card mb-4">
+            <div class="card-header">Bactopia Results</div>
+            <div class="card-body">
+                <ul>
+                    <li>
+                        <strong>QC Report:</strong>
+                        <a href="{{ request.scheme }}://{{ request.get_host }}{{ bactopia_result.directory_path }}/{{ sample_id }}.fastq.gz/main/qc/summary/{{ sample_id }}.fastq.gz-final_NanoPlot-report.html" target="_blank">
+                            NanoPlot Report
+                        </a>
+                    </li>
+                    <li>
+                        <strong>Assembly Metrics:</strong>
+                        <a href="{{ request.scheme }}://{{ request.get_host }}{{ bactopia_result.directory_path }}/{{ sample_id }}.fastq.gz/main/assembler/{{ sample_id }}.fastq.gz.tsv" target="_blank">
+                            Download TSV
+                        </a>
+                    </li>
+                    <li>
+                        <strong>Assembly (FASTA):</strong>
+                        <a href="{{ request.scheme }}://{{ request.get_host }}{{ bactopia_result.directory_path }}/{{ sample_id }}.fastq.gz/main/assembler/{{ sample_id }}.fastq.gz.fna.gz" target="_blank">
+                            Download FASTA
+                        </a>
+                    </li>
+                    <li>
+                        <strong>Annotation (GFF):</strong>
+                        <a href="{{ request.scheme }}://{{ request.get_host }}{{ bactopia_result.directory_path }}/{{ sample_id }}.fastq.gz/main/annotator/prokka/{{ sample_id }}.fastq.gz.gff.gz" target="_blank">
+                            Download GFF
+                        </a>
+                    </li>
+                    <li>
+                        <strong>Annotation Summary:</strong>
+                        <a href="{{ request.scheme }}://{{ request.get_host }}{{ bactopia_result.directory_path }}/{{ sample_id }}.fastq.gz/main/annotator/prokka/{{ sample_id }}.fastq.gz.tsv" target="_blank">
+                            Download TSV
+                        </a>
+                    </li>
+                    <li>
+                        <strong>AMRFinderPlus Results:</strong>
+                        <a href="{{ request.scheme }}://{{ request.get_host }}{{ bactopia_result.directory_path }}/{{ sample_id }}.fastq.gz/tools/amrfinderplus/{{ sample_id }}.fastq.gz.tsv" target="_blank">
+                            Download TSV
+                        </a>
+                    </li>
+                    <li>
+                        <strong>MLST Results:</strong>
+                        <a href="{{ request.scheme }}://{{ request.get_host }}{{ bactopia_result.directory_path }}/{{ sample_id }}.fastq.gz/tools/mlst/{{ sample_id }}.fastq.gz.tsv" target="_blank">
+                            Download TSV
+                        </a>
+                    </li>
+                    <li>
+                        <strong>Taxonomic Classification:</strong>
+                        <a href="{{ request.scheme }}://{{ request.get_host }}{{ bactopia_result.directory_path }}/{{ sample_id }}.fastq.gz/main/sketcher/{{ sample_id }}.fastq.gz-mash-refseq88-k21.txt" target="_blank">
+                            Mash Results
+                        </a>
+                    </li>
+                    <li>
+                        <strong>Summary Files:</strong>
+                            <ul>
+                                <li>
+                                    <a href="{{ request.scheme }}://{{ request.get_host }}{{ bactopia_result.directory_path }}/bactopia-runs/bactopia-20241206-082913/merged-results/amrfinderplus.tsv" target="_blank" download>
+                                        Download amrfinderplus.tsv
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{{ request.scheme }}://{{ request.get_host }}{{ bactopia_result.directory_path }}/bactopia-runs/bactopia-20241206-082913/merged-results/assembly-scan.tsv" target="_blank" download>
+                                        Download assembly-scan.tsv
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{{ request.scheme }}://{{ request.get_host }}{{ bactopia_result.directory_path }}/bactopia-runs/bactopia-20241206-082913/merged-results/meta.tsv" target="_blank" download>
+                                        Download meta.tsv
+                                    </a>
+                                </li>
+                                <li>
+                                    <a href="{{ request.scheme }}://{{ request.get_host }}{{ bactopia_result.directory_path }}/bactopia-runs/bactopia-20241206-082913/merged-results/mlst.tsv" target="_blank" download>
+                                        Download mlst.tsv
+                                    </a>
+                                </li>
+                         </ul>
+                    </li>
+                     <li>
+                        <strong>Bactopia Report:</strong>
+                        <a href="{{ request.scheme }}://{{ request.get_host }}{{ bactopia_result.directory_path }}/bactopia-runs/bactopia-20241206-082913/nf-reports/bactopia-report.html" target="_blank">
+                      View bactopia-report.html
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+
+
+    {% else %}
+    <p>No Bactopia results available.</p>
+    {% endif %}
+
+    <!-- PlasmIdent Results -->
+    <h2 id="plas" class="text-info">Plasmid-Related Analyses: Results from PlasmIdent</h2>
+    <p>
+        This section provides insights into plasmid-related analyses, including antimicrobial resistance and plasmid sequences.
+    </p>
+
+    {% if plasmid_ident_result %}
+        <!-- Summary Metrics -->
+        <div class="card mb-4">
+            <div class="card-header">Summary Metrics</div>
+            <div class="card-body">
+                <p>Number of Contigs: {{ num_contigs|default:"N/A" }}</p>
+                <p>Number of AR Genes: {{ num_ar_genes|default:"N/A" }}</p>
+            </div>
+        </div>
+
+        <!-- Plasmid Sequences -->
+        <h3>Plasmid Sequences</h3>
+        <div style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px;">
+            <ul>
+                {% for plasmid_file in plasmid_files %}
+                <li>
+                    <a href="{{ request.scheme }}://{{ request.get_host }}{{ plasmid_ident_result.directory_path }}/{{ sample_id }}/plasmids/{{ plasmid_file }}" target="_blank">
+                        {{ plasmid_file|basename }}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- Plasmid Visualization Plots -->
+        <h3 class="mt-5">Plasmid Visualization Plots</h3>
+        <div style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; padding: 10px;">
+            <ul>
+                {% for plot_file in plot_files %}
+                <li>
+                    <a href="{{ request.scheme }}://{{ request.get_host }}{{ plasmid_ident_result.directory_path }}/{{ sample_id }}/plots/{{ plot_file }}" target="_blank">
+                        {{ plot_file|basename }}
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <!-- Additional Files -->
+        <h3 class="mt-5">Additional Files</h3>
+        <ul>
+            <li>
+                <strong>Antimicrobial Resistance Genes:</strong>
+                <a href="{{ request.scheme }}://{{ request.get_host }}{{ plasmid_ident_result.directory_path }}/{{ sample_id }}/resistances/{{ sample_id }}_rgi.txt" target="_blank">
+                    {{ sample_id }}_rgi.txt
+                </a>
+            </li>
+            <li>
+                <strong>Gene Predictions:</strong>
+                <a href="{{ request.scheme }}://{{ request.get_host }}{{ plasmid_ident_result.directory_path }}/{{ sample_id }}/genes/{{ sample_id }}.predict" target="_blank">
+                    {{ sample_id }}.predict
+                </a>
+            </li>
+            <li>
+                <strong>Coverage Information:</strong>
+                <a href="{{ request.scheme }}://{{ request.get_host }}{{ plasmid_ident_result.directory_path }}/{{ sample_id }}/coverage/{{ sample_id }}_cov_normal.bed.gz" target="_blank">
+                    {{ sample_id }}_cov_normal.bed.gz
+                </a>
+            </li>
+            <li>
+                <strong>HTML Report:</strong>
+                <a href="{{ request.scheme }}://{{ request.get_host }}{{ plasmid_ident_result.directory_path }}/nf_reports/PlasmIdent_Report.html" target="_blank">
+                    View PlasmIdent_Report.html
+                </a>
+            </li>
+        </ul>
+
+    {% else %}
+    <p>No PlasmIdent results available for this sample.</p>
+    {% endif %}
+</div>
+
+{% endblock %}

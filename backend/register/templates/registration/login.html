@@ -1,0 +1,24 @@
+{% extends "gensurvapp/base.html" %}
+
+{% block title %}
+Login Here
+{% endblock %}
+
+{% load crispy_forms_tags %}
+
+{% block content %}
+<div class="login-form">
+    <form method="post" class="form-group">
+        {% csrf_token %}
+        {{form|crispy}}
+        <p>Don't have an account? Create one <a href="{% url 'register' %}">here</a></p>
+        <button type="submit" class="btn btn-success">Login</button>
+        <a href="{% url 'password_reset' %}">Forgot your password?</a>
+    </form>
+</div>
+
+<!-- Show logout option only if the user is authenticated -->
+{% if user.is_authenticated %}
+    <p>Already logged in? <a href="{% url 'logout' %}">Logout</a></p>
+{% endif %}
+{% endblock %}

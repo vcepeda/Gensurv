@@ -1,0 +1,140 @@
+{% extends 'gensurvapp/base.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1 class="text-center mb-4">Detailed Metadata Fields</h1>
+    <p class="lead">
+        This table outlines the required and optional metadata fields for sample uploads, as well as their descriptions and conditions.
+    </p>
+
+    <!-- Legend for colors -->
+    <div class="mb-3">
+        <p><strong>Legend:</strong></p>
+        <div>
+            <span style="display:inline-block; width:20px; height:20px; background-color:#ffd1d1; border:1px solid #dee2e6; margin-right:5px;"></span>
+            <span>Mandatory Fields</span>
+        </div>
+        <div>
+            <span style="display:inline-block; width:20px; height:20px; background-color:#ffffe0; border:1px solid #dee2e6; margin-right:5px;"></span>
+            <span>Optional Fields</span>
+        </div>
+    </div>
+
+    <!-- Metadata Table -->
+    <table class="table table-striped table-hover table-bordered">
+        <thead class="thead-dark">
+            <tr>
+                <th>Field</th>
+                <th>Description</th>
+                <th>Content</th>
+                <th>Condition</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Sample and Isolate Information -->
+            <tr class="table-primary">
+                <td colspan="4"><strong>Sample and Isolate Information</strong></td>
+            </tr>
+            <tr>
+                <td>Sample Identifier</td>
+                <td>Unique ID for tracking the sample.</td>
+                <td>Unique ID</td>
+                <td style="background-color: #ffd1d1;">Mandatory</td>
+            </tr>
+            <tr>
+                <td>Isolate Species</td>
+                <td>NCBI Taxonomy ID.</td>
+                <td>NCBI taxonomy ID</td>
+                <td style="background-color: #ffd1d1;">Mandatory</td>
+            </tr>
+            <tr>
+                <td>Subtype</td>
+                <td>Sequence type, strain, serotype, etc.</td>
+                <td>Text</td>
+                <td style="background-color: #ffffe0;">Optional</td>
+            </tr>
+
+            <!-- Sample Collection -->
+            <tr class="table-primary">
+                <td colspan="4"><strong>Sample Collection</strong></td>
+            </tr>
+            <tr>
+                <td>Collection Date</td>
+                <td>When the sample was collected.</td>
+                <td>Day/Month/Year</td>
+                <td style="background-color: #ffd1d1;">Mandatory</td>
+            </tr>
+            <tr>
+                <td>City</td>
+                <td>City where the sample was collected.</td>
+                <td>Text</td>
+                <td style="background-color: #ffd1d1;">Mandatory</td>
+            </tr>
+            <tr>
+                <td>Postal Code</td>
+                <td>Postal code where the sample was collected.</td>
+                <td>Number</td>
+                <td style="background-color: #ffd1d1;">Mandatory</td>
+            </tr>
+            <tr>
+                <td>County</td>
+                <td>County where the sample was collected.</td>
+                <td>Text</td>
+                <td style="background-color: #ffffe0;">Optional</td>
+            </tr>
+            <tr>
+                <td>Sampling Strategy</td>
+                <td>Reason for sampling.</td>
+                <td>Surveillance, suspected outbreak, sequencing for diagnostic purposes, other [Text]</td>
+                <td style="background-color: #ffffe0;">Optional</td>
+            </tr>
+            <tr>
+                <td>Sample Source</td>
+                <td>Type of sample source.</td>
+                <td>Human clinical (hospital), human screening (hospital), medical devices, etc.</td>
+                <td style="background-color: #ffd1d1;">Mandatory</td>
+            </tr>
+
+            <!-- Sequencing Details -->
+            <tr class="table-primary">
+                <td colspan="4"><strong>Sequencing Details</strong></td>
+            </tr>
+            <tr>
+                <td>Sequencing Platform</td>
+                <td>Platform used for sequencing.</td>
+                <td>Illumina, PacBio, ONT, other [Text]</td>
+                <td style="background-color: #ffd1d1;">Mandatory</td>
+            </tr>
+            <tr>
+                <td>Sequencing Type</td>
+                <td>Type of sequencing performed.</td>
+                <td>Whole genome sequencing, amplicon sequencing, metagenome sequencing, RNA-sequencing</td>
+                <td style="background-color: #ffd1d1;">Mandatory</td>
+            </tr>
+
+            <!-- Laboratory Antibiotic Resistance Testing -->
+            <tr class="table-primary">
+                <td colspan="4"><strong>Laboratory Antibiotic Resistance Testing</strong></td>
+            </tr>
+            <tr>
+                <td>Testing Method</td>
+                <td>Method used for testing resistance.</td>
+                <td>Disk diffusion, Vitek, etc.</td>
+                <td style="background-color: #ffd1d1;">Mandatory</td>
+            </tr>
+            <tr>
+                <td>Observed Antibiotic Resistance MIC (mg/L)</td>
+                <td>Minimum Inhibitory Concentration.</td>
+                <td>Values like >=1.0, 0.5, etc.</td>
+                <td style="background-color: #ffffe0;">Optional</td>
+            </tr>
+            <tr>
+                <td>Observed Antibiotic Resistance SIR</td>
+                <td>SIR classification.</td>
+                <td>Susceptible, Intermediate, Resistant</td>
+                <td style="background-color: #ffd1d1;">Mandatory</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+{% endblock %}
