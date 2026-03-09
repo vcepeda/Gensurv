@@ -2206,10 +2206,10 @@ def compare_metadata_with_uploaded_files_single(submission, metadata_df):
     )
 
     # ✅ Get existing uploaded files
-    existing_fastq = submission.uploadedfile_set.filter(file_type="fastq", sample_id=sample_id)
+    existing_fastq = submission.files.filter(file_type="fastq", sample_id=sample_id)
     uploaded_fastq_names = {f.file.name.split("/")[-1] for f in existing_fastq}
 
-    ab_file_obj = submission.uploadedfile_set.filter(file_type="antibiotics", sample_id=sample_id).first()
+    ab_file_obj = submission.files.filter(file_type="antibiotics", sample_id=sample_id).first()
     ab_file_name = ab_file_obj.file.name.split("/")[-1] if ab_file_obj else None
 
     # ✅ Compare
@@ -2237,7 +2237,7 @@ def compare_metadata_with_uploaded_files(submission, metadata_df):
     mismatches = []
 
     # Build lookup for uploaded FASTQ files
-    uploaded_fastqs = submission.uploadedfile_set.filter(file_type="fastq")
+    uploaded_fastqs = submission.files.filter(file_type="fastq")
     uploaded_by_sample = {}
     for f in uploaded_fastqs:
         sid = (f.sample_id or "").lower()
@@ -2246,7 +2246,7 @@ def compare_metadata_with_uploaded_files(submission, metadata_df):
     # Build lookup for uploaded antibiotics files → IMPORTANT: use "antibiotics_raw"
     uploaded_ab = {
         (f.sample_id or "").lower(): f.file.name.split("/")[-1]
-        for f in submission.uploadedfile_set.filter(file_type="antibiotics_raw")
+        for f in submission.files.filter(file_type="antibiotics_raw")
     }
 
     for idx, row in metadata_df.iterrows():
@@ -2310,7 +2310,7 @@ def compare_metadata_with_uploaded_files2(submission, metadata_df):
     mismatches = []
 
     # Build lookup for uploaded files: sample_id -> files
-    uploaded_fastqs = submission.uploadedfile_set.filter(file_type="fastq")
+    uploaded_fastqs = submission.files.filter(file_type="fastq")
     uploaded_by_sample = {}
     for f in uploaded_fastqs:
         sid = (f.sample_id or "").lower()
@@ -2318,7 +2318,7 @@ def compare_metadata_with_uploaded_files2(submission, metadata_df):
 
     uploaded_ab = {
         (f.sample_id or "").lower(): f.file.name.split("/")[-1]
-        for f in submission.uploadedfile_set.filter(file_type="antibiotics_raw")
+        for f in submission.files.filter(file_type="antibiotics_raw")
     }
 
     for idx, row in metadata_df.iterrows():
@@ -2447,7 +2447,7 @@ def resubmit_file_view(request, submission_id, file_type):
         form = UploadFileForm(request.POST, request.FILES)
         if form.is_valid():
             new_file = form.cleaned_data["file"]
-            old = submission.uploadedfile_set.filter(file_type=f"{file_type}_raw").first()
+            old = submission.files.filter(file_type=f"{file_type}_raw").first()
             logger.info(f"file_type2: {file_type}_raw")
 
             if old:
@@ -2513,7 +2513,7 @@ def resubmit_file_view(request, submission_id, file_type):
                         logger.info(f"###### SAMPLE: {sample_id}")
 
                         original_sample_ids = list(set([
-                            sid for sid in submission.uploadedfile_set.values_list("sample_id", flat=True) if sid
+                            sid for sid in submission.files.values_list("sample_id", flat=True) if sid
                         ]))
                         stored_sample_ids_lc = [sid.lower() for sid in original_sample_ids]
 
@@ -2942,19 +2942,10 @@ def user_dashboard(request):
     fastq_files_qs = UploadedFile.objects.filter(file_type="fastq")
     
     query_start = time.time()
-    # old code without all users admin view
-    #submissions = Submission.objects.prefetch_related(
-    #    Prefetch('sample_files', queryset=sample_files_qs, to_attr='prefetched_sample_files'),
-    #    Prefetch('uploadedfile_set', queryset=antibiotics_files_qs, to_attr='prefetched_antibiotics_files'),
-    #    Prefetch('uploadedfile_set', queryset=fastq_files_qs, to_attr='prefetched_fastq_files')
-    #).filter(user=request.user).order_by('-created_at')
-
 
     base_qs = Submission.objects.prefetch_related(
-        Prefetch('sample_files', queryset=sample_files_qs, to_attr='prefetched_sample_files'),
-        Prefetch('uploadedfile_set', queryset=antibiotics_files_qs, to_attr='prefetched_antibiotics_files'),
-        Prefetch('uploadedfile_set', queryset=fastq_files_qs, to_attr='prefetched_fastq_files')
-    )
+    Prefetch('files', queryset=UploadedFile.objects.all(), to_attr='prefetched_files')
+)
 
     if admin_only_upload_test(request.user):
         submissions = base_qs.order_by('-created_at')
@@ -2984,12 +2975,12 @@ def user_dashboard(request):
     all_sample_ids = set()
 
     for submission in submissions:
-        for fastq_file in submission.uploadedfile_set.filter(file_type="fastq"):
+        for fastq_file in submission.files.filter(file_type="fastq"):
             if fastq_file.sample_id:
                 all_sample_ids.add(fastq_file.sample_id)
 
     # Fetch analysis results in ONE query:
-    analysis_results = AnalysisResult.objects.filter(sample__sample_id__in=all_sample_ids).order_by('-completion_date')
+    analysis_results = AnalysisResult.objects.filter(sample_id__in=all_sample_ids).order_by('-completion_date')
 
     # Build lookup:
     analysis_lookup = {}
@@ -3005,19 +2996,23 @@ def user_dashboard(request):
         logger.debug(f"➡️ is_bulk_upload: {submission.is_bulk_upload}")
         logger.debug(f"➡️ resubmission_allowed: {submission.resubmission_allowed}")
 
-        antibiotics_files = submission.prefetched_antibiotics_files
-        fastq_files = submission.prefetched_fastq_files
-        sample_files = submission.prefetched_sample_files
+        #antibiotics_files = submission.prefetched_antibiotics_files
+        #fastq_files = submission.prefetched_fastq_files
+        #sample_files = submission.prefetched_sample_files
+        all_files = submission.prefetched_files
 
+        sample_files = [f for f in all_files if f.file_type in ('metadata_raw', 'metadata_cleaned')]
+        antibiotics_files = [f for f in all_files if f.file_type in ('antibiotics_raw', 'antibiotics_cleaned')]
+        fastq_files = [f for f in all_files if f.file_type == 'fastq']
 
         logger.debug(f"🧬 FASTQ count: {len(fastq_files)} | 🧫 Antibiotics file count: {len(antibiotics_files)}")
 
         # Find cleaned_metadata ONCE here:
-        cleaned_metadata = submission.uploadedfile_set.filter(file_type="metadata_cleaned").first()
+        cleaned_metadata = submission.files.filter(file_type="metadata_cleaned").first()
         if not cleaned_metadata:
-            cleaned_metadata = submission.uploadedfile_set.filter(file_type="metadata_raw").first()
+            cleaned_metadata = submission.files.filter(file_type="metadata_raw").first()
 
-        raw_metadata = submission.uploadedfile_set.filter(file_type="metadata_raw").first()
+        raw_metadata = submission.files.filter(file_type="metadata_raw").first()
         if cleaned_metadata:
             logger.debug(f"🧼 Cleaned metadata file exists? {'Yes' if cleaned_metadata.cleaned_file else 'No'}")
         else:
