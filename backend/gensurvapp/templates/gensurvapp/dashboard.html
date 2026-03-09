@@ -43,7 +43,7 @@
                         <!-- Metadata Files -->
                         <td>
                         
-                            {% with raw=data.submission.uploadedfile_set|get_file:"metadata_raw" cleaned=data.submission.uploadedfile_set|get_file:"metadata_cleaned" %}
+                            {% with raw=data.submission.files|get_file:"metadata_raw" cleaned=data.submission.files|get_file:"metadata_cleaned" %}
                                 {% if raw %}
                                     <strong>Raw:</strong>
                                     <a href="{{ raw.file.url }}" target="_blank">

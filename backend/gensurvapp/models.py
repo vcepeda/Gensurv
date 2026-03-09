@@ -68,7 +68,7 @@ class Submission(models.Model):
 
 
 class UploadedFile(models.Model):
-    submission = models.ForeignKey(Submission, on_delete=models.CASCADE)
+    submission = models.ForeignKey(Submission, on_delete=models.CASCADE, related_name='files')
     file = models.FileField(upload_to=user_submission_path)  # Updated to use `user_submission_path`
     cleaned_file = models.FileField(upload_to=user_submission_path, null=True, blank=True)  # Cleaned file (optional)
     file_type = models.CharField(max_length=30)
