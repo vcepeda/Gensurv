@@ -13,11 +13,11 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 import os
 from pathlib import Path
 #check is neccesary...
-from storages.backends.sftpstorage import SFTPStorage
+#from storages.backends.sftpstorage import SFTPStorage
 from django.core.files.storage import FileSystemStorage
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 # Quick-start development settings - unsuitable for production
@@ -31,14 +31,13 @@ SECRET_KEY = 'django-insecure-9fmq@_ias7off0o7)1y=sd7@%&*&a9t%^$@y6u#jw2ds*$df&3
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = ['gensurv.de',"localhost", "127.0.0.1",'188.34.142.178']#'https://gensurv.de','http://gensurv.de']
-
-#CSRF_TRUSTED_ORIGINS = [
-#    "https://188.34.142.178.sslip.io",
-#]
+CSRF_TRUSTED_ORIGINS = ["https://gensurv.de"]
 
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
+CRISPY_TEMPLATE_PACK= "bootstrap4"
+CRISPY_ALLOWED_TEMPLATE_PACKS = ["bootstrap4"]
 
 # Application definition
 
@@ -56,18 +55,13 @@ INSTALLED_APPS = [
     "crispy_bootstrap5",
     "rest_framework",
     "corsheaders",  # for local development, since vue.js runs on a different port
-    "crispy_bootstrap4",
+    "crispy_bootstrap4", #obsolete
     'dbbackup',  # django-dbbackup
-    'storages',
+    'storages',  #check
 
     ]
 SITE_ID = 1
 SITE_URL = 'https://gensurv.de'  # Replace with your actual domain
-
-# Local storage for metadata and antibiotics files
-# MEDIA_URL = '/media/'
-MEDIA_ROOT = '/mnt/storage/ahcepev1/Gensurv_data/media'
-# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
 DBBACKUP_STORAGE_OPTIONS = {'location': '/mnt/web_data/html/Gensurv/DBBACKUP_STORAGE'}
@@ -89,7 +83,7 @@ DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 #}
 
 # Local storage settings for metadata and antibiotics files
-LOCAL_STORAGE = FileSystemStorage(location=MEDIA_ROOT)
+#LOCAL_STORAGE = FileSystemStorage(location=MEDIA_ROOT)
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -99,7 +93,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-#    'middleware.timing_middleware.UploadTimingMiddleware',  # <- Add this here suggested by the chatgpt to include timing before django uploload recei
+    "corsheaders.middleware.CorsMiddleware", # Beacause CORS was added above
 ]
 
 ROOT_URLCONF = 'gensurv_project.urls'
@@ -123,7 +117,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'gensurv_project.wsgi.application'
 
-
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
@@ -138,48 +131,67 @@ DATABASES = {
     }
 }
 
+# Rest API
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        # 'rest_framework.authentication.TokenAuthentication',  # Optional: for token auth
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.MultiPartParser',
+        'rest_framework.parsers.FormParser',
+    ],
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',  # For development
+    ],
+    'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
+}
 
+# CORS
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "https://gensurv.de",
+]
 
 # Password validation
 # https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
+
+AUTH_USER_MODEL = 'register.CustomUser'
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'UTC'
-
 USE_I18N = True
-
 USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
+# Media files
+MEDIA_ROOT = '/mnt/storage/ahcepev1/Gensurv_data/media'
+MEDIA_URL = '/media/' 
 
-CRISPY_TEMPLATE_PACK= "bootstrap4"
-CRISPY_ALLOWED_TEMPLATE_PACKS = ["bootstrap4"]
+# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 
 # Default primary key field type
@@ -245,10 +257,11 @@ ADMINS = [
     ("Admin", ADMIN_EMAIL),
 ]
 
+##NOT mandatory
+
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
-AUTH_USER_MODEL = 'register.CustomUser'
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Or cache, if using cache sessions
 
