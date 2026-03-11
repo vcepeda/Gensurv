@@ -55,7 +55,7 @@ INSTALLED_APPS = [
     "crispy_bootstrap5",
     "rest_framework",
     "corsheaders",  # for local development, since vue.js runs on a different port
-    "crispy_bootstrap4", #obsolete
+    #"crispy_bootstrap4", #obsolete
     'dbbackup',  # django-dbbackup
     'storages',  #check
 
