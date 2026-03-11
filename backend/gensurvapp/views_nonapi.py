@@ -1,9 +1,8 @@
 from django.shortcuts import render, redirect, HttpResponse
 from django.http import HttpResponseNotFound, HttpResponseRedirect
 from django.http import Http404
-from .models import TodoItem, Item
 from .models import Submission,FileHistory
-from .models import SampleFile, UploadedFile, AnalysisResult 
+from .models import UploadedFile, AnalysisResult 
 import re
 from django.db.models import Q
 from .forms import CreateNewList, FileUploadForm ,SearchForm
@@ -51,7 +50,7 @@ logging.basicConfig(filename='bulk_upload.log', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 def home(request):
-    return render(request, 'gensurvapp/home.html', {"TodoItems": TodoItem.objects.all()})
+    return render(request, 'gensurvapp/home.html')
 def research(request):
     return render(request, 'gensurvapp/research.html')
 
@@ -67,57 +66,7 @@ def contact(request):
 def accessibility(request):
     return render(request, 'gensurvapp/accessibility.html')
 
-    
-@login_required
-def create(response):
-    if response.method == "POST":
-        form = CreateNewList(response.POST)
-        if form.is_valid():
-            n = form.cleaned_data["name"]
-            t = TodoItem(name=n)
-            t.save()
-            response.user.todoitem.add(t)
-            return HttpResponseRedirect(f"/{n}/")
-    else:
-        form = CreateNewList()
-    return render(response, 'gensurvapp/create.html', {"form": form})
 
-@login_required
-def todos(request):
-    items = TodoItem.objects.all()
-    return render(request, 'gensurvapp/todos.html', {"todos": items})
-
-@login_required
-def index(request, name):
-    try:
-        ls = TodoItem.objects.get(name=name)
-    except TodoItem.DoesNotExist:
-        return HttpResponseNotFound("TodoItem with name '%s' does not exist." % name)
-
-    if ls in request.user.todoitem.all():
-        if request.method == "POST":
-            print(request.POST)
-            if request.POST.get("save"):
-                for item in ls.item_set.all():
-                    if request.POST.get("c" + str(item.id)) == "clicked":
-                        item.complete = True
-                    else:
-                        item.complete = False
-                    item.save()
-            elif request.POST.get("newItem"):
-                txt = request.POST.get("new")
-                if len(txt) > 2:
-                    ls.item_set.create(text=txt, complete=False)
-                else:
-                    print("invalid")
-
-        try:
-            item = ls.item_set.first()
-        except Item.DoesNotExist:
-            return HttpResponseNotFound("Item with id 8 does not exist for TodoItem with name '%s'." % name)
-
-        return render(request, 'gensurvapp/list.html', {"ls": ls, "item": item, "TodoItems": TodoItem.objects.all()})
-    return render(request, 'gensurvapp/todos.html', {})
 @login_required
 def instructions(request):
     return render(request, 'gensurvapp/instructions.html')
@@ -1326,61 +1275,6 @@ def validate_and_save_csv(file, expected_columns,essential_columns=None):
     #return is_valid: bool, warning: bool, message: str, delimiter: str, dataframe: Optional[pd.DataFrame]
     return True, False, "Validation successful.", delimiter, df
 
-
-def handle_single_upload(form, user):
-    """Process single upload."""
-    metadata_file = form.cleaned_data['metadata_file']
-    antibiotics_file = form.cleaned_data['antibiotics_file']
-    fastq_files = form.cleaned_data['fastq_files']
-
-    # Create submission instance
-    submission = Submission.objects.create(user=user, metadata_file=metadata_file, is_bulk_upload=False)
-
-    # Save related files
-    SampleFile.objects.create(submission=submission, sample_id="SingleSample", file_type='metadata', file=metadata_file)
-    SampleFile.objects.create(submission=submission, sample_id="SingleSample", file_type='antibiotics', file=antibiotics_file)
-
-    for fastq_file in fastq_files:
-        SampleFile.objects.create(submission=submission, sample_id="SingleSample", file_type='fastq', file=fastq_file)
-
-    return submission
-
-def handle_bulk_upload(form, user):
-    """Process bulk upload."""
-    metadata_file = form.cleaned_data['metadata_file']
-    antibiotics_files = form.cleaned_data['antibiotics_files']
-    fastq_files = form.cleaned_data['fastq_files']
-
-    # Create submission instance
-    submission = Submission.objects.create(user=user, metadata_file=metadata_file, is_bulk_upload=True)
-
-    # Parse sample IDs from metadata file
-    sample_ids = extract_sample_ids_from_metadata(metadata_file)
-
-    # Match files to sample IDs
-    for sample_id in sample_ids:
-        matched_antibiotics = [f for f in antibiotics_files if sample_id in f.name]
-        matched_fastqs = [f for f in fastq_files if sample_id in f.name]
-
-        if not matched_antibiotics:
-            raise ValueError(f"Missing antibiotics file for sample ID: {sample_id}")
-        if not matched_fastqs:
-            raise ValueError(f"Missing FASTQ files for sample ID: {sample_id}")
-
-        # Save files for each sample ID
-        SampleFile.objects.create(
-            submission=submission, sample_id=sample_id, file_type='metadata', file=metadata_file
-        )
-        for antib_file in matched_antibiotics:
-            SampleFile.objects.create(
-                submission=submission, sample_id=sample_id, file_type='antibiotics', file=antib_file
-            )
-        for fastq_file in matched_fastqs:
-            SampleFile.objects.create(
-                submission=submission, sample_id=sample_id, file_type='fastq', file=fastq_file
-            )
-
-    return submission
 
 def extract_sample_ids(file):
     """
@@ -2815,17 +2709,6 @@ def upload(request):
     return render(request, 'gensurvapp/upload.html', {'form': form, 'columns_data': columns_data})
 
 
-@login_required
-def search(request):
-    query = request.GET.get('query', '')
-    results = []
-    if query:
-        results = TodoItem.objects.filter(
-            Q(name__icontains=query) |
-            Q(item__text__icontains=query)
-        ).distinct()
-
-    return render(request, 'gensurvapp/search.html', {'query': query, 'results': results})
 ###test
 def success_page(request):
     return render(request, 'gensurvapp/success.html')
@@ -3274,35 +3157,6 @@ def user_dashboard(request):
     logger.debug(f"🏁 TOTAL dashboard build time: {overall_elapsed:.4f} seconds")
 
     return render(request, 'gensurvapp/dashboard.html', {'submissions': context})
-
-
-@login_required
-def dashboard_and_search(request):
-    # Ensure related fastq_files are being fetched
-    user_submissions = Submission.objects.prefetch_related('fastq_files').filter(user=request.user)
-
-    # Pagination setup
-    paginator = Paginator(user_submissions, 10)  # Show 10 submissions per page
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
-    # Handle search functionality
-    query = request.GET.get('query', '')
-    search_results = []
-    if query:
-        search_results = TodoItem.objects.filter(
-            Q(name__icontains=query) |
-            Q(item__text__icontains=query)
-        ).distinct()
-
-    context = {
-        'page_obj': page_obj,  # Pass paginated submissions
-        'query': query,
-        'search_results': search_results,
-    }
-    return render(request, 'gensurvapp/dashboard_and_search.html', context)
-
-
 
 
 

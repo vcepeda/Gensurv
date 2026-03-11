@@ -5,6 +5,7 @@ from django.utils.text import slugify
 from django.conf import settings
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
+from django.core.files.base import ContentFile
 
 
 # Function to generate dynamic file paths
@@ -56,7 +57,6 @@ class Submission(models.Model):
     network_delay = models.FloatField(null=True, blank=True, help_text="Estimated network + upload delay in seconds")
 
 
-    from django.core.files.base import ContentFile
 
 
 class UploadedFile(models.Model):

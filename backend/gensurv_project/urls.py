@@ -32,12 +32,13 @@ urlpatterns = [
     path("", include("register.urls")),  # ← delegates to register/urls.py
     # API urls now come from gensurvapp.urls instead of being listed here
     path("", include("gensurvapp.urls")),
+    #path("", include("gensurvapp.urls_nonapi")),  # Include non-API URLs from gensurvapp
+
     path('', include("django.contrib.auth.urls")),
     path('password_reset/', CustomPasswordResetView.as_view(template_name='registration/password_reset.html'), name='password_reset'),
     path('password_reset/done/', django_auth_views.PasswordResetDoneView.as_view(template_name='registration/password_reset_done.html'), name='password_reset_done'),
     path('reset/<uidb64>/<token>/', django_auth_views.PasswordResetConfirmView.as_view(template_name='registration/password_reset_confirm.html'), name='password_reset_confirm'),
     path('reset/done/', django_auth_views.PasswordResetCompleteView.as_view(template_name='registration/password_reset_complete.html'), name='password_reset_complete'),
-    path('', include('gensurvapp.urls')),
 ]   
 
 if settings.DEBUG:

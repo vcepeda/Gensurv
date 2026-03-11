@@ -1,7 +1,7 @@
 from django.urls import path
-from . import views
-from .views import (
-    impressum, research, contact, datenschutz, accessibility,
+from . import views_nonapi as views
+from .views_nonapi import (
+    home, impressum, research, contact, datenschutz, accessibility,
     success_page, sample_csv, download_sample_csv,
     download_antibiotics_csv, detailed_metadata_fields,
     upload_files, upload_files_dev, submission_results
@@ -10,7 +10,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    path('', views.home, name='home'),
+    path('', home, name='home'),
     path('impressum/', impressum, name='impressum'),
     path('contact/', contact, name='contact'),
     path('datenschutz/', datenschutz, name='datenschutz'),
