@@ -1,36 +1,25 @@
+# gensurvapp/urls_api.py
 from django.urls import path
 from . import views
-from .views import impressum, research, contact, datenschutz, accessibility,success_page, sample_csv, download_sample_csv, download_antibiotics_csv, detailed_metadata_fields
-from .views import success_page,upload, upload_files, upload_files_dev
-from .views import submission_results
-from django.conf import settings
-from django.conf.urls.static import static
+
+app_name = "gensurvapp_api"
 
 urlpatterns = [
-    path('', views.home, name='home'),
-    path('impressum/', impressum, name='impressum'),
-    path('contact/', contact, name='contact'),
-    path('datenschutz/', datenschutz, name='datenschutz'),
-    path('accessibility/', accessibility, name='accessibility'),
-    path('research/', research, name='research'),
-    path('upload/', upload_files, name='upload_files'),
-    path('upload_dev/', upload_files_dev, name='upload_files_dev'),
-    path('resubmit/<int:submission_id>/<str:file_type>/', views.resubmit_file_view, name='resubmit_file'),
-    path("submission/<int:submission_id>/request-delete/", views.request_submission_deletion, name="request_submission_deletion"),
-    path('help/', views.help_view, name='help'),
-    path('bulk_upload/', views.bulk_upload, name='bulk_upload'),
-    path('success/', views.success_page, name='success_page'),
-    path('sample_csv/', sample_csv, name='sample_csv'),
-    path('download_sample_csv/', download_sample_csv, name='download_sample_csv'),
-    path('download_antibiotics_csv/', download_antibiotics_csv, name='download_antibiotics_csv'),
-    path('detailed_metadata_fields/', detailed_metadata_fields, name='detailed_metadata_fields'),
-    path('about/', views.about, name='about'),  # Add this line
-    path('dashboard/', views.user_dashboard, name='dashboard'),
-    path('submissions/', views.submission_list, name='submission_list'),
-    path('submission/<int:submission_id>/sample/<str:sample_id>/details/', views.sample_all_results, name='sample_all_results'),
-    path('submission/<int:submission_id>/results/', views.submission_results, name='submission_results'),
-    path('submission/<int:submission_id>/sample/<str:sample_id>/', views.sample_results, name='sample_results'),
-]
+    # uploads (already exist)
+    path("api/upload/single/", views.SingleUploadAPIView.as_view(), name="single-upload"),
+    path("api/upload/bulk/", views.BulkUploadAPIView.as_view(), name="bulk-upload"),
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    # dashboard
+    path("api/dashboard/", views.DashboardAPIView.as_view(), name="dashboard"),
+
+    # deletion
+    path("api/submissions/<int:submission_id>/request-deletion/", views.RequestSubmissionDeletionAPIView.as_view(), name="request-submission-deletion"),
+
+    # resubmission
+    path("api/submissions/<int:submission_id>/resubmissions/<str:file_type>/", views.ResubmitFileAPIView.as_view(), name="resubmit-file"),
+    path("api/submissions/<int:submission_id>/resubmissions/<str:file_type>/history/", views.ResubmissionHistoryAPIView.as_view(), name="resubmission-history"),
+
+    # submission
+    path("api/submissions/<int:submission_id>/samples/", views.SubmissionSamplesAPIView.as_view(), name="submission_samples_api"),
+
+]

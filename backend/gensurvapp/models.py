@@ -2,17 +2,9 @@ from django.db import models
 import os
 from django.contrib.auth.models import User
 from django.utils.text import slugify
-import logging  # Ensure logging is imported
 from django.conf import settings
-from django import forms
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
-
-
-
-# Create your models here.
-from django.conf import settings  # use settings to reference AUTH_USER_MODE
-
 
 
 # Function to generate dynamic file paths

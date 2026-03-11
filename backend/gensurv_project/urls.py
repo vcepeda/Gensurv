@@ -17,24 +17,22 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as django_auth_views
-from register import views as auth_views
 from django.conf import settings
 from django.conf.urls.static import static
-from gensurvapp import views as app_views  # Import views from gensurvapp
 from register.views import CustomPasswordResetView  # Import the custom view
 
 urlpatterns = [
     path('admin/', admin.site.urls),  # Admin site URLs
     #path('register/', include('register.urls')),  # Include app-level URLs for 'register'
-    path('register/', auth_views.register, name="register"),
-    path('login/', auth_views.login_view, name="login"),
-    path('logout/', auth_views.logout_view, name='logout'),  # Direct link to logout view
+    #path('register/', auth_views.register, name="register"),
+    #path('login/', auth_views.login_view, name="login"),
+    #path('logout/', auth_views.logout_view, name='logout'),  # Direct link to logout view
+
+    # No direct imports of register views
+    path("", include("register.urls")),  # ← delegates to register/urls.py
+    # API urls now come from gensurvapp.urls instead of being listed here
+    path("", include("gensurvapp.urls")),
     path('', include("django.contrib.auth.urls")),
-    # Password reset URLs
-    #path('password_reset/', django_auth_views.PasswordResetView.as_view(template_name='registration/password_reset.html'), name='password_reset'),
-    #path('password_reset/done/', django_auth_views.PasswordResetDoneView.as_view(template_name='registration/password_reset_done.html'), name='password_reset_done'),
-    #path('reset/<uidb64>/<token>/', django_auth_views.PasswordResetConfirmView.as_view(template_name='registration/password_reset_confirm.html'), name='password_reset_confirm'),
-    #path('reset/done/', django_auth_views.PasswordResetCompleteView.as_view(template_name='registration/password_reset_complete.html'), name='password_reset_complete'),
     path('password_reset/', CustomPasswordResetView.as_view(template_name='registration/password_reset.html'), name='password_reset'),
     path('password_reset/done/', django_auth_views.PasswordResetDoneView.as_view(template_name='registration/password_reset_done.html'), name='password_reset_done'),
     path('reset/<uidb64>/<token>/', django_auth_views.PasswordResetConfirmView.as_view(template_name='registration/password_reset_confirm.html'), name='password_reset_confirm'),
