@@ -9,13 +9,15 @@ import FooterLinksView from "./views/FooterLinksView.vue";
 import AboutView from "./views/AboutView.vue";
 import ResearchView from "./views/ResearchView.vue";
 import UploadView from "./views/UploadView.vue";
-import DashboardView from "./views/DashboardView.vue";
+import tempDashboardView from "./views/tempDashboardView.vue";
 import ResubmitView from "./views/ResubmitView.vue";
 import SubmissionResultsView from "./views/SubmissionResultView.vue"
+import MetadataStatisticsView from "./views/MetadataStatisticsView.vue"
+import GlobalStatisticsView from "./views/GlobalStatisticsView.vue"
 
 const routes = [
   { path: "/", component: HomeView },
-  { path: "/login", component: LoginView },
+  { path: "/login", name: "login", component: LoginView },
   { path: "/logout", component: LogoutView },
   { path: "/register", component: RegisterView },
   { path: "/help", component: HelpView },
@@ -26,12 +28,23 @@ const routes = [
   { path: "/about", component: AboutView },
   { path: "/research", component: ResearchView },
   { path: "/upload", component: UploadView },
-  { path: "/dashboard", component: DashboardView },
+  { path: "/dashboard", component: tempDashboardView },
+  {
+    path: "/statistics",
+    name: "global_statistics",
+    component: GlobalStatisticsView,
+  },
   {
       path: "/submissions/:submissionId/results",
       name: "submission_results",
       component: SubmissionResultsView,
     },
+  {
+    path: "/submissions/:submissionId/statistics",
+    name: "metadata_statistics",
+    component: MetadataStatisticsView,
+    meta: { requiresAuth: true }
+  },
   { 
     path: "/resubmit/:submissionId/:fileType", 
     name: "resubmit",

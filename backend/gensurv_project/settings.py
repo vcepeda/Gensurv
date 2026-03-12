@@ -146,6 +146,9 @@ STATICFILES_DIRS = [BASE_DIR / 'static']
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / "runtime" / "media"
 
+# File upload limits
+DATA_UPLOAD_MAX_NUMBER_FILES = 10000  # Increase from default 1000 for bulk uploads
+
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

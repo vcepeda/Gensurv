@@ -5,6 +5,7 @@ export const useAuthStore = defineStore("auth", {
   state: () => ({
     isAuthenticated: false,
     username: null,
+    isSuperuser: false,
     isLoading: false,
   }),
 
@@ -15,9 +16,11 @@ export const useAuthStore = defineStore("auth", {
         const data = await me();
         this.isAuthenticated = !!data?.is_authenticated;
         this.username = data?.username ?? null;
+        this.isSuperuser = !!data?.is_superuser;
       } catch (e) {
         this.isAuthenticated = false;
         this.username = null;
+        this.isSuperuser = false;
       } finally {
         this.isLoading = false;
       }
@@ -27,6 +30,7 @@ export const useAuthStore = defineStore("auth", {
       await apiLogout();
       this.isAuthenticated = false;
       this.username = null;
+      this.isSuperuser = false;
     }
   }
 });

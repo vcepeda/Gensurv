@@ -1,6 +1,11 @@
 <template>
   <div class="container-fluid">
-    <div class="text-center mb-5">
+    <div v-if="!auth.isAuthenticated" class="text-center py-5">
+      <h2>Login Required</h2>
+      <p class="lead">To upload data please <RouterLink to="/login">login</RouterLink> to your account.</p>
+    </div>
+    
+    <div v-else class="text-center mb-5">
       <h1>Upload Your Data Files</h1>
       <p class="lead">
         Choose between single sample upload or bulk upload options to upload your data.
@@ -11,7 +16,7 @@
       </p>
     </div>
 
-    <div class="row mb-4">
+    <div v-if="auth.isAuthenticated" class="row mb-4">
       <div class="col-lg-12">
         <div class="card shadow-sm">
           <div class="card-body">
@@ -44,7 +49,7 @@
     </div>
 
     <!-- SINGLE -->
-    <div class="row">
+    <div v-if="auth.isAuthenticated" class="row">
       <div class="col-lg-12 mb-4">
         <div class="card shadow-sm">
           <div class="card-header text-white text-center" style="background-color: #17a2b8;">
@@ -202,6 +207,9 @@
 import axios from "axios";
 import apiClinet from "../api/client"
 import { reactive, ref, watch } from "vue";
+import { useAuthStore } from "@/stores/auth";
+
+const auth = useAuthStore();
 
 axios.defaults.withCredentials = true;
 

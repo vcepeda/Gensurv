@@ -27,25 +27,27 @@ def build_dashboard_rows_for_user(user):
     history_counts = FileHistory.objects.values("submission_id", "file_type").annotate(count=Count("id"))
     history_lookup = {(e["submission_id"], e["file_type"]): e["count"] for e in history_counts}
 
-    # collect sample ids for analysis lookup
-    all_sample_ids = set()
+    # collect submission/sample pairs for analysis lookup
+    submission_sample_pairs = set()
     for s in submissions:
         for fq in s.prefetched_fastq_files:
             if fq.sample_id:
-                all_sample_ids.add(fq.sample_id)
+                submission_sample_pairs.add((s.id, fq.sample_id))
 
     analysis_lookup = {}
-    if all_sample_ids:
+    if submission_sample_pairs:
+        submission_ids = {submission_id for submission_id, _ in submission_sample_pairs}
+        sample_ids = {sample_id for _, sample_id in submission_sample_pairs}
         analysis_results = (
             AnalysisResult.objects
-            .filter(sample_id__in=all_sample_ids)
+            .filter(submission_id__in=submission_ids, sample_id__in=sample_ids)
             .order_by("-completion_date")
         )
 
         for r in analysis_results:
-            sid = r.sample_id
-            if sid not in analysis_lookup:
-                analysis_lookup[sid] = r.status
+            key = (r.submission_id, r.sample_id)
+            if key in submission_sample_pairs and key not in analysis_lookup:
+                analysis_lookup[key] = r.status
 
     rows = []
     for submission in submissions:
@@ -65,7 +67,7 @@ def build_dashboard_rows_for_user(user):
             sid = fq.sample_id or "unknown"
             grouped_fastq_files[sid].append(fq)
             if sid != "unknown":
-                sample_analysis_status[sid] = analysis_lookup.get(sid, "pending")
+                sample_analysis_status[sid] = analysis_lookup.get((submission.id, sid), "pending")
 
         antibiotics_info = {}
         # single upload

@@ -1,9 +1,11 @@
 import time
+import re
+import math
 import pandas as pd
 from django.db import transaction
 
-# ✅ IMPORTANT: adjust these imports to match your project paths
 from gensurvapp.models import Submission, UploadedFile
+from gensurvapp.services.global_stats_service import recompute_global_statistics
 from gensurvapp.utils import validate_and_save_csv, generate_cleaned_file
 from gensurvapp.constants import METADATA_COLUMNS, ESSENTIAL_METADATA_COLUMNS, ANTIBIOTICS_COLUMNS
 
@@ -17,6 +19,236 @@ def normalize_submission_type(value):
     if normalized not in ("bacteria", "virus"):
         raise ValueError("Invalid submission_type. Use 'bacteria' or 'virus'.")
     return normalized
+
+
+def generate_statistics(metadata_df, submission_type, antibiotics_dfs=None):
+    antibiotics_dfs = antibiotics_dfs or []
+
+    def _json_safe(value):
+        if isinstance(value, dict):
+            return {k: _json_safe(v) for k, v in value.items()}
+        if isinstance(value, list):
+            return [_json_safe(v) for v in value]
+        if isinstance(value, float) and not math.isfinite(value):
+            return None
+        return value
+
+    if metadata_df is None or metadata_df.empty:
+        return {
+            "submission_type": submission_type,
+            "total_rows": 0,
+            "illumina_r1_only_count": 0,
+            "illumina_r1_r2_count": 0,
+            "nanopore_count": 0,
+            "pacbio_count": 0,
+            "unique_isolate_species_count": 0,
+            "unique_sample_identifiers": 0,
+            "duplicate_sample_identifiers": [],
+            "missing_sample_identifier_count": 0,
+            "platform_file_presence": {
+                "illumina_r1": 0,
+                "illumina_r2": 0,
+                "nanopore": 0,
+                "pacbio": 0,
+            },
+            "antibiotics": {
+                "rows_with_antibiotics_file": 0,
+                "rows_with_antibiotics_info": 0,
+                "rows_with_both": 0,
+                "different_antibiotics_count": 0,
+                "sir_type_count": 0,
+                "sir_counts": {
+                    "resistant": 0,
+                    "intermediate": 0,
+                    "susceptible": 0,
+                },
+                "mic_column_present": False,
+                "mic_numeric_count": 0,
+                "mic_numeric_values": [],
+            },
+        }
+
+    stats_df = metadata_df.copy()
+    stats_df.columns = stats_df.columns.str.lower().str.strip()
+
+    def _is_present(value):
+        if pd.isna(value):
+            return False
+        value_str = str(value).strip()
+        return bool(value_str) and value_str.lower() != "nan"
+
+    if "sample identifier" in stats_df.columns:
+        sample_series = stats_df["sample identifier"].astype(str).str.strip()
+        valid_sample_series = sample_series[
+            (sample_series != "") & (sample_series.str.lower() != "nan")
+        ]
+        duplicate_samples = sorted(
+            valid_sample_series[
+                valid_sample_series.str.lower().duplicated(keep=False)
+            ].unique(),
+            key=str.lower,
+        )
+        missing_sample_identifier_count = int(len(sample_series) - len(valid_sample_series))
+        unique_sample_identifiers = int(valid_sample_series.str.lower().nunique())
+    else:
+        duplicate_samples = []
+        missing_sample_identifier_count = int(len(stats_df.index))
+        unique_sample_identifiers = 0
+
+    def _count_present(column_name):
+        if column_name not in stats_df.columns:
+            return 0
+        return int(stats_df[column_name].apply(_is_present).sum())
+
+    rows_with_antibiotics_file = _count_present("antibiotics file")
+    rows_with_antibiotics_info = _count_present("antibiotics info")
+
+    illumina_r1_present = (
+        stats_df["illumina r1"].apply(_is_present)
+        if "illumina r1" in stats_df.columns
+        else pd.Series(False, index=stats_df.index)
+    )
+    illumina_r2_present = (
+        stats_df["illumina r2"].apply(_is_present)
+        if "illumina r2" in stats_df.columns
+        else pd.Series(False, index=stats_df.index)
+    )
+
+    illumina_r1_r2_count = int((illumina_r1_present & illumina_r2_present).sum())
+    illumina_r1_only_count = int((illumina_r1_present & ~illumina_r2_present).sum())
+
+    isolate_species_series = (
+        stats_df["isolate species"].astype(str).str.strip()
+        if "isolate species" in stats_df.columns
+        else pd.Series(dtype=str)
+    )
+    valid_isolate_species = isolate_species_series[
+        (isolate_species_series != "") & (isolate_species_series.str.lower() != "nan")
+    ]
+    unique_isolate_species_count = int(valid_isolate_species.str.lower().nunique())
+
+    rows_with_both = 0
+    if "antibiotics file" in stats_df.columns and "antibiotics info" in stats_df.columns:
+        rows_with_both = int(
+            (
+                stats_df["antibiotics file"].apply(_is_present)
+                & stats_df["antibiotics info"].apply(_is_present)
+            ).sum()
+        )
+
+    different_antibiotics_count = 0
+    sir_counts = {
+        "resistant": 0,
+        "intermediate": 0,
+        "susceptible": 0,
+    }
+    mic_column_present = False
+    mic_numeric_values = []
+
+    def _extract_numeric_mic(value):
+        if value is None or pd.isna(value):
+            return None
+
+        value_str = str(value).strip()
+        if not value_str or value_str.lower() == "nan":
+            return None
+
+        value_str = value_str.replace(",", ".")
+        match = re.search(r"[-+]?\d*\.?\d+", value_str)
+        if not match:
+            return None
+
+        try:
+            parsed = float(match.group(0))
+            if not math.isfinite(parsed):
+                return None
+            return parsed
+        except (TypeError, ValueError):
+            return None
+
+    antibiotic_frames = [
+        frame.copy()
+        for frame in antibiotics_dfs
+        if frame is not None and not frame.empty
+    ]
+
+    if antibiotic_frames:
+        antibiotics_stats_df = pd.concat(antibiotic_frames, ignore_index=True)
+        antibiotics_stats_df.columns = antibiotics_stats_df.columns.str.lower().str.strip()
+
+        if "tested antibiotic" in antibiotics_stats_df.columns:
+            tested_series = antibiotics_stats_df["tested antibiotic"].astype(str).str.strip()
+            tested_series = tested_series[
+                (tested_series != "") & (tested_series.str.lower() != "nan")
+            ]
+            different_antibiotics_count = int(tested_series.str.lower().nunique())
+
+        sir_column = None
+        if "observed antibiotic resistance sir" in antibiotics_stats_df.columns:
+            sir_column = "observed antibiotic resistance sir"
+        elif "sir" in antibiotics_stats_df.columns:
+            sir_column = "sir"
+
+        if sir_column:
+            sir_series = antibiotics_stats_df[sir_column].astype(str).str.strip()
+
+            for value in sir_series:
+                value_lower = value.lower()
+                if not value or value_lower == "nan":
+                    continue
+                if value_lower in ("r", "resistant"):
+                    sir_counts["resistant"] += 1
+                elif value_lower in ("i", "intermediate"):
+                    sir_counts["intermediate"] += 1
+                elif value_lower in ("s", "susceptible"):
+                    sir_counts["susceptible"] += 1
+
+        mic_columns = [column for column in antibiotics_stats_df.columns if "mic" in column.lower()]
+        if mic_columns:
+            mic_column_present = True
+            extracted_mic_values = []
+            for mic_column in mic_columns:
+                raw_mic_series = antibiotics_stats_df[mic_column]
+                extracted_mic_values.extend([
+                    parsed
+                    for parsed in raw_mic_series.map(_extract_numeric_mic).tolist()
+                    if parsed is not None
+                ])
+            mic_numeric_values = extracted_mic_values
+
+    sir_type_count = int(sum(1 for key in ("resistant", "intermediate", "susceptible") if sir_counts[key] > 0))
+
+    stats_payload = {
+        "submission_type": submission_type,
+        "total_rows": int(len(stats_df.index)),
+        "illumina_r1_only_count": illumina_r1_only_count,
+        "illumina_r1_r2_count": illumina_r1_r2_count,
+        "nanopore_count": _count_present("nanopore"),
+        "pacbio_count": _count_present("pacbio"),
+        "unique_isolate_species_count": unique_isolate_species_count,
+        "unique_sample_identifiers": unique_sample_identifiers,
+        "duplicate_sample_identifiers": duplicate_samples,
+        "missing_sample_identifier_count": missing_sample_identifier_count,
+        "platform_file_presence": {
+            "illumina_r1": _count_present("illumina r1"),
+            "illumina_r2": _count_present("illumina r2"),
+            "nanopore": _count_present("nanopore"),
+            "pacbio": _count_present("pacbio"),
+        },
+        "antibiotics": {
+            "rows_with_antibiotics_file": rows_with_antibiotics_file,
+            "rows_with_antibiotics_info": rows_with_antibiotics_info,
+            "rows_with_both": rows_with_both,
+            "different_antibiotics_count": different_antibiotics_count,
+            "sir_type_count": sir_type_count,
+            "sir_counts": sir_counts,
+            "mic_column_present": mic_column_present,
+            "mic_numeric_count": len(mic_numeric_values),
+            "mic_numeric_values": mic_numeric_values,
+        },
+    }
+
+    return _json_safe(stats_payload)
 
 
 
@@ -84,6 +316,23 @@ def handle_single_upload(*, user, metadata_file, uploaded_antibiotics_file, fast
     # sample id
     if "sample identifier" not in metadata_df.columns:
         raise ValueError("Metadata missing required column: 'sample identifier'.")
+
+    single_sample_ids = (
+        metadata_df["sample identifier"]
+        .astype(str)
+        .str.strip()
+    )
+    single_sample_ids = single_sample_ids[
+        (single_sample_ids != "") & (single_sample_ids.str.lower() != "nan")
+    ]
+    duplicate_single_sample_ids = single_sample_ids[
+        single_sample_ids.str.lower().duplicated(keep=False)
+    ].unique()
+    if len(duplicate_single_sample_ids) > 0:
+        duplicates = ", ".join(sorted(duplicate_single_sample_ids, key=str.lower))
+        raise ValueError(
+            f"Duplicate sample identifier(s) found in metadata file '{metadata_file.name}': {duplicates}. "
+        )
 
     sample_id = str(metadata_df.loc[0, "sample identifier"]).strip()
     if not sample_id or sample_id.lower() == "nan":
@@ -189,6 +438,7 @@ def handle_single_upload(*, user, metadata_file, uploaded_antibiotics_file, fast
             )
 
     antibiotics_df = pd.DataFrame()
+    antibiotics_dfs_for_stats = []
     ab_warning = None
 
     if uploaded_antibiotics_file:
@@ -205,6 +455,7 @@ def handle_single_upload(*, user, metadata_file, uploaded_antibiotics_file, fast
             raise ValueError("Antibiotics file is empty or incorrectly formatted.")
 
         antibiotics_df.columns = antibiotics_df.columns.str.lower().str.strip()
+        antibiotics_dfs_for_stats.append(antibiotics_df)
 
     submission = Submission(user=user)
     submission.submission_type = submission_type
@@ -219,6 +470,11 @@ def handle_single_upload(*, user, metadata_file, uploaded_antibiotics_file, fast
         submission.fastq_warning = extra_fastq_warning
 
     submission.submit_to_pipeline = bool(submit_to_pipeline)
+    submission.metadata_statistics = generate_statistics(
+        metadata_df,
+        submission_type,
+        antibiotics_dfs_for_stats,
+    )
 
     submission.save()
 
@@ -259,6 +515,11 @@ def handle_single_upload(*, user, metadata_file, uploaded_antibiotics_file, fast
         message += f"\n{extra_fastq_warning}"
 
     upload_duration = time.time() - server_start
+
+    try:
+        recompute_global_statistics()
+    except Exception as exc:
+        logger.warning(f"Global statistics recompute failed after single upload: {exc}")
 
     return {
         "submission_id": submission.id,
@@ -323,6 +584,24 @@ def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, s
 
     metadata_df.columns = metadata_df.columns.str.lower().str.strip()
 
+    if "sample identifier" not in metadata_df.columns:
+        raise ValueError("Metadata missing required column: 'sample identifier'.")
+
+    metadata_df["sample identifier"] = metadata_df["sample identifier"].astype(str).str.strip()
+    valid_bulk_sample_ids = metadata_df.loc[
+        (metadata_df["sample identifier"] != "")
+        & (metadata_df["sample identifier"].str.lower() != "nan"),
+        "sample identifier",
+    ]
+    duplicate_sample_ids = valid_bulk_sample_ids[
+        valid_bulk_sample_ids.str.lower().duplicated(keep=False)
+    ].unique()
+    if len(duplicate_sample_ids) > 0:
+        duplicates = ", ".join(sorted(duplicate_sample_ids, key=str.lower))
+        raise ValueError(
+            f"Duplicate sample identifier(s) found in metadata file '{metadata_file.name}': {duplicates}. "
+        )
+
     valid_extensions = (".fastq", ".fq", ".bam", ".fastq.gz", ".fq.gz", ".bam.gz", ".bz2", ".xz", ".zip")
     uploaded_fastq_names = {f.name.strip() for f in fastq_files}
     logger.debug(f"Uploaded FASTQ filenames: {uploaded_fastq_names}")
@@ -354,7 +633,7 @@ def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, s
         if not any([illumina_r1, nanopore, pacbio]):
             raise ValueError(
                 f"Sample '{sample_id}': Must include at least one platform file (Illumina R1, Nanopore, or PacBio)."
-            )
+            ) 
 
         if illumina_r2 and not illumina_r1:
             raise ValueError(f"Sample '{sample_id}': Illumina R2 file provided without Illumina R1.")
@@ -384,6 +663,8 @@ def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, s
 
     uploaded_antibiotics_by_name = {f.name.strip(): f for f in antibiotics_files}
     logger.debug(f"Uploaded antibiotics file names: {list(uploaded_antibiotics_by_name.keys())}")
+    antibiotics_dfs_for_stats = []
+    stats_seen_antibiotics_files = set()
 
     for idx, row in metadata_df.iterrows():
         sample_id = _safe_str(row.get("sample identifier")) or f"row {idx + 1}"
@@ -420,6 +701,9 @@ def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, s
 
             if ab_df is not None and not ab_df.empty:
                 ab_df.columns = ab_df.columns.str.lower().str.strip()
+                if expected_ab_file not in stats_seen_antibiotics_files:
+                    antibiotics_dfs_for_stats.append(ab_df)
+                    stats_seen_antibiotics_files.add(expected_ab_file)
 
         elif antibiotics_info:
             logger.info(f"Sample '{sample_id}': Using antibiotics info from metadata.")
@@ -439,6 +723,11 @@ def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, s
         submission.fastq_warning = extra_fastq_warning_message.strip()
 
     submission.submit_to_pipeline = bool(submit_to_pipeline)
+    submission.metadata_statistics = generate_statistics(
+        metadata_df,
+        submission_type,
+        antibiotics_dfs_for_stats,
+    )
 
     submission.save()
 
@@ -466,6 +755,7 @@ def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, s
         for seq_filename in expected_fastq_files:
             matched_seq_file = next((f for f in fastq_files if f.name.strip() == seq_filename.strip()), None)
             if matched_seq_file:
+                matched_seq_file.seek(0)
                 UploadedFile.objects.create(
                     submission=submission,
                     file=matched_seq_file,
@@ -496,6 +786,8 @@ def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, s
             cleaned_ab_file = generate_cleaned_file(uploaded_file.name, ab_df)
 
             uploaded_file.seek(0)
+            if uploaded_file.closed:
+                uploaded_file.open()
 
             UploadedFile.objects.create(
                 submission=submission,
@@ -519,6 +811,11 @@ def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, s
     bulk_success_message = "\n".join(success_messages)
 
     upload_duration = time.time() - server_start
+
+    try:
+        recompute_global_statistics()
+    except Exception as exc:
+        logger.warning(f"Global statistics recompute failed after bulk upload: {exc}")
 
     return {
         "submission_id": submission.id,

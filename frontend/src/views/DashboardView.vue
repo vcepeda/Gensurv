@@ -1,13 +1,18 @@
 <template>
   <div class="container-fluid">
-    <div class="mb-5">
+    <div v-if="!authStore.isAuthenticated" class="text-center py-5">
+      <h2>Login Required</h2>
+      <p class="lead">To view your dashboard please <RouterLink to="/login">login</RouterLink> to your account.</p>
+    </div>
+    
+    <div v-else class="mb-5">
       <h1 class="text-center">Submissions</h1>
       <p class="lead">
         View uploaded data, including metadata, antibiotic files, FASTQ files, and their analysis statuses.
       </p>
     </div>
 
-    <div class="card">
+    <div v-if="authStore.isAuthenticated" class="card">
       <div class="card-header d-flex justify-content-between align-items-center">
         <span>Submission Details</span>
         <button class="btn btn-outline-secondary btn-sm" @click="fetchRows" :disabled="loading">
@@ -65,6 +70,14 @@
                   <div v-if="row.metadata.files.cleaned_url">
                     <strong>Cleaned:</strong>
                     <a :href="row.metadata.files.cleaned_url" target="_blank">{{ row.metadata.files.cleaned_name }}</a>
+                  </div>
+                  <div class="mt-1">
+                    <router-link
+                      class="btn btn-sm btn-info"
+                      :to="{ name: 'metadata_statistics', params: { submissionId: row.submission_id } }"
+                    >
+                      View Statistics
+                    </router-link>
                   </div>
                 </div>
                 <span v-else class="text-muted">N/A</span>
@@ -158,11 +171,22 @@
                 <div v-if="row.analysis?.statuses && Object.keys(row.analysis.statuses).length">
                   <div v-for="(status, sid) in row.analysis.statuses" :key="sid" class="mb-1">
                     <strong>{{ sid }}</strong>:
-                    <span class="badge" :class="badgeClass(status)">{{ status || "pending" }}</span>
-                    <div v-if="status === 'completed'" class="mt-1">
+                    <span
+                      class="badge"
+                      :class="badgeClass(status)"
+                      :style="isAdmin ? 'cursor: pointer;' : ''"
+                      :aria-disabled="isToggling(row.submission_id, sid)"
+                      :tabindex="isAdmin ? 0 : -1"
+                      role="button"
+                      @click="isAdmin && !isToggling(row.submission_id, sid) && toggleAnalysisStatus(row, sid)"
+                      @keydown.enter="isAdmin && !isToggling(row.submission_id, sid) && toggleAnalysisStatus(row, sid)"
+                    >
+                      {{ status || "pending" }}
+                    </span>
+                    <div v-if="status === 'completed' || status === 'finished'" class="mt-1">
                       <router-link
                         class="btn btn-sm btn-primary"
-                        :to="{ name: 'sampleResults', params: { submissionId: row.submission_id, sampleId: sid } }"
+                        :to="{ name: 'submission_results', params: { submissionId: row.submission_id } }"
                       >
                         View Results
                       </router-link>
@@ -182,12 +206,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import apiClient from "../api/client/"
+import { useAuthStore } from "@/stores/auth";
 
 const rows = ref([]);
 const loading = ref(false);
 const error = ref("");
+const toggling = ref({});
+
+const authStore = useAuthStore();
+const isAdmin = computed(() => !!authStore.isSuperuser);
 
 function formatDate(iso) {
   if (!iso) return "";
@@ -197,10 +226,38 @@ function formatDate(iso) {
 
 function badgeClass(status) {
   console.log(status)
+  if (status === "finished") return "badge text-bg-success";
   if (status === "completed") return "badge text-bg-success";
   if (status === "failed") return "badge text-bg-danger";
   if (status === "pending") return "badge text-bg-warning";
   return "badge text-bg-warning";
+}
+
+function toggleKey(submissionId, sampleId) {
+  return `${submissionId}:${sampleId}`;
+}
+
+function isToggling(submissionId, sampleId) {
+  return !!toggling.value[toggleKey(submissionId, sampleId)];
+}
+
+async function toggleAnalysisStatus(row, sampleId) {
+  if (!isAdmin.value) return;
+
+  const key = toggleKey(row.submission_id, sampleId);
+  toggling.value[key] = true;
+  try {
+    const res = await apiClient.post("/api/analysis-status/toggle/", {
+      submission_id: row.submission_id,
+      sample_id: sampleId,
+    });
+    row.analysis.statuses[sampleId] = res?.data?.status || "pending";
+    await fetchRows();
+  } catch (e) {
+    alert(e?.response?.data?.detail || "Failed to update analysis status.");
+  } finally {
+    toggling.value[key] = false;
+  }
 }
 
 function hasAntibiotics(row) {
@@ -208,11 +265,15 @@ function hasAntibiotics(row) {
 }
 
 async function fetchRows() {
+  if (loading.value) return;
   error.value = "";
   loading.value = true;
   try {
-    const res = await apiClient.get("/api/dashboard/");
-    rows.value = res.data;
+    const res = await apiClient.get("/api/dashboard/", { timeout: 15000 });
+    rows.value = Array.isArray(res.data) ? res.data : [];
+    if (!Array.isArray(res.data)) {
+      error.value = "Unexpected dashboard response.";
+    }
   } catch (e) {
     error.value = e?.response?.data?.detail || "Failed to load submissions.";
   } finally {
