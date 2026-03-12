@@ -77,6 +77,7 @@ function computeActiveMenu(r) {
 
   if (p.startsWith("/upload")) return "upload-menu";
   if (p.startsWith("/dashboard")) return "analyses-menu";
+  if (p.startsWith("/statistics")) return "analyses-menu";
   if (p.startsWith("/search") || p.startsWith("/dashboard_and_search")) return "search-menu";
   if (p.startsWith("/help")) return "help-menu";
   if (p.startsWith("/about")) return "about-menu";

@@ -7,8 +7,6 @@ from django.conf import settings
 def user_submission_path(instance, filename):
     """
     submissions/<username>/submission_<id>/<filename>
-
-    Works for Submission and any model with a .submission FK.
     """
     if isinstance(instance, Submission):
         submission_id = instance.pk if instance.pk else "temp"
@@ -49,6 +47,7 @@ class Submission(models.Model):
     metadata_warnings = models.TextField(blank=True, null=True)
     antibiotics_warnings = models.TextField(blank=True, null=True)
     fastq_warnings = models.TextField(blank=True, null=True)
+    metadata_statistics = models.JSONField(default=dict, blank=True)
 
     upload_duration = models.FloatField(null=True, blank=True)
     client_total_upload_time = models.FloatField(null=True, blank=True)
@@ -109,6 +108,13 @@ class FileHistory(models.Model):
 
 
 class AnalysisResult(models.Model):
+    submission = models.ForeignKey(
+        Submission,
+        on_delete=models.CASCADE,
+        related_name="analysis_results",
+        null=True,
+        blank=True,
+    )
     sample_id = models.CharField(max_length=100)
 
     result_directory = models.CharField(max_length=255, default="not_set")
@@ -117,7 +123,21 @@ class AnalysisResult(models.Model):
     completion_date = models.DateTimeField(null=True, blank=True)
     error_message = models.TextField(null=True, blank=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["submission", "sample_id"],
+                condition=models.Q(submission__isnull=False),
+                name="uniq_analysisresult_submission_sample",
+            )
+        ]
+        indexes = [
+            models.Index(fields=["submission", "sample_id"]),
+        ]
+
     def __str__(self):
+        if self.submission_id:
+            return f"Analysis for submission {self.submission_id}/{self.sample_id} - {self.status}"
         return f"Analysis for {self.sample_id} - {self.status}"
 
 
@@ -131,3 +151,26 @@ class PlasmidIdentResult(models.Model):
     submission = models.ForeignKey(Submission, on_delete=models.CASCADE)
     sample_id = models.CharField(max_length=100)
     directory_path = models.TextField()
+
+
+class GlobalStatistics(models.Model):
+    singleton_key = models.PositiveSmallIntegerField(default=1, unique=True)
+    stats_version = models.PositiveIntegerField(default=1)
+
+    total_submissions = models.PositiveIntegerField(default=0)
+    total_metadata_rows = models.PositiveIntegerField(default=0)
+    total_fastq_files = models.PositiveIntegerField(default=0)
+    total_antibiotics_files = models.PositiveIntegerField(default=0)
+    total_unique_sample_identifiers = models.PositiveIntegerField(default=0)
+    total_unique_isolate_species = models.PositiveIntegerField(default=0)
+
+    platform_counts = models.JSONField(default=dict, blank=True)
+    sir_counts = models.JSONField(default=dict, blank=True)
+    mic_numeric_values = models.JSONField(default=list, blank=True)
+
+    map_location_counts = models.JSONField(default=list, blank=True)
+
+    last_recomputed_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Global Statistics v{self.stats_version}"

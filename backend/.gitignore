@@ -21,3 +21,10 @@ venv/
 .data/
 ./bulk_upload.log
 ./gensurv_project/settings*.py
+*.submissions
+./runtime/media/submissions
+backend/runtime/media/submissions/
+backend/runtime/media/uploads/submissions/
+backend/runtime/media/**/submissions/
+*.fastq.gz
+backend
