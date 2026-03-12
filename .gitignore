@@ -1,3 +1,35 @@
+# .git
+.token
+token
+*.pyc
+__pycache__/
+db.sqlite3
+/media/
+#/staticfiles/
+/.env
+*.env
+.env.*
+venv/
+.venv/
+*.log
+*.sqlite3
+*.DS_Store
+*.egg-info
+.idea/
+.vscode/
+.media/
+.data/
+./bulk_upload.log
+./gensurv_project/settings*.py
+*.submissions
+./runtime/media/submissions
+backend/runtime/media/submissions/
+backend/runtime/media/uploads/submissions/
+backend/runtime/media/**/submissions/
+*.fastq.gz
+backend/gensurv_project/settings.py
+
+
 # Logs
 logs
 *.log
@@ -24,3 +56,7 @@ dist-ssr
 *.sw?
 
 /frontend/node_modules
+
+backend/runtime
+.*fastq.*
+backend/runtime/media/submissions/
