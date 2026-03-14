@@ -3,6 +3,7 @@ import { useAuthStore } from "./stores/auth";
 import LoginView from "@/views/LoginView.vue";
 import LogoutView from "@/views/LogoutView.vue";
 import RegisterView from "./views/RegisterView.vue";
+import PasswordResetView from "./views/PasswordReset.vue";
 import HomeView from "./views/HomeView.vue";
 import HelpView from "./views/HelpView.vue";
 import FooterLinksView from "./views/FooterLinksView.vue";
@@ -20,6 +21,13 @@ const routes = [
   { path: "/login", name: "login", component: LoginView },
   { path: "/logout", component: LogoutView },
   { path: "/register", component: RegisterView },
+  { path: "/password-reset", name: "password_reset", component: PasswordResetView },
+  {
+    path: "/password-reset/:uid/:token",
+    name: "password_reset_confirm",
+    component: PasswordResetView,
+    props: true,
+  },
   { path: "/help", component: HelpView },
   { path: "/impressum", component: FooterLinksView, meta: {pageKey: "impressum" }},
   { path: "/contact", component: FooterLinksView, meta: {pageKey: "contact" }},

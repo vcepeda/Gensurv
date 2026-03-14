@@ -2,7 +2,7 @@ import json
 
 from django.conf import settings
 from django.contrib.auth import authenticate, login, logout, get_user_model
-from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.forms import AuthenticationForm, PasswordResetForm, SetPasswordForm
 from django.core.mail import send_mail
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_protect, ensure_csrf_cookie
@@ -12,6 +12,8 @@ from django.contrib.auth import views as auth_views
 from django.utils.http import urlsafe_base64_encode
 from django.utils.encoding import force_bytes
 from django.contrib.auth.tokens import default_token_generator
+from django.utils.encoding import force_str
+from django.utils.http import urlsafe_base64_decode
 
 
 from .forms import RegisterForm
@@ -111,8 +113,6 @@ def api_login(request):
 
     username = form.cleaned_data.get("username")
     password = form.cleaned_data.get("password")
-    print("Username: ", username)
-    print("Password: ", password)
     user = authenticate(request, username=username, password=password)
 
     if user is None:
@@ -145,6 +145,70 @@ def api_login(request):
 @csrf_protect
 def api_logout(request):
     logout(request)
+    return JsonResponse({"ok": True})
+
+
+@require_POST
+@csrf_protect
+def api_password_reset(request):
+    payload = _parse_json(request)
+    if payload is None:
+        return JsonResponse({"detail": "Invalid JSON."}, status=400)
+
+    form = PasswordResetForm(payload)
+    if not form.is_valid():
+        return JsonResponse({"ok": False, "errors": _json_form_errors(form)}, status=400)
+
+    frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:5173").rstrip("/")
+    form.save(
+        request=request,
+        use_https=frontend_url.startswith("https://"),
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        email_template_name="registration/password_reset_email_vue.txt",
+        subject_template_name="registration/password_reset_subject_vue.txt",
+        token_generator=default_token_generator,
+        extra_email_context={"frontend_url": frontend_url},
+    )
+
+    # Mirror Django behavior: do not reveal whether the email exists.
+    return JsonResponse({"ok": True, "status": "pending"})
+
+
+@require_POST
+@csrf_protect
+def api_password_reset_confirm(request):
+    payload = _parse_json(request)
+    if payload is None:
+        return JsonResponse({"detail": "Invalid JSON."}, status=400)
+
+    uidb64 = payload.get("uid")
+    token = payload.get("token")
+    new_password1 = payload.get("new_password1")
+    new_password2 = payload.get("new_password2")
+
+    if not uidb64 or not token:
+        return JsonResponse(
+            {"ok": False, "code": "invalid_token", "detail": "Invalid or missing reset token."},
+            status=400,
+        )
+
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+
+    if user is None or not default_token_generator.check_token(user, token):
+        return JsonResponse(
+            {"ok": False, "code": "invalid_token", "detail": "This password reset link is invalid or has expired."},
+            status=400,
+        )
+
+    form = SetPasswordForm(user, {"new_password1": new_password1, "new_password2": new_password2})
+    if not form.is_valid():
+        return JsonResponse({"ok": False, "errors": _json_form_errors(form)}, status=400)
+
+    form.save()
     return JsonResponse({"ok": True})
 
 class CustomPasswordResetView(auth_views.PasswordResetView):
