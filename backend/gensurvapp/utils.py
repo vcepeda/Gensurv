@@ -18,6 +18,25 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
+
+def decode_file_content(content):
+    """
+    Decode bytes content with fallback encoding support.
+    Tries UTF-8 first, then Latin-1, then Windows-1252.
+    """
+    if not isinstance(content, bytes):
+        return content
+    
+    for encoding in ['utf-8', 'latin-1', 'cp1252']:
+        try:
+            return content.decode(encoding)
+        except (UnicodeDecodeError, LookupError):
+            continue
+    
+    # If all fail, use UTF-8 with error replacement
+    return content.decode('utf-8', errors='replace')
+
+
 ESSENTIAL_METADATA_COLUMNS = {
     "Sample Identifier": (str, True),#,#[Unique ID]
     "Isolate Species": (str, True),#[NCBI taxonomy ID] 
@@ -73,7 +92,7 @@ def detect_delimiter(file):
         
         # Decode if the content is binary
         if isinstance(sample, bytes):
-            sample = sample.decode('utf-8')
+            sample = decode_file_content(sample)
             
         file.seek(0)  # Reset file pointer after reading
 
@@ -135,11 +154,10 @@ def fix_trailing_empty_columns_new(file, detected_delimiter):
     - Returns cleaned content as a StringIO object
     """
     file.seek(0)
-    #content = file.read().decode("utf-8")#this was previous code, check if the new code below works
     content = file.read()
 
     if isinstance(content, bytes):
-        content = content.decode("utf-8")
+        content = decode_file_content(content)
 
 
     # Read CSV with proper handling of quotes and delimiters
@@ -191,7 +209,9 @@ def fix_trailing_empty_columns(file, detected_delimiter):
     - Returns cleaned content as a StringIO object
     """
     file.seek(0)
-    content = file.read().decode("utf-8")
+    content = file.read()
+    if isinstance(content, bytes):
+        content = decode_file_content(content)
     # Normalize quotes added by Excel (e.g., "value", 'value')
     content = content.replace('"', '').replace("'", '')
 
@@ -314,7 +334,10 @@ def fetch_taxonomy_name(taxonomy_id: str, retries=3, timeout=20):
             data = response.json()
 
             if "result" in data and taxonomy_id in data["result"]:
-                return True, data["result"][taxonomy_id]["scientificname"]
+                result = data["result"][taxonomy_id]
+                # Try different possible keys for the name
+                name = result.get("scientificname") or result.get("name") or result.get("commonname") or str(taxonomy_id)
+                return True, name
 
             return False, f"Taxonomy ID {taxonomy_id} not found in NCBI database."
         
@@ -322,9 +345,11 @@ def fetch_taxonomy_name(taxonomy_id: str, retries=3, timeout=20):
             logger.warning(f"NCBI API timeout (attempt {attempt + 1}/{retries})")
             time.sleep(5)  # Wait before retrying
         
-        except requests.exceptions.RequestException as e:
+        except (requests.exceptions.RequestException, KeyError) as e:
             logger.error(f"NCBI API error: {e}")
-            break  # Stop retrying if it's a different error
+            if attempt == retries - 1:
+                break  # Only break on last retry
+            time.sleep(3)
 
     return False, f"NCBI API unreachable. Skipping taxonomy validation for {taxonomy_id}."
 
@@ -787,6 +812,12 @@ def validate_and_save_csv(file, expected_columns, essential_columns=None):
             df = pd.read_csv(cleaned_file, sep=delimiter)
 
         df.columns = df.columns.str.lower().str.strip()
+
+        # Accept short alias for antibiotics SIR column.
+        # If users upload a column named only 'SIR', normalize it to the canonical name.
+        if "sir" in df.columns and "observed antibiotic resistance sir" not in df.columns:
+            df = df.rename(columns={"sir": "observed antibiotic resistance sir"})
+
         logger.debug(f"DataFrame shape after trimming: {df.shape}")
         logger.debug(f"File read into DataFrame successfully:\n{df.head()}")
 

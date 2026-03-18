@@ -25,22 +25,25 @@
           <!-- Left nav -->
           <ul class="navbar-nav me-auto mb-0 align-items-start">
             <li class="nav-item">
-              <RouterLink class="nav-link" to="/" active-class="active">Home</RouterLink>
+              <RouterLink class="nav-link" to="/" active-class="active" @click="closeNavbar">Home</RouterLink>
             </li>
             <li class="nav-item">
-              <RouterLink class="nav-link" to="/upload" active-class="active">Data Upload</RouterLink>
+              <RouterLink class="nav-link" to="/upload" active-class="active" @click="closeNavbar">Data Upload</RouterLink>
             </li>
             <li class="nav-item">
-              <RouterLink class="nav-link" to="/dashboard" active-class="active">Analyses</RouterLink>
+              <RouterLink class="nav-link" to="/dashboard" active-class="active" @click="closeNavbar">Dashboard</RouterLink>
+            </li>
+            <li class="nav-item">
+              <RouterLink class="nav-link" to="/statistics" active-class="active" @click="closeNavbar">Statistics</RouterLink>
             </li>
             <!-- <li class="nav-item">
               <RouterLink class="nav-link" to="/search" active-class="active">Search</RouterLink>
             </li> -->
             <li class="nav-item">
-              <RouterLink class="nav-link" to="/help" active-class="active">Help</RouterLink>
+              <RouterLink class="nav-link" to="/help" active-class="active" @click="closeNavbar">Help</RouterLink>
             </li>
             <li class="nav-item">
-              <RouterLink class="nav-link" to="/about" active-class="active">About</RouterLink>
+              <RouterLink class="nav-link" to="/about" active-class="active" @click="closeNavbar">About</RouterLink>
             </li>
           </ul>
 
@@ -60,10 +63,10 @@
 
             <template v-else>
               <li class="nav-item">
-                <RouterLink class="nav-link" to="/register" active-class="active">Register</RouterLink>
+                <RouterLink class="nav-link" to="/register" active-class="active" @click="closeNavbar">Register</RouterLink>
               </li>
               <li class="nav-item">
-                <RouterLink class="nav-link" to="/login" active-class="active">Login</RouterLink>
+                <RouterLink class="nav-link" to="/login" active-class="active" @click="closeNavbar">Login</RouterLink>
               </li>
             </template>
           </ul>
@@ -91,12 +94,29 @@
 
 <script setup>
 import router from "../router"
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { useAuthStore } from "@/stores/auth";
+import { Collapse } from "bootstrap";
 
 const auth = useAuthStore();
+const collapseId = "navbarSupportedContent";
+let collapseInstance = null;
+
+onMounted(() => {
+  const elem = document.getElementById(collapseId);
+  if (elem) {
+    collapseInstance = new Collapse(elem, { toggle: false });
+  }
+});
+
+function closeNavbar() {
+  if (collapseInstance) {
+    collapseInstance.hide();
+  }
+}
 
 function onLogout() {
+  closeNavbar();
   auth.logout();
   router.push('/logout')
 }
@@ -105,7 +125,6 @@ const emit = defineEmits(["logout", "search"]);
 
 // Local state
 const query = ref("");
-const collapseId = "navbarSupportedContent";
 
 function onSubmitSearch() {
   emit("search", query.value);

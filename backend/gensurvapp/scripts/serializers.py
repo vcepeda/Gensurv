@@ -70,3 +70,8 @@ class SubmissionDashboardRowSerializer(serializers.Serializer):
 class SubmissionSampleListSerializer(serializers.Serializer):
     submission_id = serializers.IntegerField()
     sample_ids = serializers.ListField(child=serializers.CharField())
+
+
+class AdminToggleAnalysisStatusSerializer(serializers.Serializer):
+    submission_id = serializers.IntegerField(required=True)
+    sample_id = serializers.CharField(required=True, max_length=100)

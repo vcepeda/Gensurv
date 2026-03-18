@@ -2,7 +2,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
@@ -14,10 +14,18 @@ from .services.upload_service import handle_single_upload, handle_bulk_upload
 from django.shortcuts import get_object_or_404
 from django.conf import settings
 from django.core.mail import send_mail
+from django.utils import timezone
 
 from gensurvapp.models import *
 from gensurvapp.services.dashboard_service import build_dashboard_rows_for_user
-from gensurvapp.scripts.serializers import SubmissionDashboardRowSerializer, SubmissionSampleListSerializer, SingleUploadSerializer, BulkUploadSerializer
+from gensurvapp.services.global_stats_service import recompute_global_statistics
+from gensurvapp.scripts.serializers import (
+    SubmissionDashboardRowSerializer,
+    SubmissionSampleListSerializer,
+    SingleUploadSerializer,
+    BulkUploadSerializer,
+    AdminToggleAnalysisStatusSerializer,
+)
 from gensurvapp.utils import admin_only_upload_test, archive_file_to_submission_history
 
 from gensurvapp.utils import (
@@ -294,6 +302,56 @@ class DashboardAPIView(APIView):
         return Response(ser.data)
 
 
+class AdminToggleAnalysisStatusAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if not admin_only_upload_test(request.user):
+            return Response({"detail": "Forbidden"}, status=403)
+
+        serializer = AdminToggleAnalysisStatusSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        submission_id = serializer.validated_data["submission_id"]
+        sample_id = serializer.validated_data["sample_id"].strip()
+
+        if not sample_id:
+            return Response({"detail": "sample_id is required."}, status=400)
+
+        submission = get_object_or_404(Submission, id=submission_id)
+
+        analysis_result = (
+            AnalysisResult.objects
+            .filter(submission=submission, sample_id=sample_id)
+            .order_by("-completion_date", "-id")
+            .first()
+        )
+
+        current_status = (analysis_result.status if analysis_result else "pending").strip().lower()
+        is_finished_like = current_status in {"finished", "completed", "done"}
+        new_status = "pending" if is_finished_like else "finished"
+
+        defaults = {"status": new_status}
+        if new_status == "finished":
+            defaults["completion_date"] = timezone.now()
+
+        updated_result, _ = AnalysisResult.objects.update_or_create(
+            submission=submission,
+            sample_id=sample_id,
+            defaults=defaults,
+        )
+
+        return Response(
+            {
+                "ok": True,
+                "submission_id": submission.id,
+                "sample_id": sample_id,
+                "status": updated_result.status,
+            },
+            status=200,
+        )
+
+
 class RequestSubmissionDeletionAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -442,3 +500,63 @@ class SubmissionSamplesAPIView(APIView):
 
         payload = {"submission_id": submission.id, "sample_ids": sample_ids}
         return Response(SubmissionSampleListSerializer(payload).data)
+
+
+class SubmissionStatisticsAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, submission_id: int):
+        submission = get_object_or_404(Submission, id=submission_id)
+
+        # Enforce ownership unless admin
+        if not admin_only_upload_test(request.user) and submission.user_id != request.user.id:
+            return Response({"detail": "Forbidden"}, status=403)
+
+        # Keep lightweight compatibility summary fields
+        fastq_files = UploadedFile.objects.filter(submission=submission, file_type="fastq")
+        sample_ids = sorted(set(f.sample_id for f in fastq_files if f.sample_id))
+
+        # Count antibiotics files
+        antibiotics_files = UploadedFile.objects.filter(
+            submission=submission,
+            file_type__in=["antibiotics_raw", "antibiotics_cleaned"]
+        )
+
+        metadata_statistics = submission.metadata_statistics or {}
+
+        return Response({
+            "submission_id": submission.id,
+            "username": submission.user.username,
+            "created_at": submission.created_at,
+            "submission_type": submission.submission_type,
+            "is_bulk_upload": submission.is_bulk_upload,
+            "metadata_statistics": metadata_statistics,
+            "total_samples": len(sample_ids),
+            "sample_ids": sample_ids,
+            "total_fastq_files": fastq_files.count(),
+            "total_antibiotics_files": antibiotics_files.count(),
+        })
+
+
+class GlobalStatisticsAPIView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        global_stats = GlobalStatistics.objects.filter(singleton_key=1).first()
+        if not global_stats:
+            global_stats = recompute_global_statistics()
+
+        return Response({
+            "stats_version": global_stats.stats_version,
+            "last_recomputed_at": global_stats.last_recomputed_at,
+            "total_submissions": global_stats.total_submissions,
+            "total_metadata_rows": global_stats.total_metadata_rows,
+            "total_fastq_files": global_stats.total_fastq_files,
+            "total_antibiotics_files": global_stats.total_antibiotics_files,
+            "total_unique_sample_identifiers": global_stats.total_unique_sample_identifiers,
+            "total_unique_isolate_species": global_stats.total_unique_isolate_species,
+            "platform_counts": global_stats.platform_counts,
+            "sir_counts": global_stats.sir_counts,
+            "mic_numeric_values": global_stats.mic_numeric_values,
+            "map_location_counts": global_stats.map_location_counts,
+        })
