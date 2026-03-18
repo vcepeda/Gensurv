@@ -1,4 +1,5 @@
 from django.urls import path
+from django.views.generic import RedirectView
 from . import views
 
 urlpatterns = [
@@ -7,4 +8,5 @@ urlpatterns = [
     path("api/register/", views.api_register, name="api_register"),
     path("api/login/", views.api_login, name="api_login"),
     path("api/logout/", views.api_logout, name="api_logout"),
+    path("register/", RedirectView.as_view(url="/"), name="register"),
 ]

@@ -45,7 +45,7 @@
           </div>
 
           <div class="text-center mt-3">
-            <a href="/password_reset/">Forgot your password?</a>
+            <RouterLink to="/password-reset">Forgot your password?</RouterLink>
           </div>
         </form>
       </div>

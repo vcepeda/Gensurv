@@ -36,8 +36,8 @@ CSRF_TRUSTED_ORIGINS = ["https://gensurv.de"]
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
-CRISPY_TEMPLATE_PACK= "bootstrap4"
-CRISPY_ALLOWED_TEMPLATE_PACKS = ["bootstrap4"]
+CRISPY_TEMPLATE_PACK= "bootstrap5"
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 
 # Application definition
 
@@ -58,13 +58,17 @@ INSTALLED_APPS = [
     #"crispy_bootstrap4", #obsolete
     'dbbackup',  # django-dbbackup
     'storages',  #check
-
+    'hijack',# act as another user
+    'hijack.contrib.admin',
     ]
+
+#HIJACK_ALLOW_GET_REQUESTS = True
+
 SITE_ID = 1
 SITE_URL = 'https://gensurv.de'  # Replace with your actual domain
 
 DBBACKUP_STORAGE = 'django.core.files.storage.FileSystemStorage'
-DBBACKUP_STORAGE_OPTIONS = {'location': '/mnt/web_data/html/Gensurv/DBBACKUP_STORAGE'}
+DBBACKUP_STORAGE_OPTIONS = {'location': '/mnt/storage/ahcepev1/Gensurv_data/media/DBBACKUP_STORAGE'}
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = None#52428800000  # 50GB
 DATA_UPLOAD_MAX_NUMBER_FILES = 1000  # Limit to 1000 files per upload
@@ -101,9 +105,21 @@ ROOT_URLCONF = 'gensurv_project.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')],
-        'APP_DIRS': True,
+        'DIRS': [
+            BASE_DIR/'templates',
+            #BASE_DIR/'register'/'templates',  #if APPS_DIRS is False, otherwise it will be automatically included               
+        ],
+        
+        'APP_DIRS': True, # Set to False to use custom loaders
         'OPTIONS': {
+           # 'loaders': [
+           #     ('django.template.loaders.filesystem.Loader', [
+           #         str(BASE_DIR / 'register' / 'templates'),
+           #         str(BASE_DIR / 'templates'),
+           #     ]),
+           #     'django.template.loaders.app_directories.Loader',
+           # ],
+
             'context_processors': [
                 'django.template.context_processors.debug',
                 'django.template.context_processors.request',
@@ -197,7 +213,7 @@ MEDIA_URL = '/media/'
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
-#DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
 LOGIN_URL = '/login/'  # This should be the name of your login page URL

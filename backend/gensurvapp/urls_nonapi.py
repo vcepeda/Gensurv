@@ -28,8 +28,8 @@ urlpatterns = [
     path('about/', views.about, name='about'),  # Add this line
     path('dashboard/', views.user_dashboard, name='dashboard'),
     # NOT in old urls.py but in vue — add when views are ready:
-    # path('search/', views.search, name='search'),
-    # path('dashboard_search/', views.dashboard_and_search, name='dashboard_and_search'),
+    #path('search/', views.search, name='search'),
+    #path('dashboard_search/', views.dashboard_and_search, name='dashboard_and_search'),
     path('submissions/', views.submission_list, name='submission_list'),
     path('submission/<int:submission_id>/sample/<str:sample_id>/details/', views.sample_all_results, name='sample_all_results'),
     path('submission/<int:submission_id>/results/', submission_results, name='submission_results'),

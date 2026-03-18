@@ -72,7 +72,7 @@ def api_register(request):
     user.save()
 
     message = form.cleaned_data.get("message")
-    admin_email = settings.ADMIN_EMAIL if not settings.DEBUG else "linksiddharthp@gmail.com"
+    admin_email = settings.ADMIN_EMAIL #if not settings.DEBUG else "linksiddharthp@gmail.com"
     site_url = settings.SITE_URL
 
     subject = "New User Registration Pending Approval"
