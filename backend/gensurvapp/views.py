@@ -269,6 +269,7 @@ class DashboardAPIView(APIView):
 
             payload.append({
                 "username": s.user.username,
+                "institution": getattr(s.user, "institution", "") or "",
                 "submission_id": s.id,
                 "created_at": s.created_at,
                 "submission_type": s.submission_type,
@@ -498,7 +499,42 @@ class SubmissionSamplesAPIView(APIView):
 
         sample_ids = sorted(set(bactopia_ids) | set(plasmid_ids))
 
-        payload = {"submission_id": submission.id, "sample_ids": sample_ids}
+        fastq_files_qs = UploadedFile.objects.filter(
+            submission=submission,
+            file_type="fastq",
+        ).exclude(file="")
+
+        antibiotics_files_qs = UploadedFile.objects.filter(
+            submission=submission,
+            file_type__in=["antibiotics_raw", "antibiotics_cleaned"],
+        ).exclude(file="")
+
+        fastq_files = [
+            {
+                "name": os.path.basename(f.file.name),
+                "sample_id": f.sample_id or "",
+                "file_type": f.file_type,
+            }
+            for f in fastq_files_qs
+            if f.file and f.file.name
+        ]
+
+        antibiotics_files = [
+            {
+                "name": os.path.basename(f.file.name),
+                "sample_id": f.sample_id or "",
+                "file_type": f.file_type,
+            }
+            for f in antibiotics_files_qs
+            if f.file and f.file.name
+        ]
+
+        payload = {
+            "submission_id": submission.id,
+            "sample_ids": sample_ids,
+            "fastq_files": fastq_files,
+            "antibiotics_files": antibiotics_files,
+        }
         return Response(SubmissionSampleListSerializer(payload).data)
 
 
