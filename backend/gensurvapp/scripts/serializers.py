@@ -57,6 +57,7 @@ class UploadedFileSerializer(serializers.ModelSerializer):
 
 class SubmissionDashboardRowSerializer(serializers.Serializer):
     username = serializers.CharField()
+    institution = serializers.CharField(required=False, allow_blank=True)
     submission_id = serializers.IntegerField()
     created_at = serializers.DateTimeField()
     submission_type = serializers.CharField(required=False, default="bacteria")
@@ -70,6 +71,8 @@ class SubmissionDashboardRowSerializer(serializers.Serializer):
 class SubmissionSampleListSerializer(serializers.Serializer):
     submission_id = serializers.IntegerField()
     sample_ids = serializers.ListField(child=serializers.CharField())
+    fastq_files = serializers.ListField(child=serializers.DictField(), required=False)
+    antibiotics_files = serializers.ListField(child=serializers.DictField(), required=False)
 
 
 class AdminToggleAnalysisStatusSerializer(serializers.Serializer):
