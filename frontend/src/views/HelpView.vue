@@ -149,7 +149,7 @@
             <td>Single Platform: <code>PacBio</code></td>
             <td></td>
             <td></td>
-            <td></td>
+            <td>sample_pacbio.fastq.gz</td>
             <td></td>
           </tr>
           <tr>
@@ -480,6 +480,7 @@
           </tr>
         </thead>
         <tbody>
+  <!-- Sample and Isolate Information -->
           <tr class="table-primary">
             <td colspan="4"><strong>Sample and Isolate Information</strong></td>
           </tr>
@@ -501,7 +502,7 @@
             <td>Text</td>
             <td class="cell-optional">Optional</td>
           </tr>
-
+  <!-- Sample Collection Data -->
           <tr class="table-primary">
             <td colspan="4"><strong>Sample Collection Data</strong></td>
           </tr>
@@ -529,7 +530,127 @@
             <td>Text</td>
             <td class="cell-optional">Optional</td>
           </tr>
+<!-- Sample Collection Facility -->
+      <tr class="table-primary">
+        <td colspan="4">
+          <strong>Sample Collection Facility</strong>
+        </td>
+      </tr>
+      <tr>
+        <td>City</td>
+        <td>City where the sample was collected.</td>
+        <td>Text</td>
+        <td style="background-color: #ffd1d1;">Mandatory</td>
+      </tr>
+      <tr>
+        <td>Postal Code</td>
+        <td>Postal code where the sample was collected.</td>
+        <td>Number</td>
+        <td style="background-color: #ffd1d1;">Mandatory</td>
+      </tr>
+      <tr>
+        <td>County</td>
+        <td>County where the sample was collected.</td>
+        <td>Text</td>
+        <td style="background-color: #ffffe0;">Optional</td>
+      </tr>
+      <tr>
+        <td>State</td>
+        <td>State where the sample was collected.</td>
+        <td>Text</td>
+        <td style="background-color: #ffd1d1;">Optional</td>
+      </tr>
+      <tr>
+        <td>Country</td>
+        <td>Country where the sample was collected.</td>
+        <td>Text</td>
+        <td style="background-color: #ffd1d1;">Mandatory</td>
+      </tr>
+      <tr>
+        <td>Lab Identifier</td>
+        <td>Unique identifier for the laboratory handling the sample.</td>
+        <td>Text</td>
+        <td style="background-color: #ffffe0;">Optional</td>
+      </tr>
 
+      <!-- Patient/Host Details -->
+      <tr class="table-primary">
+        <td colspan="4">
+          <strong>Patient/Host Details</strong>
+        </td>
+      </tr>
+      <tr>
+        <td>Sex</td>
+        <td>Biological sex of the host. Use "Other" to specify additional information if needed.</td>
+        <td>Male, Female, Other</td>
+        <td style="background-color: #ffffe0;">Optional</td>
+      </tr>
+      <tr>
+        <td>Age Group</td>
+        <td>Age range of the host.</td>
+        <td>Neonate [0-1 years], Pediatric [1-17], Adult [18-59], Elder [>=65]</td>
+        <td style="background-color: #ffffe0;">Optional</td>
+      </tr>
+      <tr>
+        <td>Country of Putative Exposure</td>
+        <td>Country where the host was likely exposed, based on epidemiological data or travel history.</td>
+        <td>Text</td>
+        <td style="background-color: #ffffe0;">Optional</td>
+      </tr>
+
+      <!-- Sequencing Details -->
+      <tr class="table-primary">
+        <td colspan="4">
+          <strong>Sequencing Details</strong>
+        </td>
+      </tr>
+      <tr>
+        <td>Sequencing Platform</td>
+        <td>Platform(s) used for sequencing. Can be more than one.</td>
+        <td>Illumina, PacBio, ONT, other [Text]</td>
+        <td style="background-color: #ffffe0;">Optional</td>
+      </tr>
+      <tr>
+        <td>Sequencing Type</td>
+        <td>Type of sequencing performed. Add free-text details for additional types if necessary.</td>
+        <td>Whole genome sequencing, Amplicon sequencing, Metagenome sequencing, RNA-sequencing, other [Text]</td>
+        <td style="background-color: #ffd1d1;">Mandatory</td>
+      </tr>
+      <tr>
+        <td>Library Preparation Kit</td>
+        <td>Kit used for preparing the sequencing library. Examples include Nextera XT, TruSeq DNA, SMRTbell, and others.</td>
+        <td>Text</td>
+        <td style="background-color: #ffffe0;">Optional</td>
+      </tr>
+      <tr>
+        <td>Sequencing Chemistry</td>
+        <td>Chemistry used for sequencing, such as Illumina (e.g., V2.5), PacBio (e.g., SMRTbell), ONT (e.g., R9.4).</td>
+        <td>Text</td>
+        <td style="background-color: #ffffe0;">Optional</td>
+      </tr>
+      <tr>
+        <td>Illumina R1</td>
+        <td> Read 1 or "forward" read file of illumina paired-end reads, or single-end FASTQ illumina. The filename must match exactly as specified in the metadata.</td>
+        <td><code>Sample_001.fastq</code></td>
+        <td style="background-color: #ffe5b4; text-align: center; vertical-align: middle;" rowspan="4">At least one required among the group</td>
+      </tr>
+      <tr>
+        <td>Illumina R2</td>
+        <td> Read 2 or "reverse" read file of illumina paired-end reads. The filename must match exactly as specified in the metadata.</td>
+        <td><code>Sample_002.fastq</code></td>
+      </tr>
+      <td>Nanopore</td>
+      <td>Nanopore FASTQ file or unaligned BAM file. The filename must match exactly as specified in the metadata.</td>
+      <td><code>Sample_ont.fastq</code></td>
+      </tr>
+      <td>PacBio</td>
+      <td>PacBio FASTQ file or subreads BAM file. The filename must match exactly as specified in the metadata.</td>
+      <td><code>Sample_pacbio.fastq</code></td>
+      </tr>
+
+
+
+      <!-- Antibiotics Testing -->
           <tr class="table-primary">
             <td colspan="4"><strong>Antibiotics Details</strong></td>
           </tr>
