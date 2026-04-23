@@ -149,8 +149,8 @@
             <td>Single Platform: <code>PacBio</code></td>
             <td></td>
             <td></td>
-            <td>sample_pacbio.fastq.gz</td>
             <td></td>
+            <td>sample_pacbio.fastq.gz</td>
           </tr>
           <tr>
             <td>Multiple Platforms: <code>Paired-end Illumina</code> and <code>Nanopore</code></td>
@@ -639,16 +639,16 @@
         <td> Read 2 or "reverse" read file of illumina paired-end reads. The filename must match exactly as specified in the metadata.</td>
         <td><code>Sample_002.fastq</code></td>
       </tr>
-      <td>Nanopore</td>
-      <td>Nanopore FASTQ file or unaligned BAM file. The filename must match exactly as specified in the metadata.</td>
-      <td><code>Sample_ont.fastq</code></td>
+      <tr>
+        <td>Nanopore</td>
+        <td>Nanopore FASTQ file or unaligned BAM file. The filename must match exactly as specified in the metadata.</td>
+        <td><code>Sample_ont.fastq</code></td>
       </tr>
-      <td>PacBio</td>
-      <td>PacBio FASTQ file or subreads BAM file. The filename must match exactly as specified in the metadata.</td>
-      <td><code>Sample_pacbio.fastq</code></td>
+      <tr>
+        <td>PacBio</td>
+        <td>PacBio FASTQ file or subreads BAM file. The filename must match exactly as specified in the metadata.</td>
+        <td><code>Sample_pacbio.fastq</code></td>
       </tr>
-
-
 
       <!-- Antibiotics Testing -->
           <tr class="table-primary">
