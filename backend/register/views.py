@@ -40,6 +40,7 @@ def _user_payload(user):
         "is_authenticated": True,
         "username": user.get_username(),
         "is_superuser": bool(getattr(user, "is_superuser", False)),
+        "is_staff": bool(getattr(user, "is_staff", False)),
         "is_approved": bool(getattr(user, "is_approved", False)),
         "is_active": bool(getattr(user, "is_active", False)),
     }

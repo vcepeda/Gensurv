@@ -4,7 +4,7 @@ import math
 import pandas as pd
 from django.db import transaction
 
-from gensurvapp.models import Submission, UploadedFile
+from gensurvapp.models import Submission, UploadedFile, AnalysisResult
 from gensurvapp.services.global_stats_service import recompute_global_statistics
 from gensurvapp.utils import validate_and_save_csv, generate_cleaned_file
 from gensurvapp.constants import METADATA_COLUMNS, ESSENTIAL_METADATA_COLUMNS, ANTIBIOTICS_COLUMNS
@@ -478,6 +478,14 @@ def handle_single_upload(*, user, metadata_file, uploaded_antibiotics_file, fast
 
     submission.save()
 
+    # Create pending analysis rows only after all prechecks have passed and submission exists.
+    for sid in single_sample_ids.tolist():
+        AnalysisResult.objects.get_or_create(
+            submission=submission,
+            sample_id=sid,
+            defaults={"status": "pending"},
+        )
+
     cleaned_metadata_file = generate_cleaned_file(metadata_file.name, metadata_df)
     UploadedFile.objects.create(
         submission=submission,
@@ -730,6 +738,15 @@ def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, s
     )
 
     submission.save()
+
+    # Create pending analysis rows only after all prechecks have passed and submission exists.
+    bulk_sample_ids = list(dict.fromkeys(valid_bulk_sample_ids.tolist()))
+    for sid in bulk_sample_ids:
+        AnalysisResult.objects.get_or_create(
+            submission=submission,
+            sample_id=sid,
+            defaults={"status": "pending"},
+        )
 
     cleaned_metadata_file = generate_cleaned_file(metadata_file.name, metadata_df)
     UploadedFile.objects.create(

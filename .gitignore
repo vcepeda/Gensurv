@@ -60,3 +60,5 @@ dist-ssr
 backend/runtime
 .*fastq.*
 backend/runtime/media/submissions/
+
+runs
