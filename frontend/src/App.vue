@@ -1,39 +1,25 @@
 <template>
   <div class="app-root" id="app-scroll">
-    <!-- Banner sits below the fixed navbar (same as old base.html) -->
-    <!-- <Banner
-      v-if="banner"
-      :type="banner.type"
-      :message="banner.message"
-      :navHeight="navHeight"
-    /> -->
-
-    <!-- Fixed header -->
-    <Navbar
-      :user="auth"
-      :navHeight="navHeight"
-      @logout="handleLogout"
-      @search="handleSearch"
-    />
-
-    <!-- Main layout -->
-    <div class="app-shell">
-      <main class="container app-main">
-        <RouterView />
-      </main>
-
-      <!-- Right sidebar (optional) -->
-      <!-- <Sidebar
-        v-if="showSidebar"
-        class="app-sidebar"
+    <template v-if="!isFullscreenRoute">
+      <Navbar
+        :user="auth"
         :navHeight="navHeight"
-        :activeMenu="activeMenu"
-        :isAuthenticated="auth.isAuthenticated"
-      /> -->
-    </div>
+        @logout="handleLogout"
+        @search="handleSearch"
+      />
 
-    <!-- Footer full width -->
-    <Footer />
+      <div class="app-shell">
+        <main class="container app-main">
+          <RouterView />
+        </main>
+      </div>
+
+      <Footer />
+    </template>
+
+    <main v-else class="fullscreen-view">
+      <RouterView />
+    </main>
   </div>
 </template>
 
@@ -146,6 +132,7 @@ const route = useRoute();
 
 const navHeight = 70;
 const auth = useAuthStore();
+const isFullscreenRoute = computed(() => route.meta?.fullscreen === true);
 
 onMounted(() => {
   auth.fetchUser();
@@ -205,6 +192,13 @@ function handleSearch(query) {
 /* keep your old main spacing behavior */
 .app-main {
   padding: 0.75rem 1rem 2rem;
+}
+
+.fullscreen-view {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  min-height: 100vh;
 }
 
 /* If your Sidebar component is already position:fixed you can omit this. */

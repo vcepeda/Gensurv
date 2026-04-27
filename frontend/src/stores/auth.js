@@ -6,6 +6,7 @@ export const useAuthStore = defineStore("auth", {
     isAuthenticated: false,
     username: null,
     isSuperuser: false,
+    isStaff: false,
     isLoading: false,
   }),
 
@@ -17,10 +18,12 @@ export const useAuthStore = defineStore("auth", {
         this.isAuthenticated = !!data?.is_authenticated;
         this.username = data?.username ?? null;
         this.isSuperuser = !!data?.is_superuser;
+        this.isStaff = !!data?.is_staff;
       } catch (e) {
         this.isAuthenticated = false;
         this.username = null;
         this.isSuperuser = false;
+        this.isStaff = false;
       } finally {
         this.isLoading = false;
       }
@@ -31,6 +34,7 @@ export const useAuthStore = defineStore("auth", {
       this.isAuthenticated = false;
       this.username = null;
       this.isSuperuser = false;
+      this.isStaff = false;
     }
   }
 });
