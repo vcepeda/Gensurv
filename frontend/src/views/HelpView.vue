@@ -558,7 +558,7 @@
         <td>State</td>
         <td>State where the sample was collected.</td>
         <td>Text</td>
-        <td style="background-color: #ffd1d1;">Optional</td>
+        <td class="cell-optional">Optional</td>
       </tr>
       <tr>
         <td>Country</td>
