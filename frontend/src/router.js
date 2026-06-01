@@ -5,7 +5,9 @@ import LogoutView from "@/views/LogoutView.vue";
 import RegisterView from "./views/RegisterView.vue";
 import PasswordResetView from "./views/PasswordReset.vue";
 import HomeView from "./views/HomeView.vue";
-import HelpView from "./views/HelpView.vue";
+import HelpBacteriaView from "./views/HelpBacteriaView.vue";
+import HelpVirusView from "./views/HelpVirusView.vue";
+import HelpCogdatView from "./views/HelpCogdatView.vue";
 import FooterLinksView from "./views/FooterLinksView.vue";
 import AboutView from "./views/AboutView.vue";
 import ResearchView from "./views/ResearchView.vue";
@@ -31,7 +33,10 @@ const routes = [
     component: PasswordResetView,
     props: true,
   },
-  { path: "/help", component: HelpView },
+  { path: "/help", component: HelpBacteriaView },
+  { path: "/help/bacteria", component: HelpBacteriaView },
+  { path: "/help/virus", component: HelpVirusView },
+  { path: "/help/cogdat", component: HelpCogdatView },
   { path: "/impressum", component: FooterLinksView, meta: {pageKey: "impressum" }},
   { path: "/contact", component: FooterLinksView, meta: {pageKey: "contact" }},
   { path: "/privacy", component: FooterLinksView, meta: {pageKey: "privacy" }},

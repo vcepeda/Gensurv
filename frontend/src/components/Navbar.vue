@@ -39,9 +39,43 @@
             <!-- <li class="nav-item">
               <RouterLink class="nav-link" to="/search" active-class="active">Search</RouterLink>
             </li> -->
-            <li class="nav-item">
-              <RouterLink class="nav-link" to="/help" active-class="active" @click="closeNavbar">Help</RouterLink>
+            <!-- <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="helpDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" @click.prevent>
+                Help
+              </a>
+              <ul class="dropdown-menu" aria-labelledby="helpDropdown">
+                <li class="dropdown-item">
+                  <RouterLink to="/help/bacteria" @click="closeNavbar">Bacteria</RouterLink>
+                </li>
+                <li class="dropdown-item">
+                  <RouterLink to="/help/virus" @click="closeNavbar">Virus</RouterLink>
+                </li>
+              </ul>
+            </li> -->
+
+            <li class="nav-item dropdown">
+              <a
+                class="nav-link dropdown-toggle"
+                href="#"
+                role="button"
+                :aria-expanded="dropdownOpen"
+                @click.prevent="dropdownOpen = !dropdownOpen"
+              >
+                Help
+              </a>
+              <ul class="dropdown-menu" :class="{ show: dropdownOpen }">
+                <li>
+                  <RouterLink class="dropdown-item" to="/help/bacteria" @click="closeDropdown">Gensurv</RouterLink>
+                </li>
+                <li>
+                  <RouterLink class="dropdown-item" to="/help/virus" @click="closeDropdown">NUM-SAR</RouterLink>
+                </li>
+                <li>
+                  <RouterLink class="dropdown-item" to="/help/cogdat" @click="closeDropdown">COGDAT</RouterLink>
+                </li>
+              </ul>
             </li>
+
             <li class="nav-item">
               <RouterLink class="nav-link" to="/about" active-class="active" @click="closeNavbar">About</RouterLink>
             </li>
@@ -101,18 +135,30 @@ import { Collapse } from "bootstrap";
 const auth = useAuthStore();
 const collapseId = "navbarSupportedContent";
 let collapseInstance = null;
+const dropdownOpen = ref(false);
 
 onMounted(() => {
   const elem = document.getElementById(collapseId);
   if (elem) {
     collapseInstance = new Collapse(elem, { toggle: false });
   }
+
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".nav-item.dropdown")) {
+      dropdownOpen.value = false;
+    }
+  });
 });
 
 function closeNavbar() {
   if (collapseInstance) {
     collapseInstance.hide();
   }
+}
+
+function closeDropdown() {
+  dropdownOpen.value = false;
+  closeNavbar();
 }
 
 function onLogout() {
