@@ -40,7 +40,7 @@ class Submission(models.Model):
     submit_to_pipeline = models.BooleanField(default=False)
     submission_type = models.CharField(
         max_length=20,
-        choices=[("bacteria", "Bacteria"), ("virus", "Virus")],
+        choices=[("bacteria", "Bacteria"), ("virus", "Virus"), ("cogdat", "COGDAT")],
         default="bacteria",
     )
 

@@ -11,7 +11,7 @@
         Choose between single sample upload or bulk upload options to upload your data.
       </p>
       <p>
-        <RouterLink to="/help">Click here</RouterLink>
+        <RouterLink :to="helpLink">Click here</RouterLink>
         to view detailed help on metadata and antibiotics testing formats.
       </p>
     </div>
@@ -206,7 +206,7 @@
 <script setup>
 import axios from "axios";
 import apiClinet from "../api/client"
-import { reactive, ref, watch } from "vue";
+import { reactive, ref, watch, computed } from "vue";
 import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();
@@ -221,6 +221,11 @@ const bulkMetadataInput = ref(null);
 const bulkAntibioticsInput = ref(null);
 const bulkFastqInput = ref(null);
 const submissionType = ref("bacteria");
+
+// Computed help link based on submission type
+const helpLink = computed(() => {
+  return submissionType.value === "bacteria" ? "/help/bacteria" : "/help/virus";
+});
 
 const single = reactive({
   metadata: null,

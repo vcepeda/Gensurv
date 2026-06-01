@@ -143,6 +143,7 @@
                           Metadata Warning
                         </button>
                         <RouterLink
+                          v-if="!isArchiveSubmission(row)"
                           class="btn btn-info btn-sm metadata-chip"
                           :to="{ name: 'metadata_statistics', params: { submissionId: row.submission_id } }"
                         >
@@ -310,6 +311,10 @@ function metadataViewerHref(fileUrl, fileName) {
 function hasCompletedStatus(row) {
   const statuses = Object.values(row.analysis?.statuses || {});
   return statuses.some((status) => status === "completed" || status === "finished");
+}
+
+function isArchiveSubmission(row) {
+  return row.institution === "COGDAT (Archive)";
 }
 
 function warningToText(rawWarning) {

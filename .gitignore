@@ -61,4 +61,8 @@ backend/runtime
 .*fastq.*
 backend/runtime/media/submissions/
 
+Metadata_Field_Info.docx
+
 runs
+cogdat
+Metadata_Field_Info.pdf
