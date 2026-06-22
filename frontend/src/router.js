@@ -5,13 +5,14 @@ import LogoutView from "@/views/LogoutView.vue";
 import RegisterView from "./views/RegisterView.vue";
 import PasswordResetView from "./views/PasswordReset.vue";
 import HomeView from "./views/HomeView.vue";
-import HelpBacteriaView from "./views/HelpBacteriaView.vue";
-import HelpVirusView from "./views/HelpVirusView.vue";
+import HelpGensurvView from "./views/HelpGensurvView.vue";
+import HelpNumSarView from "./views/HelpNumSarView.vue";
 import HelpCogdatView from "./views/HelpCogdatView.vue";
 import FooterLinksView from "./views/FooterLinksView.vue";
 import AboutView from "./views/AboutView.vue";
 import ResearchView from "./views/ResearchView.vue";
-import UploadView from "./views/UploadView.vue";
+import UploadGensurvView from "./views/UploadGensurvView.vue";
+import UploadNumSarView from "./views/UploadNumSarView.vue";
 import DashboardView from "./views/DashboardView.vue";
 import ResubmitView from "./views/ResubmitView.vue";
 import SubmissionResultsView from "./views/SubmissionResultView.vue"
@@ -33,9 +34,9 @@ const routes = [
     component: PasswordResetView,
     props: true,
   },
-  { path: "/help", component: HelpBacteriaView },
-  { path: "/help/bacteria", component: HelpBacteriaView },
-  { path: "/help/virus", component: HelpVirusView },
+  { path: "/help", component: HelpGensurvView },
+  { path: "/help/gensurv", component: HelpGensurvView },
+  { path: "/help/num-sar", component: HelpNumSarView },
   { path: "/help/cogdat", component: HelpCogdatView },
   { path: "/impressum", component: FooterLinksView, meta: {pageKey: "impressum" }},
   { path: "/contact", component: FooterLinksView, meta: {pageKey: "contact" }},
@@ -43,7 +44,9 @@ const routes = [
   { path: "/accessibility", component: FooterLinksView, meta: {pageKey: "accessibility" }},
   { path: "/about", component: AboutView },
   { path: "/research", component: ResearchView },
-  { path: "/upload", component: UploadView },
+  { path: "/upload", redirect: "/upload/gensurv" },
+  { path: "/upload/gensurv", component: UploadGensurvView },
+  { path: "/upload/num-sar", component: UploadNumSarView },
   { path: "/dashboard", component: DashboardView },
   {
     path: "/statistics",

@@ -60,7 +60,7 @@ class SubmissionDashboardRowSerializer(serializers.Serializer):
     institution = serializers.CharField(required=False, allow_blank=True)
     submission_id = serializers.IntegerField()
     created_at = serializers.DateTimeField()
-    submission_type = serializers.CharField(required=False, default="bacteria")
+    submission_type = serializers.CharField(required=False, default="gensurv")
 
     metadata = serializers.DictField()
     antibiotics = serializers.DictField()
@@ -78,4 +78,3 @@ class SubmissionSampleListSerializer(serializers.Serializer):
 class AdminToggleAnalysisStatusSerializer(serializers.Serializer):
     submission_id = serializers.IntegerField(required=True)
     sample_id = serializers.CharField(required=True, max_length=100)
-
