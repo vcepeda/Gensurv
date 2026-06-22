@@ -27,8 +27,24 @@
             <li class="nav-item">
               <RouterLink class="nav-link" to="/" active-class="active" @click="closeNavbar">Home</RouterLink>
             </li>
-            <li class="nav-item">
-              <RouterLink class="nav-link" to="/upload" active-class="active" @click="closeNavbar">Data Upload</RouterLink>
+            <li class="nav-item dropdown">
+              <a
+                class="nav-link dropdown-toggle"
+                href="#"
+                role="button"
+                :aria-expanded="uploadDropdownOpen"
+                @click.prevent="toggleUploadDropdown"
+              >
+                Data Upload
+              </a>
+              <ul class="dropdown-menu" :class="{ show: uploadDropdownOpen }">
+                <li>
+                  <RouterLink class="dropdown-item" to="/upload/gensurv" @click="closeUploadDropdown">Gensurv</RouterLink>
+                </li>
+                <li>
+                  <RouterLink class="dropdown-item" to="/upload/num-sar" @click="closeUploadDropdown">NUM-SAR</RouterLink>
+                </li>
+              </ul>
             </li>
             <li class="nav-item">
               <RouterLink class="nav-link" to="/dashboard" active-class="active" @click="closeNavbar">Dashboard</RouterLink>
@@ -45,10 +61,10 @@
               </a>
               <ul class="dropdown-menu" aria-labelledby="helpDropdown">
                 <li class="dropdown-item">
-                  <RouterLink to="/help/bacteria" @click="closeNavbar">Bacteria</RouterLink>
+                  <RouterLink to="/help/gensurv" @click="closeNavbar">Gensurv</RouterLink>
                 </li>
                 <li class="dropdown-item">
-                  <RouterLink to="/help/virus" @click="closeNavbar">Virus</RouterLink>
+                  <RouterLink to="/help/num-sar" @click="closeNavbar">NUM-SAR</RouterLink>
                 </li>
               </ul>
             </li> -->
@@ -58,17 +74,17 @@
                 class="nav-link dropdown-toggle"
                 href="#"
                 role="button"
-                :aria-expanded="dropdownOpen"
-                @click.prevent="dropdownOpen = !dropdownOpen"
+                :aria-expanded="helpDropdownOpen"
+                @click.prevent="toggleHelpDropdown"
               >
                 Help
               </a>
-              <ul class="dropdown-menu" :class="{ show: dropdownOpen }">
+              <ul class="dropdown-menu" :class="{ show: helpDropdownOpen }">
                 <li>
-                  <RouterLink class="dropdown-item" to="/help/bacteria" @click="closeDropdown">Gensurv</RouterLink>
+                  <RouterLink class="dropdown-item" to="/help/gensurv" @click="closeDropdown">Gensurv</RouterLink>
                 </li>
                 <li>
-                  <RouterLink class="dropdown-item" to="/help/virus" @click="closeDropdown">NUM-SAR</RouterLink>
+                  <RouterLink class="dropdown-item" to="/help/num-sar" @click="closeDropdown">NUM-SAR</RouterLink>
                 </li>
                 <li>
                   <RouterLink class="dropdown-item" to="/help/cogdat" @click="closeDropdown">COGDAT</RouterLink>
@@ -135,7 +151,8 @@ import { Collapse } from "bootstrap";
 const auth = useAuthStore();
 const collapseId = "navbarSupportedContent";
 let collapseInstance = null;
-const dropdownOpen = ref(false);
+const uploadDropdownOpen = ref(false);
+const helpDropdownOpen = ref(false);
 
 onMounted(() => {
   const elem = document.getElementById(collapseId);
@@ -145,10 +162,25 @@ onMounted(() => {
 
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".nav-item.dropdown")) {
-      dropdownOpen.value = false;
+      closeDropdowns();
     }
   });
 });
+
+function closeDropdowns() {
+  uploadDropdownOpen.value = false;
+  helpDropdownOpen.value = false;
+}
+
+function toggleUploadDropdown() {
+  uploadDropdownOpen.value = !uploadDropdownOpen.value;
+  helpDropdownOpen.value = false;
+}
+
+function toggleHelpDropdown() {
+  helpDropdownOpen.value = !helpDropdownOpen.value;
+  uploadDropdownOpen.value = false;
+}
 
 function closeNavbar() {
   if (collapseInstance) {
@@ -156,8 +188,13 @@ function closeNavbar() {
   }
 }
 
+function closeUploadDropdown() {
+  uploadDropdownOpen.value = false;
+  closeNavbar();
+}
+
 function closeDropdown() {
-  dropdownOpen.value = false;
+  helpDropdownOpen.value = false;
   closeNavbar();
 }
 
