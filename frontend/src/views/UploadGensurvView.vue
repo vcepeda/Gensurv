@@ -6,7 +6,7 @@
     </div>
     
     <div v-else class="text-center mb-5">
-      <h1>Upload Your Gensurv Data Files</h1>
+      <h1 class="section-title text-center">Upload Your Gensurv Data Files</h1>
       <p class="lead">
         Choose between single sample upload or bulk upload options to upload your data.
       </p>
@@ -19,9 +19,9 @@
     <!-- SINGLE -->
     <div v-if="auth.isAuthenticated" class="row">
       <div class="col-lg-12 mb-4">
-        <div class="card shadow-sm">
-          <div class="card-header text-white text-center" style="background-color: #17a2b8;">
-            <h4>Single Sample Upload</h4>
+        <div class="card shadow-sm accent-teal">
+          <div class="card-header text-center">
+            <h4><i class="fas fa-vial accent-icon me-2"></i>Single Sample Upload</h4>
           </div>
           <div class="card-body">
             <p>
@@ -58,7 +58,7 @@
               </div>
 
               <div class="text-center">
-                <button class="btn btn-lg mt-3" type="submit" :disabled="single.loading" style="background-color: #17a2b8; color: white; border-color: #17a2b8;">
+                <button class="btn btn-primary btn-lg mt-3" type="submit" :disabled="single.loading">
                   <i class="fas fa-upload"></i>
                   {{ single.loading ? "Uploading..." : "Upload Single Sample" }}
                 </button>
@@ -96,9 +96,9 @@
 
       <!-- BULK -->
       <div class="col-lg-12 mb-4">
-        <div class="card shadow-sm">
-          <div class="card-header text-white text-center" style="background-color: #17a2b8;">
-            <h4>Bulk Upload</h4>
+        <div class="card shadow-sm accent-rose">
+          <div class="card-header text-center">
+            <h4><i class="fas fa-layer-group accent-icon me-2"></i>Bulk Upload</h4>
           </div>
           <div class="card-body">
             <p>If you have multiple samples to upload, use the bulk upload option below.</p>
@@ -132,7 +132,7 @@
               </div>
 
               <div class="text-center">
-                <button class="btn btn-lg mt-3" type="submit" :disabled="bulk.loading" style="background-color: #17a2b8; color: white; border-color: #17a2b8;">
+                <button class="btn btn-warning btn-lg mt-3" type="submit" :disabled="bulk.loading">
                   <i class="fas fa-file-upload"></i>
                   {{ bulk.loading ? "Uploading..." : "Upload Bulk Data" }}
                 </button>

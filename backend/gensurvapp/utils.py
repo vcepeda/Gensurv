@@ -370,6 +370,20 @@ def validate_sha256(value):
     return False, f"Invalid SHA256 checksum: '{value}'. Expected 64 hexadecimal characters."
 
 
+def validate_meldetatbestand(value):
+    """Validate DEMIS MELDETATBESTAND against the notificationCategory CodeSystem."""
+    from gensurvapp.num_sar_constants import VALID_MELDETATBESTAND_CODES
+
+    normalized = value.strip().lower()
+    if not re.fullmatch(r"[a-z]{4}", normalized):
+        return False, f"Invalid MELDETATBESTAND: '{value}'. Expected a valid 4-letter DEMIS notificationCategory code."
+
+    if normalized not in VALID_MELDETATBESTAND_CODES:
+        return False, f"Invalid MELDETATBESTAND: '{value}'. Code is not in the DEMIS notificationCategory CodeSystem."
+
+    return True, normalized
+
+
 def validate_sex_field(value):
     """
     Validate and normalize the 'Sex' field.
@@ -759,6 +773,13 @@ def validate_csv_columns(df: pd.DataFrame, expected_columns: dict, submission_ty
                             validation_results["type_mismatches"].append(f"Row {idx + 1}, Isolate Species: {result}")
 
             elif submission_type in NUM_SAR_SUBMISSION_TYPES:
+                if column == "meldetatbestand" and not non_empty_values.empty:
+                    for idx, val in non_empty_values.items():
+                        is_valid, result = validate_meldetatbestand(val)
+                        if not is_valid:
+                            validation_results["is_valid"] = False
+                            validation_results["type_mismatches"].append(f"Row {idx + 1}, MELDETATBESTAND: {result}")
+
                 if column in ("date_of_sequencing", "date_of_receiving", "date_of_sampling") and not non_empty_values.empty:
                     for idx, val in non_empty_values.items():
                         is_valid, result = validate_iso_date(val)
@@ -841,12 +862,15 @@ def validate_and_save_csv(file, expected_columns, essential_columns=None, submis
     Returns:
         tuple: (is_valid: bool, has_warnings: bool, message: str, delimiter: str, dataframe: pd.DataFrame or None)
     """
+    from gensurvapp.num_sar_constants import NUM_SAR_SUBMISSION_TYPES
+
     logger.debug(f"Validating file: {getattr(file, 'name', 'Unknown')} (type: {type(file)})")
 
     has_errors = False
     has_warnings = False
     error_messages = []
     warning_messages = []
+    is_num_sar = submission_type in NUM_SAR_SUBMISSION_TYPES
 
     ext = os.path.splitext(file.name)[1].lower()
 
@@ -898,6 +922,27 @@ def validate_and_save_csv(file, expected_columns, essential_columns=None, submis
         if essential_missing:
             has_errors = True
             error_messages.append(f"Missing essential columns: {', '.join(essential_missing)}")
+
+    if is_num_sar and not validation_results["is_valid"]:
+        fatal_messages = []
+
+        if validation_results["missing_columns"]:
+            fatal_messages.append(
+                f"Missing mandatory columns: {', '.join(validation_results['missing_columns'])}"
+            )
+
+        if validation_results["extra_columns"]:
+            fatal_messages.append(
+                f"Extra columns detected: {', '.join(sorted(validation_results['extra_columns']))}"
+            )
+
+        if validation_results["type_mismatches"]:
+            fatal_messages.extend(validation_results["type_mismatches"])
+
+        if validation_results.get("invalid_values"):
+            fatal_messages.extend(validation_results["invalid_values"])
+
+        return False, False, "\n".join(fatal_messages), delimiter, None
 
     # Handle warnings instead of failing
     if not validation_results["is_valid"]:

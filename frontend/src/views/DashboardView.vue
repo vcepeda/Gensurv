@@ -432,7 +432,8 @@ watch(selectedScope, () => {
 
 .compact-table :deep(thead th) {
   border-bottom: 1px solid #dde6ef;
-  color: inherit;
+  background: var(--num-slate);
+  color: #ffffff;
   font-weight: 600;
   font-size: 0.85rem;
 }
@@ -452,6 +453,7 @@ watch(selectedScope, () => {
   top: 0;
   z-index: 2;
   white-space: nowrap;
+  background: var(--num-slate);
 }
 
 .metadata-cell {

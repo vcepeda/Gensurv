@@ -36,10 +36,19 @@
 footer {
   width: 100%;
   box-sizing: border-box;
-  background: linear-gradient(90deg, #4b79a1 0%, #003366 100%);
+  background: linear-gradient(90deg, var(--num-slate) 0%, var(--num-slate-dark) 100%);
   color: white;
   padding: 2.5rem 0;
   margin-top: auto;
+  border-width: 4px 0 0 0;
+  border-style: solid;
+  border-image: linear-gradient(
+      90deg,
+      var(--num-aqua) 0%,
+      var(--num-gold) 50%,
+      var(--num-rose) 100%
+    )
+    1;
 }
 
 footer .footer-copy,
@@ -48,12 +57,12 @@ footer .footer-links {
 }
 
 footer .footer-links a {
-  color: white;
+  color: var(--num-rose);
   text-decoration: none;
   transition: color 0.3s ease;
 }
 
 footer .footer-links a:hover {
-  color: #ffcc00;
+  color: #f27f8d;
 }
 </style>

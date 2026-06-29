@@ -664,7 +664,7 @@
 
 <style scoped>
 .table-header {
-  background-color: #003366;
+  background-color: var(--num-slate);
   color: #fff;
 }
 

@@ -5,6 +5,16 @@ import { fileURLToPath, URL } from "node:url";
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [vue()],
+  css: {
+    preprocessorOptions: {
+      scss: {
+        // Bootstrap 5 still uses @import / legacy color fns internally.
+        // Silence those deprecation warnings coming from node_modules.
+        quietDeps: true,
+        silenceDeprecations: ["import", "global-builtin", "color-functions"],
+      },
+    },
+  },
   server: {
     proxy: {
       "/api": {

@@ -225,7 +225,7 @@ const setupObserver = () => {
 }
 
 .sidebar-header {
-  background: linear-gradient(135deg, #4b79a1 0%, #003366 100%);
+  background: linear-gradient(135deg, var(--num-slate) 0%, var(--num-slate-dark) 100%);
   color: white;
   padding: 0.75rem 1rem;
   border-radius: 8px;
@@ -270,7 +270,7 @@ const setupObserver = () => {
 .sidebar-nav a {
   display: block;
   padding: 0.5rem 0.75rem;
-  color: #495057;
+  color: var(--num-rose);
   text-decoration: none;
   border-left: 3px solid transparent;
   border-radius: 4px;
@@ -280,15 +280,15 @@ const setupObserver = () => {
 
 .sidebar-nav a:hover {
   background-color: #f8f9fa;
-  color: #003366;
-  border-left-color: #4b79a1;
+  color: #f27f8d;
+  border-left-color: var(--num-aqua);
   padding-left: 1rem;
 }
 
 .sidebar-nav a.active {
-  background-color: #e7f1ff;
-  color: #003366;
-  border-left-color: #003366;
+  background-color: rgba(66, 209, 184, 0.12);
+  color: var(--num-rose);
+  border-left-color: var(--num-aqua);
   font-weight: 500;
 }
 
