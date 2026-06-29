@@ -6,13 +6,13 @@
     </div>
     
     <div v-else class="text-center mb-5">
-      <h1>Upload Your NUM-SAR Data Files</h1>
+      <h1 class="section-title text-center">Upload Your NUM-SAR Data Files</h1>
       <p class="lead">
         Choose between single sample upload or bulk upload options to upload your data.
       </p>
       <p>
         <RouterLink :to="helpLink">Click here</RouterLink>
-        to view detailed help on metadata and antibiotics testing formats.
+        to view detailed help on NUM-SAR metadata and sequencing file formats.
       </p>
     </div>
 
@@ -51,25 +51,20 @@
     <!-- SINGLE -->
     <div v-if="auth.isAuthenticated" class="row">
       <div class="col-lg-12 mb-4">
-        <div class="card shadow-sm">
-          <div class="card-header text-white text-center" style="background-color: #17a2b8;">
-            <h4>Single Sample Upload</h4>
+        <div class="card shadow-sm accent-teal">
+          <div class="card-header text-center">
+            <h4><i class="fas fa-vial accent-icon me-2"></i>Single Sample Upload</h4>
           </div>
           <div class="card-body">
             <p>
-              Use this option to upload data for a single sample. Include the metadata file, antibiotics file,
-              and one or more FASTQ files.
+              Use this option to upload data for a single sample. Include the metadata file
+              and one or more sequencing files.
             </p>
 
             <form @submit.prevent="submitSingle">
               <div class="mb-3">
                 <label class="form-label">Metadata file (required)</label>
                 <input ref="singleMetadataInput" class="form-control" type="file" @change="onSingleMetadata" required />
-              </div>
-
-              <div class="mb-3" v-if="submissionType === 'bacteria'">
-                <label class="form-label">Antibiotics file (optional)</label>
-                <input ref="singleAntibioticsInput" class="form-control" type="file" @change="onSingleAntibiotics" />
               </div>
 
               <div class="mb-3">
@@ -90,7 +85,7 @@
               </div>
 
               <div class="text-center">
-                <button class="btn btn-lg mt-3" type="submit" :disabled="single.loading" style="background-color: #17a2b8; color: white; border-color: #17a2b8;">
+                <button class="btn btn-primary btn-lg mt-3" type="submit" :disabled="single.loading">
                   <i class="fas fa-upload"></i>
                   {{ single.loading ? "Uploading..." : "Upload Single Sample" }}
                 </button>
@@ -128,9 +123,9 @@
 
       <!-- BULK -->
       <div class="col-lg-12 mb-4">
-        <div class="card shadow-sm">
-          <div class="card-header text-white text-center" style="background-color: #17a2b8;">
-            <h4>Bulk Upload</h4>
+        <div class="card shadow-sm accent-rose">
+          <div class="card-header text-center">
+            <h4><i class="fas fa-layer-group accent-icon me-2"></i>Bulk Upload</h4>
           </div>
           <div class="card-body">
             <p>If you have multiple samples to upload, use the bulk upload option below.</p>
@@ -139,11 +134,6 @@
               <div class="mb-3">
                 <label class="form-label">Metadata file (required)</label>
                 <input ref="bulkMetadataInput" class="form-control" type="file" @change="onBulkMetadata" required />
-              </div>
-
-              <div class="mb-3" v-if="submissionType === 'bacteria'">
-                <label class="form-label">Antibiotics files (optional, multiple)</label>
-                <input ref="bulkAntibioticsInput" class="form-control" type="file" multiple @change="onBulkAntibiotics" />
               </div>
 
               <div class="mb-3">
@@ -164,7 +154,7 @@
               </div>
 
               <div class="text-center">
-                <button class="btn btn-lg mt-3" type="submit" :disabled="bulk.loading" style="background-color: #17a2b8; color: white; border-color: #17a2b8;">
+                <button class="btn btn-warning btn-lg mt-3" type="submit" :disabled="bulk.loading">
                   <i class="fas fa-file-upload"></i>
                   {{ bulk.loading ? "Uploading..." : "Upload Bulk Data" }}
                 </button>
@@ -204,28 +194,20 @@
 </template>
 
 <script setup>
-import axios from "axios";
 import apiClinet from "../api/client"
-import { reactive, ref, watch, computed } from "vue";
+import { reactive, ref, computed } from "vue";
 import { useAuthStore } from "@/stores/auth";
 
 const auth = useAuthStore();
 
-axios.defaults.withCredentials = true;
-
 // File input refs
 const singleMetadataInput = ref(null);
-const singleAntibioticsInput = ref(null);
 const singleFastqInput = ref(null);
 const bulkMetadataInput = ref(null);
-const bulkAntibioticsInput = ref(null);
 const bulkFastqInput = ref(null);
 const submissionType = ref("bacteria");
 
-// Computed help link based on submission type
-const helpLink = computed(() => {
-  return submissionType.value === "bacteria" ? "/help/gensurv" : "/help/num-sar";
-});
+const helpLink = "/help/num-sar";
 
 const uploadSubmissionType = computed(() => {
   return submissionType.value === "bacteria" ? "num-sar_bacteria" : "num-sar_virus";
@@ -233,7 +215,6 @@ const uploadSubmissionType = computed(() => {
 
 const single = reactive({
   metadata: null,
-  antibiotics: null,
   fastq: [],
   submit_to_pipeline: false,
   loading: false,
@@ -246,7 +227,6 @@ const single = reactive({
 
 const bulk = reactive({
   metadata: null,
-  antibiotics: [],
   fastq: [],
   submit_to_pipeline: false,
   loading: false,
@@ -258,11 +238,9 @@ const bulk = reactive({
 });
 
 function onSingleMetadata(e) { single.metadata = e.target.files?.[0] ?? null; }
-function onSingleAntibiotics(e) { single.antibiotics = e.target.files?.[0] ?? null; }
 function onSingleFastq(e) { single.fastq = Array.from(e.target.files ?? []); }
 
 function onBulkMetadata(e) { bulk.metadata = e.target.files?.[0] ?? null; }
-function onBulkAntibiotics(e) { bulk.antibiotics = Array.from(e.target.files ?? []); }
 function onBulkFastq(e) { bulk.fastq = Array.from(e.target.files ?? []); }
 
 async function submitSingle() {
@@ -277,7 +255,6 @@ async function submitSingle() {
   const start = Date.now() / 1000;
 
   fd.append("metadata_file", single.metadata);
-  if (single.antibiotics) fd.append("antibiotics_file", single.antibiotics);
   single.fastq.forEach((f) => fd.append("fastq_files", f));
   fd.append("submit_to_pipeline", String(single.submit_to_pipeline));
   fd.append("upload_start_time", String(start));
@@ -300,10 +277,8 @@ async function submitSingle() {
     // Clear file inputs and data after successful upload
     single.submit_to_pipeline = false;
     single.metadata = null;
-    single.antibiotics = null;
     single.fastq = [];
     if (singleMetadataInput.value) singleMetadataInput.value.value = "";
-    if (singleAntibioticsInput.value) singleAntibioticsInput.value.value = "";
     if (singleFastqInput.value) singleFastqInput.value.value = "";
   } catch (err) {
     const data = err?.response?.data;
@@ -325,7 +300,6 @@ async function submitBulk() {
   const start = Date.now() / 1000;
 
   fd.append("metadata_file", bulk.metadata);
-  bulk.antibiotics.forEach((f) => fd.append("antibiotics_files", f));
   bulk.fastq.forEach((f) => fd.append("fastq_files", f));
   fd.append("submit_to_pipeline", String(bulk.submit_to_pipeline));
   fd.append("upload_start_time", String(start));
@@ -348,10 +322,8 @@ async function submitBulk() {
     // Clear file inputs and data after successful upload
     bulk.submit_to_pipeline = false;
     bulk.metadata = null;
-    bulk.antibiotics = [];
     bulk.fastq = [];
     if (bulkMetadataInput.value) bulkMetadataInput.value.value = "";
-    if (bulkAntibioticsInput.value) bulkAntibioticsInput.value.value = "";
     if (bulkFastqInput.value) bulkFastqInput.value.value = "";
   } catch (err) {
     const data = err?.response?.data;
@@ -360,13 +332,4 @@ async function submitBulk() {
     bulk.loading = false;
   }
 }
-
-watch(submissionType, (value) => {
-  if (value === "virus") {
-    single.antibiotics = null;
-    bulk.antibiotics = [];
-    if (singleAntibioticsInput.value) singleAntibioticsInput.value.value = "";
-    if (bulkAntibioticsInput.value) bulkAntibioticsInput.value.value = "";
-  }
-});
 </script>

@@ -10,6 +10,24 @@ NUM_SAR_SUBMISSION_TYPES = {
     "num-sar_virus",
 }
 
+# DEMIS CodeSystem NotificationCategory, version 2.3.1, dated 2026-01-19.
+# Source: https://simplifier.net/rki.demis.laboratory/notificationCategory/~overview
+# The CodeSystem is case-insensitive; values are normalized to lowercase before validation.
+VALID_MELDETATBESTAND_CODES = {
+    "abvp", "acbp", "adep", "advp", "astp", "banp", "bobp", "borp",
+    "bovp", "bpsp", "brup", "camp", "caup", "chlp", "chtp", "ckvp",
+    "clop", "cltp", "corp", "coxp", "cryp", "cvdp", "cvsp", "cymp",
+    "denp", "eahp", "ebcp", "ebvp", "echp", "ecop", "ehcp", "etvp",
+    "frtp", "fsvp", "gbsp", "gfvp", "gilp", "havp", "hbvp", "hcvp",
+    "hdvp", "hevp", "hfap", "hinp", "hivp", "htvp", "invp", "legp",
+    "lepp", "lisp", "lsvp", "mbvp", "mpmp", "mpvp", "mpxp", "mrap",
+    "mrsp", "msvp", "mylp", "mytp", "ncvp", "negp", "neip", "novp",
+    "opxp", "pinp", "pkvp", "plap", "povp", "pvbp", "rbvp", "ricp",
+    "rsvp", "rtvp", "ruvp", "salp", "ship", "spap", "spnp", "spyp",
+    "styp", "toxp", "trip", "trpp", "vchp", "vzvp", "wbkp", "wnvp",
+    "yenp", "ypsp", "zkvp",
+}
+
 NUM_SAR_ESSENTIAL_METADATA_COLUMNS = {
     "LAB_SEQUENCE_ID": (str, True),
     "MELDETATBESTAND": (str, True),
@@ -61,4 +79,3 @@ NUM_SAR_METADATA_COLUMNS = {
     "FILE_2_SHA256SUM": (str, False),
     "FILE_2_NAME": (str, False),
 }
-

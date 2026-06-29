@@ -229,40 +229,44 @@ header {
 }
 
 header .navbar {
-  background: linear-gradient(90deg, #4b79a1 0%, #003366 100%) !important;
-  padding: 10px 20px;
+  background: linear-gradient(90deg, var(--num-aqua) 0%, var(--num-slate) 100%) !important;
+  padding: 10px 24px;
+  box-shadow: 0 2px 10px rgba(16, 24, 40, 0.12);
 }
 
 header .navbar-brand img {
-  height: 50px;
+  height: 46px;
 }
 
 header .nav-link {
-  color: #fff !important;
+  color: #ffffff !important;
+  font-weight: 500;
   padding: 10px 15px !important;
-  transition: color 0.3s ease;
+  transition: color 0.2s ease;
 }
 
-header .nav-link:hover {
-  color: #ffcc00 !important;
+header .nav-link:hover,
+header .nav-link:focus {
+  color: var(--num-gold) !important;
+}
+
+header .nav-link.active,
+header .nav-link.router-link-active {
+  color: var(--num-gold) !important;
 }
 
 header .navbar-toggler {
-  border-color: rgba(255, 255, 255, 0.5);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 header .navbar-toggler-icon {
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.85%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
 }
 
-header .btn-outline-primary {
+header .dropdown-item.active,
+header .dropdown-item:active {
+  background-color: var(--num-aqua);
   color: #fff;
-  border-color: #fff;
-}
-
-header .btn-outline-primary:hover {
-  background-color: #fff;
-  color: #003366;
 }
 
 header .form-control {
