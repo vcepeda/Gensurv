@@ -1,4 +1,6 @@
 # gensurvapp/views_api.py
+from __future__ import annotations
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -9,7 +11,12 @@ from django.views.decorators.csrf import csrf_exempt
 import time
 import logging
 
-from .services.upload_service import handle_single_upload, handle_bulk_upload
+from .services.upload_service import handle_single_upload, handle_bulk_upload, normalize_submission_type
+from .services.upload_service_num_sar import (
+    handle_single_upload as handle_num_sar_single_upload,
+    handle_bulk_upload as handle_num_sar_bulk_upload,
+)
+from .num_sar_constants import NUM_SAR_SUBMISSION_TYPES
 
 from django.shortcuts import get_object_or_404
 from django.http import FileResponse
@@ -54,11 +61,13 @@ class SingleUploadAPIView(APIView):
 
     def post(self, request):
         serializer = SingleUploadSerializer(data=request.data)
-        submission_type = request.query_params.get("type", "bacteria")
-        
-        if submission_type not in ("bacteria", "virus"):
+        submission_type = request.query_params.get("type", "gensurv")
+
+        try:
+            submission_type = normalize_submission_type(submission_type)
+        except ValueError as ve:
             return Response(
-                {"success": False, "error": "Invalid type. Use 'bacteria' or 'virus'."},
+                {"success": False, "error": str(ve)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
@@ -79,14 +88,23 @@ class SingleUploadAPIView(APIView):
             submit_to_pipeline = serializer.validated_data.get('submit_to_pipeline', False)
             upload_start_time = serializer.validated_data.get('upload_start_time')
 
-            result = handle_single_upload(
-                user=request.user,
-                metadata_file=metadata_file,
-                uploaded_antibiotics_file=antibiotics_file,
-                fastq_files=fastq_files,
-                submit_to_pipeline=submit_to_pipeline,
-                submission_type=submission_type
-            )
+            if submission_type in NUM_SAR_SUBMISSION_TYPES:
+                result = handle_num_sar_single_upload(
+                    user=request.user,
+                    metadata_file=metadata_file,
+                    fastq_files=fastq_files,
+                    submit_to_pipeline=submit_to_pipeline,
+                    submission_type=submission_type
+                )
+            else:
+                result = handle_single_upload(
+                    user=request.user,
+                    metadata_file=metadata_file,
+                    uploaded_antibiotics_file=antibiotics_file,
+                    fastq_files=fastq_files,
+                    submit_to_pipeline=submit_to_pipeline,
+                    submission_type=submission_type
+                )
 
             response_data = {
                 "success": True,
@@ -143,11 +161,13 @@ class BulkUploadAPIView(APIView):
 
     def post(self, request):
         serializer = BulkUploadSerializer(data=request.data)
-        submission_type = request.query_params.get("type", "bacteria")
+        submission_type = request.query_params.get("type", "gensurv")
 
-        if submission_type not in ("bacteria", "virus"):
+        try:
+            submission_type = normalize_submission_type(submission_type)
+        except ValueError as ve:
             return Response(
-                {"success": False, "error": "Invalid type. Use 'bacteria' or 'virus'."},
+                {"success": False, "error": str(ve)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         
@@ -169,14 +189,23 @@ class BulkUploadAPIView(APIView):
             upload_start_time = serializer.validated_data.get('upload_start_time')
 
             # Call the business logic handler
-            result = handle_bulk_upload(
-                user=request.user,
-                metadata_file=metadata_file,
-                antibiotics_files=antibiotics_files,
-                fastq_files=fastq_files,
-                submit_to_pipeline=submit_to_pipeline,
-                submission_type=submission_type
-            )
+            if submission_type in NUM_SAR_SUBMISSION_TYPES:
+                result = handle_num_sar_bulk_upload(
+                    user=request.user,
+                    metadata_file=metadata_file,
+                    fastq_files=fastq_files,
+                    submit_to_pipeline=submit_to_pipeline,
+                    submission_type=submission_type
+                )
+            else:
+                result = handle_bulk_upload(
+                    user=request.user,
+                    metadata_file=metadata_file,
+                    antibiotics_files=antibiotics_files,
+                    fastq_files=fastq_files,
+                    submit_to_pipeline=submit_to_pipeline,
+                    submission_type=submission_type
+                )
 
             # Calculate timing metrics if client sent start time
             response_data = {

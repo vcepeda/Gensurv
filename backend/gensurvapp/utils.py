@@ -354,6 +354,36 @@ def fetch_taxonomy_name(taxonomy_id: str, retries=3, timeout=20):
     return False, f"NCBI API unreachable. Skipping taxonomy validation for {taxonomy_id}."
 
 
+def validate_iso_date(date_str):
+    """Validate a date string in YYYY-MM-DD format (required by NUM-SAR metadata)."""
+    try:
+        datetime.strptime(date_str.strip(), "%Y-%m-%d")
+        return True, date_str.strip()
+    except ValueError:
+        return False, f"Invalid date format: '{date_str}'. Expected YYYY-MM-DD (e.g. '2024-04-12')."
+
+
+def validate_sha256(value):
+    """Validate a SHA256 checksum: exactly 64 hexadecimal characters."""
+    if re.fullmatch(r"[0-9a-fA-F]{64}", value.strip()):
+        return True, value.strip()
+    return False, f"Invalid SHA256 checksum: '{value}'. Expected 64 hexadecimal characters."
+
+
+def validate_meldetatbestand(value):
+    """Validate DEMIS MELDETATBESTAND against the notificationCategory CodeSystem."""
+    from gensurvapp.num_sar_constants import VALID_MELDETATBESTAND_CODES
+
+    normalized = value.strip().lower()
+    if not re.fullmatch(r"[a-z]{4}", normalized):
+        return False, f"Invalid MELDETATBESTAND: '{value}'. Expected a valid 4-letter DEMIS notificationCategory code."
+
+    if normalized not in VALID_MELDETATBESTAND_CODES:
+        return False, f"Invalid MELDETATBESTAND: '{value}'. Code is not in the DEMIS notificationCategory CodeSystem."
+
+    return True, normalized
+
+
 def validate_sex_field(value):
     """
     Validate and normalize the 'Sex' field.
@@ -577,13 +607,15 @@ def validate_and_normalize_date(date_str, expected_formats=None, debug=False):
     )
 
 
-def validate_csv_columns(df: pd.DataFrame, expected_columns: dict):
+def validate_csv_columns(df: pd.DataFrame, expected_columns: dict, submission_type: str = None):
     """
     Validates the columns of a CSV file against expected schema.
 
     Args:
         df (pd.DataFrame): The DataFrame loaded from the CSV file.
         expected_columns (dict): A dictionary defining expected columns, their types, and whether they are mandatory.
+        submission_type (str, optional): Submission type string (e.g. 'gensurv', 'num-sar_bacteria', 'num-sar_virus').
+            Controls which field-specific validators are applied.
 
     Returns:
         dict: Validation results with keys:
@@ -593,6 +625,7 @@ def validate_csv_columns(df: pd.DataFrame, expected_columns: dict):
               - `type_mismatches`: (list) Descriptions of type mismatches or validation errors.
               - `invalid_values`: (list) Invalid values in mandatory fields.
     """
+    from gensurvapp.num_sar_constants import NUM_SAR_SUBMISSION_TYPES
     validation_results = {
         "is_valid": True,
         "missing_columns": [],
@@ -616,28 +649,29 @@ def validate_csv_columns(df: pd.DataFrame, expected_columns: dict):
         for col in df.columns:
             logger.debug(f"• {col.strip()}: {row[col]}")
 
-    # Explicitly cast the Postal Code column to int if it exists
-    if "postal code" in df.columns:
-        try:
-            df["postal code"] = df["postal code"].astype(int)
-            logger.debug(f"Postal Code Column After Casting: {df['postal code']}")
-        except ValueError as e:
-            logger.error(f"Failed to convert Postal Code to int: {e}")
-            validation_results["is_valid"] = False
-            validation_results["type_mismatches"].append(
-                "postal code: Could not be converted to integers due to invalid values."
-            )
-    
-    # Explicitly cast the "collection date" column to str if it exists        
-    if "collection date" in df.columns:
-        logger.debug("📅 Pre-validating 'collection date' column globally")
-        
-        if pd.api.types.is_datetime64_any_dtype(df["collection date"]):
-            logger.debug("→ Column is datetime64; formatting as DD-MM-YYYY")
-            df["collection date"] = df["collection date"].dt.strftime("%d-%m-%Y")
-        else:
-            logger.debug("Column 'Collection Date' is not a datetime object; assuming string format.")
-        logger.debug("→ Final collection date values:\n" + df["collection date"].to_string(index=False))
+    if submission_type not in NUM_SAR_SUBMISSION_TYPES:
+        # Explicitly cast the Postal Code column to int if it exists
+        if "postal code" in df.columns:
+            try:
+                df["postal code"] = df["postal code"].astype(int)
+                logger.debug(f"Postal Code Column After Casting: {df['postal code']}")
+            except ValueError as e:
+                logger.error(f"Failed to convert Postal Code to int: {e}")
+                validation_results["is_valid"] = False
+                validation_results["type_mismatches"].append(
+                    "postal code: Could not be converted to integers due to invalid values."
+                )
+
+        # Explicitly cast the "collection date" column to str if it exists
+        if "collection date" in df.columns:
+            logger.debug("📅 Pre-validating 'collection date' column globally")
+
+            if pd.api.types.is_datetime64_any_dtype(df["collection date"]):
+                logger.debug("→ Column is datetime64; formatting as DD-MM-YYYY")
+                df["collection date"] = df["collection date"].dt.strftime("%d-%m-%Y")
+            else:
+                logger.debug("Column 'Collection Date' is not a datetime object; assuming string format.")
+            logger.debug("→ Final collection date values:\n" + df["collection date"].to_string(index=False))
 
     # Check for missing mandatory columns
     mandatory_columns = [col for col, (_, is_mandatory) in normalized_expected_columns.items() if is_mandatory]
@@ -686,58 +720,92 @@ def validate_csv_columns(df: pd.DataFrame, expected_columns: dict):
                         f"Invalid values found in row(s): {', '.join(map(str, invalid_values.index + 1))}"
                     )
 
-            # MIC-specific validation
-            if column == "observed antibiotic resistance mic (mg/l)":
-                logger.debug(f"Special case for MIC validation")
-                
-                invalid_mic_values = non_empty_values[
-                    ~non_empty_values.map(lambda x: validate_mic_value(str(x)))
-                ]
+            if submission_type not in NUM_SAR_SUBMISSION_TYPES:
+                # MIC-specific validation
+                if column == "observed antibiotic resistance mic (mg/l)":
+                    logger.debug(f"Special case for MIC validation")
 
-                if not invalid_mic_values.empty:
-                    validation_results["is_valid"] = False
-                    validation_results["type_mismatches"].append(
-                        f"{column}: Invalid MIC values found in row(s): {', '.join(map(str, invalid_mic_values.index + 1))}. "
-                        f"MIC values must be numeric and may include prefixes like >=, >, <=, <. Examples: 0.5, >=4, <0.125."
-                    )
+                    invalid_mic_values = non_empty_values[
+                        ~non_empty_values.map(lambda x: validate_mic_value(str(x)))
+                    ]
 
-            # Special validations for specific fields
-            if column == "sex" and not non_empty_values.empty:
-                for idx, val in non_empty_values.items():
-                    is_valid, result = validate_sex_field(val)
-                    if not is_valid:
+                    if not invalid_mic_values.empty:
                         validation_results["is_valid"] = False
-                        validation_results["type_mismatches"].append(f"Row {idx + 1}, Sex: {result}")
+                        validation_results["type_mismatches"].append(
+                            f"{column}: Invalid MIC values found in row(s): {', '.join(map(str, invalid_mic_values.index + 1))}. "
+                            f"MIC values must be numeric and may include prefixes like >=, >, <=, <. Examples: 0.5, >=4, <0.125."
+                        )
 
-            if column == "age group" and not non_empty_values.empty:
-                for idx, val in non_empty_values.items():
-                    is_valid, result = validate_age_group_field(val)
-                    if not is_valid:
-                        validation_results["is_valid"] = False
-                        validation_results["type_mismatches"].append(f"Row {idx + 1}, Age Group: {result}")
+                # Special validations for specific fields
+                if column == "sex" and not non_empty_values.empty:
+                    for idx, val in non_empty_values.items():
+                        is_valid, result = validate_sex_field(val)
+                        if not is_valid:
+                            validation_results["is_valid"] = False
+                            validation_results["type_mismatches"].append(f"Row {idx + 1}, Sex: {result}")
 
-            if column == "sequencing platform" and not non_empty_values.empty:
-                for idx, val in non_empty_values.items():
-                    is_valid, result = validate_sequencing_platform_field(val)
-                    if not is_valid:
-                        validation_results["is_valid"] = False
-                        validation_results["type_mismatches"].append(f"Row {idx + 1}, Sequencing Platform: {result}")
+                if column == "age group" and not non_empty_values.empty:
+                    for idx, val in non_empty_values.items():
+                        is_valid, result = validate_age_group_field(val)
+                        if not is_valid:
+                            validation_results["is_valid"] = False
+                            validation_results["type_mismatches"].append(f"Row {idx + 1}, Age Group: {result}")
 
-            if column == "collection date" and not non_empty_values.empty:
-                for idx, val in non_empty_values.items():
-                    is_valid, result = validate_and_normalize_date(val)
-                    if not is_valid:
-                        validation_results["is_valid"] = False
-                        validation_results["type_mismatches"].append(f"Row {idx + 1}, Collection Date: {result}")
+                if column == "sequencing platform" and not non_empty_values.empty:
+                    for idx, val in non_empty_values.items():
+                        is_valid, result = validate_sequencing_platform_field(val)
+                        if not is_valid:
+                            validation_results["is_valid"] = False
+                            validation_results["type_mismatches"].append(f"Row {idx + 1}, Sequencing Platform: {result}")
 
-            if column == "isolate species" and not non_empty_values.empty:
-                for idx, val in non_empty_values.items():
-                    is_valid, result = is_valid_ncbi_tax_id_or_name(val)
-                    if not is_valid:
-                        validation_results["is_valid"] = False
-                        validation_results["type_mismatches"].append(f"Row {idx + 1}, Isolate Species: {result}")
+                if column == "collection date" and not non_empty_values.empty:
+                    for idx, val in non_empty_values.items():
+                        is_valid, result = validate_and_normalize_date(val)
+                        if not is_valid:
+                            validation_results["is_valid"] = False
+                            validation_results["type_mismatches"].append(f"Row {idx + 1}, Collection Date: {result}")
 
-    # Custom validation: Ensure at least one NGS platform field is filled
+                if column == "isolate species" and not non_empty_values.empty:
+                    for idx, val in non_empty_values.items():
+                        is_valid, result = is_valid_ncbi_tax_id_or_name(val)
+                        if not is_valid:
+                            validation_results["is_valid"] = False
+                            validation_results["type_mismatches"].append(f"Row {idx + 1}, Isolate Species: {result}")
+
+            elif submission_type in NUM_SAR_SUBMISSION_TYPES:
+                if column == "meldetatbestand" and not non_empty_values.empty:
+                    for idx, val in non_empty_values.items():
+                        is_valid, result = validate_meldetatbestand(val)
+                        if not is_valid:
+                            validation_results["is_valid"] = False
+                            validation_results["type_mismatches"].append(f"Row {idx + 1}, MELDETATBESTAND: {result}")
+
+                if column in ("date_of_sequencing", "date_of_receiving", "date_of_sampling") and not non_empty_values.empty:
+                    for idx, val in non_empty_values.items():
+                        is_valid, result = validate_iso_date(val)
+                        if not is_valid:
+                            validation_results["is_valid"] = False
+                            validation_results["type_mismatches"].append(f"Row {idx + 1}, {column}: {result}")
+
+                if column in ("file_1_sha256sum", "file_2_sha256sum") and not non_empty_values.empty:
+                    for idx, val in non_empty_values.items():
+                        is_valid, result = validate_sha256(val)
+                        if not is_valid:
+                            validation_results["is_valid"] = False
+                            validation_results["type_mismatches"].append(f"Row {idx + 1}, {column}: {result}")
+
+                if column == "host_sex" and not non_empty_values.empty:
+                    for idx, val in non_empty_values.items():
+                        is_valid, result = validate_sex_field(val)
+                        if not is_valid:
+                            validation_results["is_valid"] = False
+                            validation_results["type_mismatches"].append(f"Row {idx + 1}, Host Sex: {result}")
+
+    # Custom validation: Ensure at least one NGS platform field is filled (Gensurv only)
+    if submission_type in NUM_SAR_SUBMISSION_TYPES:
+        logger.debug("Validation Results:\n" + str(validation_results))
+        return validation_results
+
     all_ngs_fields = ["illumina r1", "illumina r2", "nanopore", "pacbio"]
     available_ngs_fields = [field for field in all_ngs_fields if field in df.columns]
     logger.debug(f"Available NGS fields: {available_ngs_fields}")
@@ -778,23 +846,31 @@ def validate_csv_columns(df: pd.DataFrame, expected_columns: dict):
     return validation_results
 
 
-def validate_and_save_csv(file, expected_columns, essential_columns=None):
+def validate_and_save_csv(file, expected_columns, essential_columns=None, submission_type=None):
     """
     Validates and saves a CSV or Excel (.xlsx) file by:
     - Detecting delimiters (For CSV files)
     - Fixing trailing/empty columns and inconsistent quoting (For CSV files)
     - Reading the file into a DataFrame
     - Performing schema and logic validation
-    
+
+    Args:
+        submission_type (str, optional): Controls which field-specific validators run.
+            Pass 'gensurv' (or None) for Gensurv uploads, 'num-sar_bacteria' or
+            'num-sar_virus' for NUM-SAR uploads.
+
     Returns:
         tuple: (is_valid: bool, has_warnings: bool, message: str, delimiter: str, dataframe: pd.DataFrame or None)
     """
+    from gensurvapp.num_sar_constants import NUM_SAR_SUBMISSION_TYPES
+
     logger.debug(f"Validating file: {getattr(file, 'name', 'Unknown')} (type: {type(file)})")
 
     has_errors = False
     has_warnings = False
     error_messages = []
     warning_messages = []
+    is_num_sar = submission_type in NUM_SAR_SUBMISSION_TYPES
 
     ext = os.path.splitext(file.name)[1].lower()
 
@@ -838,7 +914,7 @@ def validate_and_save_csv(file, expected_columns, essential_columns=None):
     # Validate the DataFrame using `validate_csv_columns`
     logger.debug("Entering def validate_csv_columns")
 
-    validation_results = validate_csv_columns(df, expected_columns)
+    validation_results = validate_csv_columns(df, expected_columns, submission_type=submission_type)
 
     # Separate essential from non-essential issues
     if essential_columns:
@@ -846,6 +922,27 @@ def validate_and_save_csv(file, expected_columns, essential_columns=None):
         if essential_missing:
             has_errors = True
             error_messages.append(f"Missing essential columns: {', '.join(essential_missing)}")
+
+    if is_num_sar and not validation_results["is_valid"]:
+        fatal_messages = []
+
+        if validation_results["missing_columns"]:
+            fatal_messages.append(
+                f"Missing mandatory columns: {', '.join(validation_results['missing_columns'])}"
+            )
+
+        if validation_results["extra_columns"]:
+            fatal_messages.append(
+                f"Extra columns detected: {', '.join(sorted(validation_results['extra_columns']))}"
+            )
+
+        if validation_results["type_mismatches"]:
+            fatal_messages.extend(validation_results["type_mismatches"])
+
+        if validation_results.get("invalid_values"):
+            fatal_messages.extend(validation_results["invalid_values"])
+
+        return False, False, "\n".join(fatal_messages), delimiter, None
 
     # Handle warnings instead of failing
     if not validation_results["is_valid"]:
