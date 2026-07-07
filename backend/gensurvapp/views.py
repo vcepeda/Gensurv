@@ -12,9 +12,12 @@ import logging
 from .services.upload_service import handle_single_upload, handle_bulk_upload
 
 from django.shortcuts import get_object_or_404
+from django.http import FileResponse
 from django.conf import settings
 from django.core.mail import send_mail
 from django.utils import timezone
+from pathlib import Path
+import mimetypes
 
 from gensurvapp.models import *
 from gensurvapp.services.dashboard_service import build_dashboard_rows_for_user
@@ -224,7 +227,11 @@ class DashboardAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        rows = build_dashboard_rows_for_user(request.user)
+        scope = (request.query_params.get("scope") or "mine").strip().lower()
+        if scope not in {"mine", "others"}:
+            scope = "mine"
+
+        rows = build_dashboard_rows_for_user(request.user, scope=scope)
 
         payload = []
         for r in rows:
@@ -494,10 +501,12 @@ class SubmissionSamplesAPIView(APIView):
     def get(self, request, submission_id: int):
         submission = get_object_or_404(Submission, id=submission_id)
 
-        bactopia_ids = BactopiaResult.objects.filter(submission=submission).values_list("sample_id", flat=True)
-        plasmid_ids = PlasmidIdentResult.objects.filter(submission=submission).values_list("sample_id", flat=True)
-
-        sample_ids = sorted(set(bactopia_ids) | set(plasmid_ids))
+        sample_ids = sorted(
+            set(
+                AnalysisResult.objects.filter(submission=submission, status="finished")
+                .values_list("sample_id", flat=True)
+            )
+        )
 
         fastq_files_qs = UploadedFile.objects.filter(
             submission=submission,
@@ -536,6 +545,228 @@ class SubmissionSamplesAPIView(APIView):
             "antibiotics_files": antibiotics_files,
         }
         return Response(SubmissionSampleListSerializer(payload).data)
+
+
+PREVIEWABLE_RESULT_FILE_EXTENSIONS = {".html", ".htm", ".csv", ".tsv", ".txt"}
+MAX_PREVIEW_BYTES = 50 * 1024 * 1024
+
+
+def _can_access_submission(user, submission: Submission) -> bool:
+    return admin_only_upload_test(user) or submission.user_id == user.id
+
+
+def _resolve_result_root_candidates(raw_directory: str) -> list[Path]:
+    project_root = Path(__file__).resolve().parents[2]
+    normalized = str(raw_directory or "").strip()
+    normalized_unix = normalized.replace("\\", "/")
+
+    candidates: list[Path] = []
+
+    if normalized:
+        raw_path = Path(normalized).expanduser()
+        if raw_path.is_absolute():
+            candidates.append(raw_path)
+        else:
+            candidates.append((project_root / raw_path))
+
+        marker = "/runs/all_results/"
+        if marker in normalized_unix:
+            tail = normalized_unix.split(marker, 1)[1].lstrip("/")
+            if tail:
+                candidates.append(project_root / "runs" / "all_results" / tail)
+
+        # Fallback: map by terminal directory name (sample folder)
+        name = raw_path.name
+        if name:
+            candidates.append(project_root / "runs" / "all_results" / name)
+
+    deduped: list[Path] = []
+    seen: set[str] = set()
+    for candidate in candidates:
+        key = str(candidate)
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(candidate)
+    return deduped
+
+
+def _directory_has_files(directory: Path) -> bool:
+    return any(entry.is_file() for entry in directory.rglob("*"))
+
+
+def _discover_result_root_by_sample(sample_id: str) -> Path | None:
+    project_root = Path(__file__).resolve().parents[2]
+    runs_root = project_root / "runs"
+    if not runs_root.exists() or not runs_root.is_dir():
+        return None
+
+    # Prefer top-level batch folders like runs/jena_batch/<sample_id>
+    for batch_dir in sorted(runs_root.iterdir(), key=lambda p: p.name.lower()):
+        if not batch_dir.is_dir():
+            continue
+
+        direct_candidate = batch_dir / sample_id
+        if direct_candidate.exists() and direct_candidate.is_dir() and _directory_has_files(direct_candidate):
+            return direct_candidate.resolve()
+
+        # Also support one extra nesting level like runs/all_batches/<batch>/<sample_id>
+        try:
+            nested_dirs = sorted(batch_dir.iterdir(), key=lambda p: p.name.lower())
+        except PermissionError:
+            continue
+
+        for nested in nested_dirs:
+            if not nested.is_dir():
+                continue
+            nested_candidate = nested / sample_id
+            if nested_candidate.exists() and nested_candidate.is_dir() and _directory_has_files(nested_candidate):
+                return nested_candidate.resolve()
+
+    return None
+
+
+def _get_result_root_for_sample(submission: Submission, sample_id: str) -> Path:
+    analysis = (
+        AnalysisResult.objects.filter(submission=submission, sample_id=sample_id)
+        .exclude(result_directory__in=["", "not_set"])
+        .order_by("-id")
+        .first()
+    )
+    if not analysis:
+        raise FileNotFoundError("No result directory found for this sample.")
+
+    existing_dirs: list[Path] = []
+    for candidate in _resolve_result_root_candidates(analysis.result_directory):
+        resolved = candidate.resolve()
+        if resolved.exists() and resolved.is_dir():
+            existing_dirs.append(resolved)
+        if resolved.exists() and resolved.is_dir() and _directory_has_files(resolved):
+            corrected = str(resolved)
+            if analysis.result_directory != corrected:
+                analysis.result_directory = corrected
+                analysis.save(update_fields=["result_directory"])
+            return resolved
+
+    discovered = _discover_result_root_by_sample(sample_id)
+    if discovered:
+        corrected = str(discovered)
+        if analysis.result_directory != corrected:
+            analysis.result_directory = corrected
+            analysis.save(update_fields=["result_directory"])
+        return discovered
+
+    # If an existing directory is found but empty, keep using it so UI can still render an empty tree.
+    if existing_dirs:
+        return existing_dirs[0]
+
+    raise FileNotFoundError("Result directory does not exist on disk.")
+
+
+def _safe_result_file_path(root: Path, relative_path: str) -> Path:
+    candidate = (root / relative_path).resolve()
+    candidate.relative_to(root)
+    return candidate
+
+
+class SubmissionSampleResultFilesAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, submission_id: int, sample_id: str):
+        submission = get_object_or_404(Submission, id=submission_id)
+        if not _can_access_submission(request.user, submission):
+            return Response({"detail": "Forbidden"}, status=403)
+
+        try:
+            root = _get_result_root_for_sample(submission, sample_id)
+        except FileNotFoundError as exc:
+            return Response({"detail": str(exc)}, status=404)
+
+        def build_tree(directory: Path):
+            nodes = []
+            children = sorted(
+                directory.iterdir(),
+                key=lambda item: (item.is_file(), item.name.lower()),
+            )
+            for child in children:
+                rel_path = child.relative_to(root).as_posix()
+                node = {
+                    "name": child.name,
+                    "path": rel_path,
+                    "type": "directory" if child.is_dir() else "file",
+                }
+                if child.is_dir():
+                    node["children"] = build_tree(child)
+                else:
+                    node["size"] = child.stat().st_size
+                nodes.append(node)
+            return nodes
+
+        return Response(
+            {
+                "submission_id": submission.id,
+                "sample_id": sample_id,
+                "result_root": root.name,
+                "tree": build_tree(root),
+            }
+        )
+
+
+class SubmissionSampleResultFileContentAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, submission_id: int, sample_id: str):
+        submission = get_object_or_404(Submission, id=submission_id)
+        if not _can_access_submission(request.user, submission):
+            return Response({"detail": "Forbidden"}, status=403)
+
+        relative_path = (request.query_params.get("path") or "").strip()
+        if not relative_path:
+            return Response({"detail": "Query parameter 'path' is required."}, status=400)
+
+        try:
+            root = _get_result_root_for_sample(submission, sample_id)
+            file_path = _safe_result_file_path(root, relative_path)
+        except FileNotFoundError as exc:
+            return Response({"detail": str(exc)}, status=404)
+        except ValueError:
+            return Response({"detail": "Invalid file path."}, status=400)
+
+        if not file_path.exists() or not file_path.is_file():
+            return Response({"detail": "File not found."}, status=404)
+
+        extension = file_path.suffix.lower()
+        if extension in PREVIEWABLE_RESULT_FILE_EXTENSIONS:
+            file_size = file_path.stat().st_size
+            if file_size > MAX_PREVIEW_BYTES:
+                return Response(
+                    {
+                        "detail": "File is too large to preview in browser.",
+                        "download_only": True,
+                    },
+                    status=413,
+                )
+
+            with file_path.open("r", encoding="utf-8", errors="replace") as handle:
+                content = handle.read()
+
+            mime_type = mimetypes.guess_type(file_path.name)[0] or "text/plain"
+            return Response(
+                {
+                    "mode": "preview",
+                    "name": file_path.name,
+                    "path": file_path.relative_to(root).as_posix(),
+                    "extension": extension,
+                    "mime_type": mime_type,
+                    "content": content,
+                }
+            )
+
+        return FileResponse(
+            file_path.open("rb"),
+            as_attachment=True,
+            filename=file_path.name,
+        )
 
 
 class SubmissionStatisticsAPIView(APIView):

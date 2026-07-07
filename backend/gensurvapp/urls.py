@@ -22,6 +22,16 @@ urlpatterns = [
 
     # submission
     path("api/submissions/<int:submission_id>/samples/", views.SubmissionSamplesAPIView.as_view(), name="submission_samples_api"),
+    path(
+        "api/submissions/<int:submission_id>/samples/<str:sample_id>/result-files/",
+        views.SubmissionSampleResultFilesAPIView.as_view(),
+        name="submission_sample_result_files_api",
+    ),
+    path(
+        "api/submissions/<int:submission_id>/samples/<str:sample_id>/result-file/",
+        views.SubmissionSampleResultFileContentAPIView.as_view(),
+        name="submission_sample_result_file_api",
+    ),
     path("api/submissions/<int:submission_id>/statistics/", views.SubmissionStatisticsAPIView.as_view(), name="submission_statistics_api"),
     path("api/statistics/global/", views.GlobalStatisticsAPIView.as_view(), name="global_statistics_api"),
 
