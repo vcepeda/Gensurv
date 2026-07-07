@@ -10,9 +10,12 @@ import FooterLinksView from "./views/FooterLinksView.vue";
 import AboutView from "./views/AboutView.vue";
 import ResearchView from "./views/ResearchView.vue";
 import UploadView from "./views/UploadView.vue";
-import tempDashboardView from "./views/tempDashboardView.vue";
+import DashboardView from "./views/DashboardView.vue";
 import ResubmitView from "./views/ResubmitView.vue";
 import SubmissionResultsView from "./views/SubmissionResultView.vue"
+import SubmissionSampleResultFilesView from "./views/SubmissionSampleResultFilesView.vue"
+import SubmissionSampleResultFileView from "./views/SubmissionSampleResultFileView.vue"
+import MetadataFileView from "./views/MetadataFileView.vue"
 import MetadataStatisticsView from "./views/MetadataStatisticsView.vue"
 import GlobalStatisticsView from "./views/GlobalStatisticsView.vue"
 
@@ -36,7 +39,7 @@ const routes = [
   { path: "/about", component: AboutView },
   { path: "/research", component: ResearchView },
   { path: "/upload", component: UploadView },
-  { path: "/dashboard", component: tempDashboardView },
+  { path: "/dashboard", component: DashboardView },
   {
     path: "/statistics",
     name: "global_statistics",
@@ -47,6 +50,23 @@ const routes = [
       name: "submission_results",
       component: SubmissionResultsView,
     },
+  {
+      path: "/submissions/:submissionId/results/:sampleId/files",
+      name: "submission_sample_result_files",
+      component: SubmissionSampleResultFilesView,
+    },
+  {
+      path: "/submissions/:submissionId/results/:sampleId/files/view",
+      name: "submission_sample_result_file_view",
+      component: SubmissionSampleResultFileView,
+      meta: { fullscreen: true },
+    },
+  {
+    path: "/metadata-file-view",
+    name: "metadata_file_view",
+    component: MetadataFileView,
+    meta: { requiresAuth: true },
+  },
   {
     path: "/submissions/:submissionId/statistics",
     name: "metadata_statistics",

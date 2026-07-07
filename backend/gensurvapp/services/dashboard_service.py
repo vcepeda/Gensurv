@@ -8,7 +8,7 @@ from gensurvapp.utils import (
 )
 from gensurvapp.utils import admin_only_upload_test  # wherever your function lives
 
-def build_dashboard_rows_for_user(user):
+def build_dashboard_rows_for_user(user, scope: str = "mine"):
     sample_files_qs = UploadedFile.objects.filter(file_type__in=["metadata_cleaned", "metadata_raw", "metadata"])
     antibiotics_files_qs = UploadedFile.objects.filter(file_type__in=["antibiotics", "antibiotics_raw", "antibiotics_cleaned"])
     fastq_files_qs = UploadedFile.objects.filter(file_type="fastq")
@@ -22,7 +22,10 @@ def build_dashboard_rows_for_user(user):
     if admin_only_upload_test(user):
         submissions = base_qs.order_by("-created_at")
     else:
-        submissions = base_qs.filter(user=user).order_by("-created_at")
+        if scope == "others":
+            submissions = base_qs.exclude(user=user).order_by("-created_at")
+        else:
+            submissions = base_qs.filter(user=user).order_by("-created_at")
 
     history_counts = FileHistory.objects.values("submission_id", "file_type").annotate(count=Count("id"))
     history_lookup = {(e["submission_id"], e["file_type"]): e["count"] for e in history_counts}

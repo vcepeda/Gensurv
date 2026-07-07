@@ -4,7 +4,7 @@ import math
 import pandas as pd
 from django.db import transaction
 
-from gensurvapp.models import Submission, UploadedFile
+from gensurvapp.models import Submission, UploadedFile, AnalysisResult
 from gensurvapp.services.global_stats_service import recompute_global_statistics
 from gensurvapp.utils import validate_and_save_csv, generate_cleaned_file
 from gensurvapp.constants import METADATA_COLUMNS, ESSENTIAL_METADATA_COLUMNS, ANTIBIOTICS_COLUMNS
@@ -12,13 +12,28 @@ from gensurvapp.constants import METADATA_COLUMNS, ESSENTIAL_METADATA_COLUMNS, A
 import logging
 logger = logging.getLogger(__name__)
 
+SUBMISSION_TYPE_ALIASES = {
+    "": "gensurv",
+    "bacteria": "gensurv",
+    "gensurv": "gensurv",
+    "virus": "num-sar_virus",
+    "num-sar_bacteria": "num-sar_bacteria",
+    "num-sar_virus": "num-sar_virus",
+}
+
+VIRUS_SUBMISSION_TYPES = {"num-sar_virus"}
+
+
 def normalize_submission_type(value):
     if not value:
-        return "bacteria"
+        return "gensurv"
     normalized = str(value).strip().lower()
-    if normalized not in ("bacteria", "virus"):
-        raise ValueError("Invalid submission_type. Use 'bacteria' or 'virus'.")
-    return normalized
+    try:
+        return SUBMISSION_TYPE_ALIASES[normalized]
+    except KeyError:
+        raise ValueError(
+            "Invalid submission_type. Use 'gensurv', 'num-sar_bacteria', or 'num-sar_virus'."
+        )
 
 
 def generate_statistics(metadata_df, submission_type, antibiotics_dfs=None):
@@ -263,7 +278,7 @@ def handle_single_upload(*, user, metadata_file, uploaded_antibiotics_file, fast
 
     submission_type = normalize_submission_type(submission_type)
 
-    if submission_type == "virus" and uploaded_antibiotics_file:
+    if submission_type in VIRUS_SUBMISSION_TYPES and uploaded_antibiotics_file:
         raise ValueError("Virus submissions do not accept antibiotics files.")
 
     if not metadata_file:
@@ -338,7 +353,7 @@ def handle_single_upload(*, user, metadata_file, uploaded_antibiotics_file, fast
     if not sample_id or sample_id.lower() == "nan":
         raise ValueError("Metadata has missing/invalid 'sample identifier' in first row.")
     
-    if submission_type == "virus":
+    if submission_type in VIRUS_SUBMISSION_TYPES:
         ab_file_val = _safe_str(metadata_df.loc[0, "antibiotics file"]) if "antibiotics file" in metadata_df.columns else None
         ab_info_val = _safe_str(metadata_df.loc[0, "antibiotics info"]) if "antibiotics info" in metadata_df.columns else None
         if ab_file_val or ab_info_val:
@@ -478,6 +493,14 @@ def handle_single_upload(*, user, metadata_file, uploaded_antibiotics_file, fast
 
     submission.save()
 
+    # Create pending analysis rows only after all prechecks have passed and submission exists.
+    for sid in single_sample_ids.tolist():
+        AnalysisResult.objects.get_or_create(
+            submission=submission,
+            sample_id=sid,
+            defaults={"status": "pending"},
+        )
+
     cleaned_metadata_file = generate_cleaned_file(metadata_file.name, metadata_df)
     UploadedFile.objects.create(
         submission=submission,
@@ -533,7 +556,7 @@ def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, s
 
     submission_type = normalize_submission_type(submission_type)
 
-    if submission_type == "virus" and antibiotics_files:
+    if submission_type in VIRUS_SUBMISSION_TYPES and antibiotics_files:
         raise ValueError("Virus submissions do not accept antibiotics files.")
 
     server_start = time.time()
@@ -675,7 +698,7 @@ def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, s
         antibiotics_info = _safe_str(row.get("antibiotics info"))
 
         # inside handle_bulk_upload loop that processes antibiotics fields
-        if submission_type == "virus":
+        if submission_type in VIRUS_SUBMISSION_TYPES:
             if expected_ab_file or antibiotics_info:
                 raise ValueError(f"Sample '{sample_id}': Virus submissions must not include antibiotics fields.")
             continue
@@ -730,6 +753,15 @@ def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, s
     )
 
     submission.save()
+
+    # Create pending analysis rows only after all prechecks have passed and submission exists.
+    bulk_sample_ids = list(dict.fromkeys(valid_bulk_sample_ids.tolist()))
+    for sid in bulk_sample_ids:
+        AnalysisResult.objects.get_or_create(
+            submission=submission,
+            sample_id=sid,
+            defaults={"status": "pending"},
+        )
 
     cleaned_metadata_file = generate_cleaned_file(metadata_file.name, metadata_df)
     UploadedFile.objects.create(
