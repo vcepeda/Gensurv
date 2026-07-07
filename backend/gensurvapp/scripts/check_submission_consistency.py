@@ -101,4 +101,3 @@ def check_submission_filehistory_consistency(submission_id):
             print(f"   - {f}")
     else:
         print("✅ No files missing in media/history folder")
-
