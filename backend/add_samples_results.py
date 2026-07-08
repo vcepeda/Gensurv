@@ -80,9 +80,8 @@ def _build_result_dir_map(all_results_dir: Path) -> dict[str, str]:
 
 def run() -> None:
 	from gensurvapp.models import AnalysisResult, Submission
-	
-	#all_results_dir = Path(__file__).resolve().parents[1] / "runs" / "all_results"
-	all_results_dir = Path(__file__).resolve().parents[1] / "all_results"
+
+	all_results_dir = Path(__file__).resolve().parents[1] / "runs" / "all_results"
 	result_dir_map = _build_result_dir_map(all_results_dir)
 
 	for submission in Submission.objects.all().order_by("id"):
