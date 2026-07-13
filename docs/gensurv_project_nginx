@@ -1,14 +1,15 @@
+#Remember to replace the IP with your server's IP address and /path/ with the actual path to your project and static files.
 server {
-    server_name gensurv.de 49.13.219.197;
+    server_name gensurv.de IP;
 
     location = /favicon.ico { access_log off; log_not_found off; }
     location /static/ {
-        alias /home/ahcepev1/projects/gensurv_project/staticfiles/;
+        alias /path/staticfiles/;
     }
 
     location / {
         include proxy_params;
-        proxy_pass http://unix:/home/ahcepev1/projects/gensurv_project/gensurv_project.sock;
+        proxy_pass http://unix:/path/gensurv_project.sock;
     }
 
     listen 443 ssl; # managed by Certbot
@@ -27,7 +28,7 @@ server {
 
     listen 80;
     listen [::]:80;
-    server_name gensurv.de 49.13.219.197;
+    server_name gensurv.de IP;
     return 404; # managed by Certbot
 
 }
