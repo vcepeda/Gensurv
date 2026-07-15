@@ -27,8 +27,24 @@
             <li class="nav-item">
               <RouterLink class="nav-link" to="/" active-class="active" @click="closeNavbar">Home</RouterLink>
             </li>
-            <li class="nav-item">
-              <RouterLink class="nav-link" to="/upload" active-class="active" @click="closeNavbar">Data Upload</RouterLink>
+            <li class="nav-item dropdown">
+              <a
+                class="nav-link dropdown-toggle"
+                href="#"
+                role="button"
+                :aria-expanded="uploadDropdownOpen"
+                @click.prevent="toggleUploadDropdown"
+              >
+                Data Upload
+              </a>
+              <ul class="dropdown-menu" :class="{ show: uploadDropdownOpen }">
+                <li>
+                  <RouterLink class="dropdown-item" to="/upload/gensurv" @click="closeUploadDropdown">Gensurv</RouterLink>
+                </li>
+                <li>
+                  <RouterLink class="dropdown-item" to="/upload/num-sar" @click="closeUploadDropdown">NUM-SAR</RouterLink>
+                </li>
+              </ul>
             </li>
             <li class="nav-item">
               <RouterLink class="nav-link" to="/dashboard" active-class="active" @click="closeNavbar">Dashboard</RouterLink>
@@ -39,9 +55,43 @@
             <!-- <li class="nav-item">
               <RouterLink class="nav-link" to="/search" active-class="active">Search</RouterLink>
             </li> -->
-            <li class="nav-item">
-              <RouterLink class="nav-link" to="/help" active-class="active" @click="closeNavbar">Help</RouterLink>
+            <!-- <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="helpDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" @click.prevent>
+                Help
+              </a>
+              <ul class="dropdown-menu" aria-labelledby="helpDropdown">
+                <li class="dropdown-item">
+                  <RouterLink to="/help/gensurv" @click="closeNavbar">Gensurv</RouterLink>
+                </li>
+                <li class="dropdown-item">
+                  <RouterLink to="/help/num-sar" @click="closeNavbar">NUM-SAR</RouterLink>
+                </li>
+              </ul>
+            </li> -->
+
+            <li class="nav-item dropdown">
+              <a
+                class="nav-link dropdown-toggle"
+                href="#"
+                role="button"
+                :aria-expanded="helpDropdownOpen"
+                @click.prevent="toggleHelpDropdown"
+              >
+                Help
+              </a>
+              <ul class="dropdown-menu" :class="{ show: helpDropdownOpen }">
+                <li>
+                  <RouterLink class="dropdown-item" to="/help/gensurv" @click="closeDropdown">Gensurv</RouterLink>
+                </li>
+                <li>
+                  <RouterLink class="dropdown-item" to="/help/num-sar" @click="closeDropdown">NUM-SAR</RouterLink>
+                </li>
+                <li>
+                  <RouterLink class="dropdown-item" to="/help/cogdat" @click="closeDropdown">COGDAT</RouterLink>
+                </li>
+              </ul>
             </li>
+
             <li class="nav-item">
               <RouterLink class="nav-link" to="/about" active-class="active" @click="closeNavbar">About</RouterLink>
             </li>
@@ -101,18 +151,51 @@ import { Collapse } from "bootstrap";
 const auth = useAuthStore();
 const collapseId = "navbarSupportedContent";
 let collapseInstance = null;
+const uploadDropdownOpen = ref(false);
+const helpDropdownOpen = ref(false);
 
 onMounted(() => {
   const elem = document.getElementById(collapseId);
   if (elem) {
     collapseInstance = new Collapse(elem, { toggle: false });
   }
+
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".nav-item.dropdown")) {
+      closeDropdowns();
+    }
+  });
 });
+
+function closeDropdowns() {
+  uploadDropdownOpen.value = false;
+  helpDropdownOpen.value = false;
+}
+
+function toggleUploadDropdown() {
+  uploadDropdownOpen.value = !uploadDropdownOpen.value;
+  helpDropdownOpen.value = false;
+}
+
+function toggleHelpDropdown() {
+  helpDropdownOpen.value = !helpDropdownOpen.value;
+  uploadDropdownOpen.value = false;
+}
 
 function closeNavbar() {
   if (collapseInstance) {
     collapseInstance.hide();
   }
+}
+
+function closeUploadDropdown() {
+  uploadDropdownOpen.value = false;
+  closeNavbar();
+}
+
+function closeDropdown() {
+  helpDropdownOpen.value = false;
+  closeNavbar();
 }
 
 function onLogout() {
@@ -146,40 +229,44 @@ header {
 }
 
 header .navbar {
-  background: linear-gradient(90deg, #4b79a1 0%, #003366 100%) !important;
-  padding: 10px 20px;
+  background: linear-gradient(90deg, var(--num-aqua) 0%, var(--num-slate) 100%) !important;
+  padding: 10px 24px;
+  box-shadow: 0 2px 10px rgba(16, 24, 40, 0.12);
 }
 
 header .navbar-brand img {
-  height: 50px;
+  height: 46px;
 }
 
 header .nav-link {
-  color: #fff !important;
+  color: #ffffff !important;
+  font-weight: 500;
   padding: 10px 15px !important;
-  transition: color 0.3s ease;
+  transition: color 0.2s ease;
 }
 
-header .nav-link:hover {
-  color: #ffcc00 !important;
+header .nav-link:hover,
+header .nav-link:focus {
+  color: var(--num-gold) !important;
+}
+
+header .nav-link.active,
+header .nav-link.router-link-active {
+  color: var(--num-gold) !important;
 }
 
 header .navbar-toggler {
-  border-color: rgba(255, 255, 255, 0.5);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 header .navbar-toggler-icon {
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.85%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
 }
 
-header .btn-outline-primary {
+header .dropdown-item.active,
+header .dropdown-item:active {
+  background-color: var(--num-aqua);
   color: #fff;
-  border-color: #fff;
-}
-
-header .btn-outline-primary:hover {
-  background-color: #fff;
-  color: #003366;
 }
 
 header .form-control {

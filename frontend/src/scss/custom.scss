@@ -1,0 +1,38 @@
+// =============================================================
+// NUM brand theme — Bootstrap 5 customisation
+// Brand colours (see NUM brand guide):
+//   AquaVital    #42D1B8  -> primary
+//   DeepSlate    #485156  -> secondary / dark surfaces
+//   RosePulse    #EA5167  -> danger
+//   SunshineGold #FFCC00  -> warning / accents
+// Primary typeface: Montserrat
+// Inspired by https://www.netzwerk-universitaetsmedizin.de/plattformen/num-sar
+// (clean, white-dominant, teal accents, professional corners)
+// =============================================================
+
+@use "sass:color";
+
+// Recompile Bootstrap with the brand variables (modern @use API — no @import).
+@use "bootstrap/scss/bootstrap" with (
+  $primary:   #42d1b8,                                   // AquaVital
+  $secondary: #485156,                                   // DeepSlate
+  $danger:    #ea5167,                                   // RosePulse
+  $warning:   #ffcc00,                                   // SunshineGold
+  $dark:      #485156,
+  $font-family-sans-serif: ("Montserrat", "Helvetica Neue", Arial, sans-serif),
+  $headings-font-weight: 700,
+  $link-color: #ea5167,
+  $link-hover-color: #f27f8d,
+  $border-radius: 0.375rem,
+  $border-radius-sm: 0.25rem,
+  $border-radius-lg: 0.5rem
+);
+
+// Expose brand tokens as CSS custom properties for component styles.
+:root {
+  --num-aqua: #42d1b8;
+  --num-slate: #485156;
+  --num-rose: #ea5167;
+  --num-gold: #ffcc00;
+  --num-slate-dark: #3a4145;
+}

@@ -1,13 +1,12 @@
-<!-- src/views/HelpView.vue -->
 <template>
   <div class="container-fluid">
     <!-- Page Header -->
     <div class="mb-5">
-      <h1 class="text-center">Help: Data Format and Upload Instructions</h1>
+      <h1 class="text-center">Help: NUM-SAR Data Format and Upload Instructions</h1>
       <p class="lead">
         This section provides detailed guidelines for uploading single or multiple samples, including the
-        required formats for <strong>Sample Metadata</strong>, <strong>Antibiotic Testing Results</strong>,
-        and <strong>NGS Data</strong>. Please carefully follow these instructions to ensure successful uploads.
+        required formats for <strong>Sample Metadata</strong> and <strong>NGS Data</strong>. Please carefully follow
+        these instructions to ensure successful uploads.
       </p>
     </div>
 
@@ -44,35 +43,6 @@
             <strong>Important:</strong> FASTQ file names must exactly match the actual uploaded file names (case-sensitive).
           </li>
           <li>Ensure all <strong>mandatory metadata fields</strong> are included.</li>
-        </ul>
-      </li>
-
-      <li>
-        <strong>Antibiotic Testing Information (Optional):</strong>
-        <ul>
-          <li>
-            You may provide antibiotic testing data in <code>one</code> of the following ways:
-            <ul>
-              <li>
-                <strong>Antibiotics File:</strong> A <strong>CSV</strong>, <strong>TSV</strong>, or <strong>Excel (.xlsx)</strong>
-                file containing antibiotic testing results.
-              </li>
-              <li>
-                <strong>Antibiotics Info:</strong> A text field in the metadata file summarizing the antibiotic testing information.
-              </li>
-            </ul>
-          </li>
-          <li>
-            <strong>Important:</strong> You <strong>must not</strong> provide both <code>"Antibiotics File"</code> and
-            <code>"Antibiotics Info"</code> at the same time. If an <code>"Antibiotics File"</code> is provided, its filename
-            must match exactly what is entered in the <code>"Antibiotics File"</code> field of the metadata file.
-          </li>
-          <li>
-            <strong>Format (For Antibiotics File):</strong> The file may use <code>,</code> (comma), <code>;</code> (semicolon),
-            or <code>\t</code> (tab) as delimiters — these will be auto-detected. File extensions allowed:
-            <code>.csv</code>, <code>.tsv</code>, <code>.txt</code>, <code>.xlsx</code>.
-          </li>
-          <li>If an <code>"Antibiotics File"</code> is provided, it must include all mandatory antibiotic testing columns.</li>
         </ul>
       </li>
 
@@ -198,14 +168,12 @@
         <thead class="table-header">
           <tr>
             <th class="gray-head">Metadata File</th>
-            <th class="gray-head">Antibiotic Testing Files</th>
             <th class="gray-head">FASTQ Files</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>sample_001_metadata.csv</td>
-            <td>sample_001_antibiotics.csv</td>
             <td>
               sample_001_R1.fastq.gz<br />
               sample_001_R2.fastq.gz
@@ -228,35 +196,16 @@
           <li>
             At least one FASTQ file per sample, with filenames matching exactly as listed in the metadata file platform fields.
           </li>
-          <li>
-            Antibiotic testing data per sample (optional):
-            <ul>
-              <li>
-                <strong>Antibiotics File:</strong> If provided, the filename must match exactly as listed in the
-                <code>"Antibiotics File"</code> field of the metadata file.
-              </li>
-              <li>
-                <strong>Antibiotics Info:</strong> If no file is provided, antibiotic testing details can be entered as text in the
-                <code>"Antibiotics Info"</code> field of the metadata file.
-              </li>
-              <li>
-                <strong>Important:</strong> You may provide <code>either</code> an <code>"Antibiotics File"</code> <strong>or</strong>
-                <code>"Antibiotics Info"</code>, but <strong>not both</strong>.
-              </li>
-            </ul>
-          </li>
         </ul>
       </li>
       <li>
-        The metadata file must specify the expected filenames for FASTQ files in the platform fields and, if applicable, for antibiotics
-        testing files in the <code>"Antibiotics File"</code> field.
+        The metadata file must specify the expected filenames for FASTQ files in the platform fields.
       </li>
       <li>
-        Uploaded FASTQ files must match the filenames listed in the metadata file. If an antibiotics file is provided, it must also match the
-        filename listed in the metadata file.
+        Uploaded FASTQ files must match the filenames listed in the metadata file.
       </li>
       <li>
-        Upload the metadata file, all FASTQ files, and, if applicable, any antibiotics files directly through the bulk upload form.
+        Upload the metadata file and all FASTQ files directly through the bulk upload form.
       </li>
     </ol>
 
@@ -271,20 +220,12 @@
         <thead class="table-header">
           <tr>
             <th class="gray-head">Metadata File</th>
-            <th class="gray-head">Antibiotic Testing Files</th>
             <th class="gray-head">FASTQ Files</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>eco_meta_modified.csv</td>
-            <td>
-              Eco05232_amr.csv<br />
-              Eco05239_amr.csv<br />
-              Eco05243_amr.csv<br />
-              Eco05250_amr.csv<br />
-              Eco05274_amr.csv
-            </td>
             <td>
               <strong>Eco05232:</strong><br />
               Eco05232-240828_1.fastq.gz<br />
@@ -306,10 +247,6 @@
           <tr>
             <td>sample_metadata.csv</td>
             <td>
-              Sample_001_antibiotics.csv<br />
-              Sample_002_antibiotics.csv
-            </td>
-            <td>
               <strong>Sample_001:</strong><br />
               Sample_001.fastq<br />
               <strong>Sample_002:</strong><br />
@@ -318,7 +255,6 @@
           </tr>
           <tr>
             <td>sample_metadata.csv</td>
-            <td>sample_antibiotics.csv</td>
             <td>
               <strong>Sample_001:</strong><br />
               test1.fastq
@@ -328,138 +264,22 @@
       </table>
     </div>
 
-    <!-- Detailed Metadata and Antibiotics Information -->
-    <h2 id="details" class="text-info">Detailed Metadata and Antibiotics Information</h2>
+    <!-- Detailed Metadata Information -->
+    <h2 id="details" class="text-info">Detailed Metadata Information</h2>
     <p>
-      This section provides detailed descriptions of the required fields for Sample Metadata and Antibiotic Testing Results.
-      The tables below outline the specific fields, their descriptions, expected content, and whether they are mandatory or optional.
-      Use this information as a reference when preparing your metadata and antibiotic testing files for upload.
+      This section provides detailed descriptions of the required fields for Sample Metadata.
+      The table below outlines the specific fields, their descriptions, expected content, and whether they are mandatory or optional.
+      Use this information as a reference when preparing your metadata file for upload.
     </p>
 
     <!-- Legend -->
     <h3 id="sample-meta">Sample Metadata for Single Upload</h3>
-    <p>Please follow the format shown below for your metadata.</p>
-
-    <div class="mb-3">
-      <p><strong>Legend: Field Requirements</strong></p>
-      <div>
-        <span class="legend-box mandatory"></span>
-        <span>Mandatory Fields</span>
-      </div>
-      <div>
-        <span class="legend-box optional"></span>
-        <span>Optional Fields</span>
-      </div>
-      <div>
-        <span class="legend-box groupone"></span>
-        <span>At least one required among the group</span>
-      </div>
-    </div>
-
-    <!-- Metadata Table (static example placeholder) -->
-    <div class="table-responsive">
-      <table class="table table-striped table-bordered meta-table">
-        <thead class="table-header">
-          <tr>
-            <th colspan="3" class="gray-head">Sample and Isolate Information</th>
-            <th colspan="4" class="gray-head">Sample Collection Data</th>
-            <th colspan="6" class="gray-head">Sample Collection Facility</th>
-            <th colspan="3" class="gray-head">Patient/Host Details</th>
-            <th colspan="8" class="gray-head">Sequencing Details</th>
-            <th colspan="2" class="gray-head">Antibiotics Details</th>
-          </tr>
-          <tr>
-            <th class="th-mandatory">Sample Identifier</th>
-            <th class="th-mandatory">Isolate Species</th>
-            <th class="th-optional">Subtype</th>
-            <th class="th-mandatory">Collection Date</th>
-            <th class="th-optional">Sampling Strategy</th>
-            <th class="th-mandatory">Sample Source</th>
-            <th class="th-optional">Collection Method</th>
-            <th class="th-mandatory">City</th>
-            <th class="th-mandatory">Postal Code</th>
-            <th class="th-optional">County</th>
-            <th class="th-mandatory">State</th>
-            <th class="th-mandatory">Country</th>
-            <th class="th-optional">Lab Identifier</th>
-            <th class="th-optional">Sex</th>
-            <th class="th-optional">Age Group</th>
-            <th class="th-optional">Country of Putative Exposure</th>
-            <th class="th-optional">Sequencing Platform</th>
-            <th class="th-mandatory">Sequencing Type</th>
-            <th class="th-optional">Library Preparation Kit</th>
-            <th class="th-optional">Sequencing Chemistry</th>
-            <th class="th-groupone">Illumina R1</th>
-            <th class="th-groupone">Illumina R2</th>
-            <th class="th-groupone">Nanopore</th>
-            <th class="th-groupone">Pacbio</th>
-            <th class="th-optional">Antibiotics File</th>
-            <th class="th-optional">Antibiotics Info</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Sample_001</td>
-            <td>Escherichia coli (NCBI taxid)</td>
-            <td>ST131</td>
-            <td>01/01/2026</td>
-            <td>Surveillance</td>
-            <td>Human clinical (hospital)</td>
-            <td>Swab</td>
-            <td>Tübingen</td>
-            <td>72076</td>
-            <td>Tübingen</td>
-            <td>Baden-Württemberg</td>
-            <td>Germany</td>
-            <td>LAB-123</td>
-            <td>Male</td>
-            <td>Adult</td>
-            <td>Germany</td>
-            <td>Illumina</td>
-            <td>Whole genome sequencing</td>
-            <td>Nextera XT</td>
-            <td>V2.5</td>
-            <td>sample_001_R1.fastq.gz</td>
-            <td>sample_001_R2.fastq.gz</td>
-            <td></td>
-            <td></td>
-            <td>sample_001_antibiotics.csv</td>
-            <td></td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <p>
+      Please use the detailed metadata fields table below for the sample metadata format. The grouped metadata overview table was
+      removed so the page stays aligned with the current help-page format.
+    </p>
 
     <a href="/download_sample_csv/" class="btn btn-secondary">Download Sample CSV</a>
-
-    <br /><br />
-
-    <!-- Antibiotic Testing Results for Single Upload -->
-    <h3 id="sample_anti">Antibiotic Testing Results for Single Upload</h3>
-    <p>Please follow the format shown below for your antibiotics testing data.</p>
-
-    <div class="table-responsive">
-      <table class="table table-striped table-bordered anti-table">
-        <thead class="table-header">
-          <tr>
-            <th class="th-optional">Testing Method</th>
-            <th class="th-mandatory">Tested Antibiotic</th>
-            <th class="th-mandatory">Observed Antibiotic Resistance SIR</th>
-            <th class="th-optional">Observed Antibiotic Resistance MIC (mg/L)</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Disk diffusion</td>
-            <td>Ampicillin</td>
-            <td>R</td>
-            <td>&gt;=4.0</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <a href="/download_antibiotics_csv/" class="btn btn-secondary">Download Antibiotics Testing CSV</a>
 
     <br /><br />
 
@@ -484,20 +304,44 @@
             <td colspan="4"><strong>Sample and Isolate Information</strong></td>
           </tr>
           <tr>
-            <td>Sample Identifier</td>
-            <td>Unique ID for tracking the sample.</td>
-            <td>Unique ID</td>
+            <td>LAB_SEQUENCE_ID</td>
+            <td>Unique ID for tracking the sample. This ID is generated during sample sequencing. Used for communication in case of internal queries.</td>
+            <td>Text</td>
             <td class="cell-mandatory">Mandatory</td>
           </tr>
           <tr>
-            <td>Isolate Species</td>
-            <td>NCBI Taxonomy ID.</td>
-            <td>NCBI taxonomy ID</td>
+            <td>MELDETATBESTAND</td>
+            <td>4-letter code describing the pathogen found at https://simplifier.net/rki.demis.laboratory/notificationcategory. Example: cvdp</td>
+            <td>Text (4 characters)</td>
             <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>SPECIES</td>
+            <td>A detailed description of the species on the species level using the Simplifier display name as reference.</td>
+            <td>Text</td>
+            <td class="cell-optional">Optional</td>
+          </tr>
+          <tr>
+            <td>SPECIES_CODE</td>
+            <td>A detailed description of the species on the species level using Simplifier code as reference.</td>
+            <td>Text (4 characters)</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>ISOLATE</td>
+            <td>Identification or description of the specific individual micro-organism from which this sequence was obtained. Example: Isolate 1</td>
+            <td>Text</td>
+            <td class="cell-optional">Optional</td>
           </tr>
           <tr>
             <td>Subtype</td>
-            <td>Sequence type, strain, serotype, etc.</td>
+            <td>Final classification assigned to the virus sample (e.g., Sequence type, strain, serotype, etc.). Examples: GII.4; GII.P16_GII.4; H1N1; B.1.1.7</td>
+            <td>Text</td>
+            <td class="cell-optional">Optional</td>
+          </tr>
+          <tr>
+            <td>Typing strategy</td>
+            <td>Strategy that was used to identify the pathogen subtype if applicable. Examples: phylogenetic analyses, kmer clustering, BLAST, or typing tools such as Nextclade</td>
             <td>Text</td>
             <td class="cell-optional">Optional</td>
           </tr>
@@ -506,111 +350,261 @@
             <td colspan="4"><strong>Sample Collection Data</strong></td>
           </tr>
           <tr>
-            <td>Collection Date</td>
-            <td>When the sample was collected.</td>
-            <td>Day/Month/Year</td>
-            <td class="cell-mandatory">Mandatory</td>
-          </tr>
-          <tr>
-            <td>Sampling Strategy</td>
-            <td>Reason for sampling.</td>
-            <td>Surveillance, suspected outbreak, sequencing for diagnostic purposes, other [Text]</td>
+            <td>DATE_OF_SAMPLING</td>
+            <td>Date on which the sample was collected from the host or environment. Example: 15-02-2025</td>
+            <td>YYYY-MM-DD</td>
             <td class="cell-optional">Optional</td>
           </tr>
           <tr>
-            <td>Sample Source</td>
-            <td>Type of sample source.</td>
-            <td>Human clinical (hospital), human screening (hospital), medical devices, etc.</td>
+            <td>SEQUENCING_REASON</td>
+            <td>Reason for the sequencing of this sample, e.g. random sample. In other words, context or purpose for which the sample was collected and/or sequenced.</td>
+            <td>Diagnostic sample, Screening sample, Other [Text]</td>
             <td class="cell-mandatory">Mandatory</td>
           </tr>
           <tr>
-            <td>Collection Method</td>
-            <td>Method used to collect the sample.</td>
-            <td>Text</td>
+            <td>ISOLATION SOURCE</td>
+            <td>Method used to collect the sample. Describes the local source of the organism from which the sequence was obtained, e.g. nasal, blood, stool using the simplifier material display names.</td>
+            <td>Stool/faeces, Anal/rectal swab, Inanimate surroundings</td>
+            <td class="cell-optional">Optional</td>
+          </tr>
+          <tr>
+            <td>ISOLATION SOURCE_CODE = SAMPLE_TYPE</td>
+            <td>Describes the local source of the organism from which the sequence was obtained, e.g. nasal, blood, stool using the simplifier material codes. Example: 309164002</td>
+            <td>Number</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>Storage duration</td>
+            <td>Time between sampling and sequencing of the sample.</td>
+            <td>&lt; 1 week, 1 week - 1 month, 1–6 months, 6-12 months, &gt; 12 months</td>
             <td class="cell-optional">Optional</td>
           </tr>
 
           <tr class="table-primary">
-            <td colspan="4"><strong>Antibiotics Details</strong></td>
+            <td colspan="4"><strong>Sample Collection Facility</strong></td>
           </tr>
           <tr>
-            <td>Antibiotics File</td>
-            <td>
-              A CSV or TSV file containing antibiotic testing results for the sample. The filename must match exactly as specified in the metadata.
-            </td>
-            <td><code>Sample_antibiotics.csv</code> [CSV, TSV]</td>
-            <td class="cell-optional">Optional</td>
-          </tr>
-          <tr>
-            <td>Antibiotics Info</td>
-            <td>Text-based antibiotic resistance information, provided directly in the metadata instead of a separate file.</td>
-            <td><code>Resistant to ampicillin and tetracycline</code> [Text]</td>
-            <td class="cell-optional">Optional</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Detailed Antibiotic Testing Results Fields -->
-    <h3 id="detailed-anti">Detailed Antibiotic Testing Results Fields</h3>
-    <p>
-      This section provides detailed descriptions of the required fields for Antibiotic Testing Results.
-      The table below outlines the specific fields, their descriptions, expected content, and whether they are mandatory or optional.
-    </p>
-
-    <p class="lead">Antibiotic resistance data can be included using one of two methods:</p>
-    <ul>
-      <li><strong>Antibiotics File:</strong> A structured CSV or TSV file containing antibiotic susceptibility test results for each sample.</li>
-      <li>
-        <strong>Antibiotics Info:</strong> A free-text field within the metadata file that provides antibiotic resistance details.
-        <ul>
-          <li>
-            <strong>Example Entries:</strong>
-            <ul>
-              <li><code>"Resistant to beta-lactams"</code></li>
-              <li><code>"Multidrug-resistant strain"</code></li>
-              <li><code>"SIR results pending, MIC tested at 2 mg/L for Ciprofloxacin"</code></li>
-            </ul>
-          </li>
-        </ul>
-      </li>
-    </ul>
-
-    <p><strong>Important:</strong> Only one method should be used per sample. Do not provide both an <code>Antibiotics File</code> and <code>Antibiotics Info</code> for the same sample.</p>
-
-    <div class="table-responsive">
-      <table class="table table-striped table-bordered details-anti-table">
-        <thead class="thead-dark">
-          <tr>
-            <th>Field</th>
-            <th>Description</th>
-            <th>Accepted Content</th>
-            <th>Condition</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Testing Method</td>
-            <td>Method used to determine resistance.</td>
-            <td>e.g., Disk diffusion, Vitek</td>
-            <td class="cell-optional">Optional</td>
-          </tr>
-          <tr>
-            <td>Tested Antibiotic</td>
-            <td>Name of the antibiotic tested.</td>
-            <td>e.g., Ampicillin, Ciprofloxacin</td>
+            <td>DATE_OF_RECEIVING</td>
+            <td>Date the sample arrived in the lab.</td>
+            <td>YYYY-MM-DD</td>
             <td class="cell-mandatory">Mandatory</td>
           </tr>
           <tr>
-            <td>Observed Antibiotic Resistance SIR</td>
-            <td>Resistance classification based on guidelines.</td>
-            <td>Susceptible (S), Intermediate (I), Resistant (R)</td>
+            <td>PRIME_DIAGNOSTIC_LAB.CITY</td>
+            <td>City code of the prime diagnostic lab.</td>
+            <td>Text</td>
             <td class="cell-mandatory">Mandatory</td>
           </tr>
           <tr>
-            <td>Observed Antibiotic Resistance MIC (mg/L)</td>
-            <td>Minimum Inhibitory Concentration (quantitative).</td>
-            <td>e.g., 0.5, &gt;=4.0</td>
+            <td>PRIME_DIAGNOSTIC_LAB.POSTAL_CODE</td>
+            <td>Zip code of the prime diagnostic lab.</td>
+            <td>Number</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>PRIME_DIAGNOSTIC_LAB.COUNTRY</td>
+            <td>Country of the prime diagnostic lab.</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>PRIME_DIAGNOSTIC_LAB.CITY</td>
+            <td>City where the sample was collected. City code of the prime diagnostic lab.</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>PRIME_DIAGNOSTIC_LAB.POSTAL_CODE</td>
+            <td>Postal code where the sample was collected. Zip code of the prime diagnostic lab. Example: 13353</td>
+            <td>Number</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>County</td>
+            <td>County where the sample was collected.</td>
+            <td>Text</td>
+            <td class="cell-optional">Optional</td>
+          </tr>
+          <tr>
+            <td>PRIME_DIAGNOSTIC_LAB.FEDERAL_STATE</td>
+            <td>State where the sample was collected. Federal State of the prime diagnostic lab. Example: DE-BE</td>
+            <td>Text</td>
+            <td class="cell-optional">Optional</td>
+          </tr>
+          <tr>
+            <td>Country</td>
+            <td>Country where the sample was collected.</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>SEQUENCING_LAB.DEMIS_LAB_ID</td>
+            <td>DEMIS lab ID of sequencing lab where the biological sample was sequenced.</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+
+          <tr class="table-primary">
+            <td colspan="4"><strong>Patient/Host Details</strong></td>
+          </tr>
+          <tr>
+            <td>HOST_SEX</td>
+            <td>Sex of the patient. Biological sex of the host. Use "Other" to specify additional information if needed.</td>
+            <td>Male, Female, Other</td>
+            <td class="cell-optional">Optional</td>
+          </tr>
+          <tr>
+            <td>Age Group</td>
+            <td>Age range of the host.</td>
+            <td>Neonate [0-28 days], Infant [29 days-1 year], Pediatric [1-17], Adult [18-59], [60-75], Elder [&gt;=75]</td>
+            <td class="cell-optional">Optional</td>
+          </tr>
+          <tr>
+            <td>HOST_BIRTH_MONTH</td>
+            <td>The birth month of the patient. Example: 11</td>
+            <td>Number [1-12]</td>
+            <td class="cell-optional">Optional</td>
+          </tr>
+          <tr>
+            <td>HOST_BIRTH_YEAR</td>
+            <td>The birth year of the patient. Example: 1990</td>
+            <td>4 digits number</td>
+            <td class="cell-optional">Optional</td>
+          </tr>
+          <tr>
+            <td>Patient status</td>
+            <td>Admission status of the host.</td>
+            <td>Inpatient, Outpatient</td>
+            <td class="cell-optional">Optional</td>
+          </tr>
+          <tr>
+            <td>Non patient sample</td>
+            <td>Rare, but sample can come from non human sources, such as from a food related outbreak in case of a suspected point source.</td>
+            <td>Text. Leave blank if sample is from human</td>
+            <td class="cell-optional">Optional</td>
+          </tr>
+          <tr>
+            <td>suspected outbreak</td>
+            <td>Binary (Yes/No)</td>
+            <td>Yes, No</td>
+            <td class="cell-optional">Optional</td>
+          </tr>
+
+          <tr class="table-primary">
+            <td colspan="4"><strong>Sequencing Details</strong></td>
+          </tr>
+          <tr>
+            <td>SEQUENCING_LAB.DEMIS_LAB_ID</td>
+            <td>DEMIS lab ID of sequencing lab where the biological sample was sequenced.</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>SEQUENCING_LAB.NAME</td>
+            <td>Name of the sequencing lab.</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>SEQUENCING_LAB.EMAIL</td>
+            <td>E-mail of the sequencing lab.</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>SEQUENCING_LAB.ADDRESS</td>
+            <td>Street, house number, and city of the sequencing lab.</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>SEQUENCING_LAB.CITY</td>
+            <td>City of the sequencing lab.</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>SEQUENCING_LAB.POSTAL_CODE</td>
+            <td>Zip code of the sequencing lab.</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>SEQUENCING_LAB.COUNTRY</td>
+            <td>Country of the sequencing lab.</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>REPOSITORY_NAME</td>
+            <td>Was the sequence uploaded to a repository, e.g. GISAID or ENA, already.</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>UPLOAD_STATUS</td>
+            <td>The status of the upload. Is the sample already uploaded, or is the upload in preparation?</td>
+            <td>Code</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>DATE_OF_SEQUENCING</td>
+            <td>The date the sample was sequenced.</td>
+            <td>YYYY-MM-DD</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>SEQUENCING_PLATFORM</td>
+            <td>Platform(s) used for sequencing. Can be more than one. The sequencing platform that was used for sequencing the sample is based on the ENA documentation. Example: Illumina</td>
+            <td>Illumina, PacBio, ONT, other [Text]</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>SEQUENCING_STRATEGY</td>
+            <td>The sequencing strategy that was used to sequence the sample. This property is based on the ENA documentation. Example: WGS. Type of sequencing performed. Add free-text details for additional types if necessary.</td>
+            <td>Whole genome sequencing, Amplicon sequencing, Metagenome sequencing, RNA-sequencing, other [Text]. Select one.</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>SEQUENCING_INSTRUMENT</td>
+            <td>The sequencing instrument that was used for sequencing the sample. This property is based on the ENA documentation. Example: Illumina_MiSeq</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>Library Preparation Kit</td>
+            <td>Kit used for preparing the sequencing library. Examples: Nextera XT, TruSeq DNA, SMRTbell, and others.</td>
+            <td>Text</td>
+            <td class="cell-optional">Optional</td>
+          </tr>
+          <tr>
+            <td>NAME_AMP_PROTOCOL</td>
+            <td>Name of the protocol that was used to sequence the sample. Example: CVD_Artic_Protokoll_2.1, ARTICv4.1. Strategy for targeted sequencing, e.g. amplicon or myBaits. For amplicon schemes consider adding additional references.</td>
+            <td>Text</td>
+            <td class="cell-optional">Optional</td>
+          </tr>
+          <tr>
+            <td>FILE_1_SHA256SUM</td>
+            <td>The SHA256SUM of the file provided. Example: c16516c6d9b1dd9c0f1e8ce8baf43d42031a32fcf75f1d69f16eb4b24df6fecd</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>FILE_2_SHA256SUM</td>
+            <td>The SHA256SUM of the file provided.</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>FILE_1_NAME</td>
+            <td>The filename that is connected to this sample is provided. Example: sample1_1.fastq.gz</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>FILE_2_NAME</td>
+            <td>The filename that is connected to this sample is provided. Example: sample1_2.fastq.gz</td>
+            <td>Text</td>
             <td class="cell-optional">Optional</td>
           </tr>
         </tbody>
@@ -644,10 +638,10 @@
         button will disappear.
       </li>
       <li>
-        ⚠️ If your submission includes warnings for <strong>antibiotics</strong> or <strong>FASTQ</strong> files, those will also be
-        shown in the dashboard, but <strong>they cannot be resubmitted</strong>.
+        If your submission includes warnings for <strong>FASTQ</strong> files, those will also be shown in the dashboard,
+        but <strong>they cannot be resubmitted</strong>.
       </li>
-      <li>If you wish to correct antibiotics or FASTQ data, you must create a new submission.</li>
+      <li>If you wish to correct FASTQ data, you must create a new submission.</li>
       <li>The Submission ID is displayed after upload — you can use it to track and manage resubmissions later.</li>
     </ul>
 
@@ -712,6 +706,9 @@
 .cell-optional {
   background-color: #ffffe0 !important;
 }
+.cell-groupone {
+  background-color: #ffe5b4 !important;
+}
 
 /* Table borders + font */
 .table-bordered th,
@@ -725,9 +722,7 @@
 .single-ex-table,
 .bulk-ex-table,
 .meta-table,
-.anti-table,
-.details-table,
-.details-anti-table {
+.details-table {
   font-size: 12px;
 }
 </style>
