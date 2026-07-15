@@ -56,7 +56,10 @@
             <h5 class="text-muted mb-3">
               {{ selectedScope === "others" ? "No other submissions available" : "You don't have any submissions" }}
             </h5>
-            <router-link v-if="selectedScope !== 'others'" to="/upload" class="btn btn-primary">Upload Data</router-link>
+            <div v-if="selectedScope !== 'others'" class="d-flex justify-content-center gap-2 flex-wrap">
+              <router-link to="/upload/gensurv" class="btn btn-primary">Upload Gensurv</router-link>
+              <router-link to="/upload/num-sar" class="btn btn-outline-primary">Upload NUM-SAR</router-link>
+            </div>
           </div>
 
           <div v-else class="table-responsive compact-table-wrap">
@@ -143,6 +146,7 @@
                           Metadata Warning
                         </button>
                         <RouterLink
+                          v-if="!isArchiveSubmission(row)"
                           class="btn btn-info btn-sm metadata-chip"
                           :to="{ name: 'metadata_statistics', params: { submissionId: row.submission_id } }"
                         >
@@ -312,6 +316,10 @@ function hasCompletedStatus(row) {
   return statuses.some((status) => status === "completed" || status === "finished");
 }
 
+function isArchiveSubmission(row) {
+  return row.institution === "COGDAT (Archive)";
+}
+
 function warningToText(rawWarning) {
   if (!rawWarning) return "";
   if (typeof rawWarning === "string") return rawWarning;
@@ -424,7 +432,8 @@ watch(selectedScope, () => {
 
 .compact-table :deep(thead th) {
   border-bottom: 1px solid #dde6ef;
-  color: inherit;
+  background: var(--num-slate);
+  color: #ffffff;
   font-weight: 600;
   font-size: 0.85rem;
 }
@@ -444,6 +453,7 @@ watch(selectedScope, () => {
   top: 0;
   z-index: 2;
   white-space: nowrap;
+  background: var(--num-slate);
 }
 
 .metadata-cell {

@@ -1,9 +1,8 @@
-<!-- src/views/HelpView.vue -->
 <template>
   <div class="container-fluid">
     <!-- Page Header -->
     <div class="mb-5">
-      <h1 class="text-center">Help: Data Format and Upload Instructions</h1>
+      <h1 class="text-center">Help: Gensurv Data Format and Upload Instructions</h1>
       <p class="lead">
         This section provides detailed guidelines for uploading single or multiple samples, including the
         required formats for <strong>Sample Metadata</strong>, <strong>Antibiotic Testing Results</strong>,
