@@ -698,6 +698,22 @@ def _safe_result_file_path(root: Path, relative_path: str) -> Path:
     return candidate
 
 
+# Pipeline stage order, used to sort result folders instead of alphabetically.
+# Folders not listed here (e.g. "main", "tools", reference files) fall back to
+# alphabetical order after the known stages.
+PIPELINE_STAGE_ORDER = [
+    "gather",
+    "qc",
+    "assembler",
+    "annotator",
+    "sketcher",
+    "mlst",  # Sequence Typing
+    "amrfinderplus",  # Antibiotic Resistance
+    "merlin",
+]
+PIPELINE_STAGE_PRIORITY = {name: idx for idx, name in enumerate(PIPELINE_STAGE_ORDER)}
+
+
 class SubmissionSampleResultFilesAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -711,12 +727,14 @@ class SubmissionSampleResultFilesAPIView(APIView):
         except FileNotFoundError as exc:
             return Response({"detail": str(exc)}, status=404)
 
+        def sort_key(item: Path):
+            name_lower = item.name.lower()
+            priority = PIPELINE_STAGE_PRIORITY.get(name_lower, len(PIPELINE_STAGE_ORDER))
+            return (item.is_file(), priority, name_lower)
+
         def build_tree(directory: Path):
             nodes = []
-            children = sorted(
-                directory.iterdir(),
-                key=lambda item: (item.is_file(), item.name.lower()),
-            )
+            children = sorted(directory.iterdir(), key=sort_key)
             for child in children:
                 rel_path = child.relative_to(root).as_posix()
                 node = {

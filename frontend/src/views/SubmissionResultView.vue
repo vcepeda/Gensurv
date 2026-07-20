@@ -2,6 +2,10 @@
   <div class="container-fluid">
     <h1>Submission {{ submissionId }} Results</h1>
     <p class="lead">Explore the results for the samples in this submission.</p>
+    <p>
+      The analysis was done using
+      <a href="https://bactopia.io/full-guide" target="_blank" rel="noopener noreferrer">bactopia.io</a>.
+    </p>
 
     <div v-if="error" class="alert alert-danger">{{ error }}</div>
 

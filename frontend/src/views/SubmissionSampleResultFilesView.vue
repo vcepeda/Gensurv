@@ -26,6 +26,7 @@
             v-for="node in tree"
             :key="node.path"
             :node="node"
+            :default-expanded="node.name === 'main'"
             @select-file="onSelectFile"
           />
         </ul>
