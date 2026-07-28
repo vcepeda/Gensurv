@@ -61,7 +61,10 @@ VALID_SEX_MAPPING = {
 }
 
 # Age group validation
-VALID_AGE_GROUPS = {"neonate", "pediatric", "adult", "pensioner", "geriatric", "elderly"}
+VALID_AGE_GROUPS = {"neonate", "pediatric", "adult", "pensioner", "geriatric", "elderly", "unknown"}
+
+# Synonyms that should normalize to one of VALID_AGE_GROUPS before validation
+AGE_GROUP_SYNONYMS = {"child": "pediatric"}
 
 # Sequencing platform validation
 VALID_PLATFORMS = {"illumina", "ont", "nanopore", "oxford nanopore", "pacbio"}

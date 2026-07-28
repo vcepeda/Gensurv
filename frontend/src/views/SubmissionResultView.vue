@@ -1,7 +1,19 @@
 <template>
   <div class="container-fluid">
-    <h1>Submission {{ submissionId }} Results</h1>
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+      <h1>Submission {{ submissionId }} Results</h1>
+      <RouterLink
+        :to="{ name: 'submission_results_dashboard', params: { submissionId } }"
+        class="btn btn-outline-primary btn-sm"
+      >
+        Dashboard View
+      </RouterLink>
+    </div>
     <p class="lead">Explore the results for the samples in this submission.</p>
+    <p>
+      The analysis was done using
+      <a href="https://bactopia.io/full-guide" target="_blank" rel="noopener noreferrer">bactopia.io</a>.
+    </p>
 
     <div v-if="error" class="alert alert-danger">{{ error }}</div>
 

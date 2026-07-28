@@ -74,20 +74,6 @@
               </a>
             </p>
           </li>
-
-          <!-- Your HTML had this duplicate entry too; kept for parity -->
-          <li>
-            <p>
-              Danko, D., Bezdan, D., Afshin, E. E., Ahsanuddin, S., Bhattacharya, C., Butler, D. J.,
-              Chng, K. R., Donnellan, D., Hecht, J., Jackson, K., Kuchin, K., Karasikov, M., Lyons,
-              A., Mak, L., Meleshko, D., Mustafa, H., Mutai, B., Neches, R. Y., Ng, A., . . .
-              Zubenko, S. (2021). A global metagenomic map of urban microbiomes and antimicrobial
-              resistance. Cell, 184(13), 3376-3393.e17.
-              <a href="https://doi.org/10.1016/j.cell.2021.05.002" target="_blank" rel="noopener noreferrer">
-                https://doi.org/10.1016/j.cell.2021.05.002
-              </a>
-            </p>
-          </li>
         </ul>
       </div>
     </div>

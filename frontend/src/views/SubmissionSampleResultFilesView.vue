@@ -3,7 +3,12 @@
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
       <div>
         <h1 class="mb-1">Sample {{ sampleId }} Result Files</h1>
-        <p class="text-muted mb-0">Submission {{ submissionId }}</p>
+        <p class="text-muted mb-1">Submission {{ submissionId }}</p>
+        <p class="lead mb-1">Explore the results for the samples in this submission.</p>
+        <p class="mb-0">
+          The analysis was done using
+          <a href="https://bactopia.io/full-guide" target="_blank" rel="noopener noreferrer">bactopia.io</a>.
+        </p>
       </div>
 
       <!-- <RouterLink
@@ -26,7 +31,9 @@
             v-for="node in tree"
             :key="node.path"
             :node="node"
+            :highlight-path="highlightPath"
             @select-file="onSelectFile"
+            @download-file="onDownloadFile"
           />
         </ul>
 
@@ -48,6 +55,7 @@ const route = useRoute();
 const router = useRouter();
 const submissionId = computed(() => Number(route.params.submissionId));
 const sampleId = computed(() => String(route.params.sampleId || ""));
+const highlightPath = computed(() => String(route.query.highlight || ""));
 
 const loadingTree = ref(false);
 const error = ref("");
@@ -98,6 +106,12 @@ async function onSelectFile(fileNode) {
     },
     query: { path },
   });
+}
+
+function onDownloadFile(fileNode) {
+  const path = fileNode?.path || "";
+  if (!path) return;
+  window.location.href = fileEndpoint(path);
 }
 
 onMounted(fetchTree);

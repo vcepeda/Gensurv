@@ -10,9 +10,11 @@
 
 <script setup>
 import { onMounted } from "vue";
-import { logout } from "@/api/auth";
+import { useAuthStore } from "@/stores/auth";
+
+const authStore = useAuthStore();
 
 onMounted(async () => {
-  await logout();
+  await authStore.logout();
 });
 </script>

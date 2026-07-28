@@ -1,14 +1,14 @@
 from collections import defaultdict
-from django.db.models import Prefetch, Count
+from django.db.models import Prefetch, Count, Case, When, Value, IntegerField
 from gensurvapp.models import Submission, UploadedFile, FileHistory, AnalysisResult
 from gensurvapp.utils import (
     cached_parse_metadata_sample_ids,
     cached_parse_metadata_antibiotics_info,
     parse_metadata_antibiotics_info,
 )
-from gensurvapp.utils import admin_only_upload_test  # wherever your function lives
+from gensurvapp.services.bactopia_report_service import load_bactopia_report, classify_rank
 
-def build_dashboard_rows_for_user(user, scope: str = "mine"):
+def build_dashboard_rows_for_user(user, scope: str = "all"):
     sample_files_qs = UploadedFile.objects.filter(file_type__in=["metadata_cleaned", "metadata_raw", "metadata"])
     antibiotics_files_qs = UploadedFile.objects.filter(file_type__in=["antibiotics", "antibiotics_raw", "antibiotics_cleaned"])
     fastq_files_qs = UploadedFile.objects.filter(file_type="fastq")
@@ -19,13 +19,18 @@ def build_dashboard_rows_for_user(user, scope: str = "mine"):
         Prefetch("files", queryset=fastq_files_qs, to_attr="prefetched_fastq_files"),
     )
 
-    if admin_only_upload_test(user):
-        submissions = base_qs.order_by("-created_at")
+    if scope == "mine":
+        submissions = base_qs.filter(user=user).order_by("-created_at")
+    elif scope == "others":
+        submissions = base_qs.exclude(user=user).order_by("-created_at")
     else:
-        if scope == "others":
-            submissions = base_qs.exclude(user=user).order_by("-created_at")
-        else:
-            submissions = base_qs.filter(user=user).order_by("-created_at")
+        # "all": every submission, the user's own ones sorted first
+        submissions = base_qs.order_by(
+            Case(When(user=user, then=Value(0)), default=Value(1), output_field=IntegerField()),
+            "-created_at",
+        )
+
+    report_rows = load_bactopia_report()
 
     history_counts = FileHistory.objects.values("submission_id", "file_type").annotate(count=Count("id"))
     history_lookup = {(e["submission_id"], e["file_type"]): e["count"] for e in history_counts}
@@ -102,6 +107,14 @@ def build_dashboard_rows_for_user(user, scope: str = "mine"):
         metadata_resub_count = history_lookup.get((submission.id, "metadata_raw"), 0)
         antibiotics_resub_count = history_lookup.get((submission.id, "antibiotics_raw"), 0)
 
+        qc_summary = {"succeeded": 0, "failed": 0, "pending": 0, "total": 0}
+        for sid, sample_status in sample_analysis_status.items():
+            if sample_status != "finished":
+                continue
+            outcome = classify_rank(report_rows.get(sid, {}).get("rank"))
+            qc_summary[outcome] += 1
+            qc_summary["total"] += 1
+
         rows.append({
             "submission": submission,
             "raw_metadata": raw_metadata,
@@ -112,6 +125,7 @@ def build_dashboard_rows_for_user(user, scope: str = "mine"):
             "sample_analysis_status": sample_analysis_status,
             "metadata_resub_count": metadata_resub_count,
             "antibiotics_resub_count": antibiotics_resub_count,
+            "qc_summary": qc_summary,
         })
 
     return rows

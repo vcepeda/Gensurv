@@ -14,8 +14,19 @@
           View uploaded data, including metadata, antibiotic files, FASTQ files, and their analysis statuses.
         </p>
 
-        <div v-if="showScopeToggle" class="scope-toggle-wrap">
+        <div class="scope-toggle-wrap">
           <div class="btn-group" role="group" aria-label="Dashboard scope toggle">
+            <input
+              id="scope-all"
+              v-model="selectedScope"
+              class="btn-check"
+              type="radio"
+              name="dashboard-scope"
+              value="all"
+              autocomplete="off"
+            />
+            <label class="btn btn-outline-primary btn-sm" for="scope-all">All submissions</label>
+
             <input
               id="scope-mine"
               v-model="selectedScope"
@@ -54,11 +65,12 @@
 
           <div v-if="!loading && enrichedRows.length === 0" class="text-center py-5">
             <h5 class="text-muted mb-3">
-              {{ selectedScope === "others" ? "No other submissions available" : "You don't have any submissions" }}
+              {{ selectedScope === "others" ? "No other submissions available" : "No submissions available" }}
             </h5>
             <div v-if="selectedScope !== 'others'" class="d-flex justify-content-center gap-2 flex-wrap">
               <router-link to="/upload/gensurv" class="btn btn-primary">Upload Gensurv</router-link>
               <router-link to="/upload/num-sar" class="btn btn-outline-primary">Upload NUM-SAR</router-link>
+              <router-link to="/upload/cogdat" class="btn btn-outline-primary">Upload COGDAT</router-link>
             </div>
           </div>
 
@@ -71,6 +83,7 @@
                   <th>Submission</th>
                   <th>Created</th>
                   <th>Metadata File</th>
+                  <th>QC Status</th>
                   <th class="actions-col">Actions</th>
                 </tr>
               </thead>
@@ -88,11 +101,8 @@
 
                   <td>
                     <div class="fw-semibold">#{{ row.submission_id }}</div>
-                    <span
-                      class="badge"
-                      :class="row.submission_type === 'virus' ? 'text-bg-primary' : 'text-bg-success'"
-                    >
-                      {{ row.submission_type || "bacteria" }}
+                    <span class="badge" :class="submissionTypeBadgeClass(row)">
+                      {{ submissionTypeLabel(row) }}
                     </span>
                   </td>
 
@@ -105,7 +115,7 @@
                     <div class="metadata-cell">
                       <div v-if="row.metadata?.files?.cleaned_url" class="metadata-line">
                         <span class="metadata-label">Clean:</span>
-                        <a v-if="canDownloadCurrentScope"
+                        <a
                           :href="metadataViewerHref(row.metadata.files.cleaned_url, row.metadata.files.cleaned_name)"
                           target="_blank"
                           rel="noopener noreferrer"
@@ -113,11 +123,10 @@
                         >
                           {{ row.metadata.files.cleaned_name }}
                         </a>
-                        <span v-else class="metadata-link text-muted">{{ row.metadata.files.cleaned_name }}</span>
                       </div>
                       <div v-if="row.metadata?.files?.raw_url" class="metadata-line">
                         <span class="metadata-label">Raw:</span>
-                        <a v-if="canDownloadCurrentScope"
+                        <a
                           :href="metadataViewerHref(row.metadata.files.raw_url, row.metadata.files.raw_name)"
                           target="_blank"
                           rel="noopener noreferrer"
@@ -125,7 +134,6 @@
                         >
                           {{ row.metadata.files.raw_name }}
                         </a>
-                        <span v-else class="metadata-link text-muted">{{ row.metadata.files.raw_name }}</span>
                       </div>
                       <span
                         v-if="!row.metadata?.files?.raw_url && !row.metadata?.files?.cleaned_url"
@@ -157,28 +165,41 @@
                   </td>
 
                   <td>
-                    <div class="d-flex flex-wrap gap-2 action-group">
+                    <RouterLink
+                      v-if="row.qc?.total > 0"
+                      :to="{ name: 'submission_results_dashboard', params: { submissionId: row.submission_id } }"
+                      class="badge text-decoration-none"
+                      :class="qcBadgeClass(row.qc)"
+                      :title="row.qc.failed > 0 ? `${row.qc.failed} sample(s) failed QC` : 'All samples passed QC'"
+                    >
+                      {{ row.qc.succeeded }}/{{ row.qc.total }} passed
+                    </RouterLink>
+                    <span v-else class="text-muted">&mdash;</span>
+                  </td>
+
+                  <td>
+                    <div class="d-flex flex-nowrap gap-2 action-group">
                       <button class="btn btn-outline-primary btn-sm" @click="openSubmissionDetails(row)">
                         View Submission
                       </button>
                       <RouterLink
                         class="btn btn-primary btn-sm"
                         :class="{ disabled: !hasCompletedStatus(row) }"
-                        :to="{ name: 'submission_results', params: { submissionId: row.submission_id } }"
+                        :to="{ name: 'submission_results_dashboard', params: { submissionId: row.submission_id } }"
                         :aria-disabled="!hasCompletedStatus(row)"
-                        :title="!hasCompletedStatus(row) ? 'Results not availanle' : 'View Results'"
+                        :title="!hasCompletedStatus(row) ? 'Results not available' : 'View Results'"
                         @click="!hasCompletedStatus(row) && $event.preventDefault()"
                       >
                         View Results
                       </RouterLink>
                       <button
-                        v-if="!isOthersScope && !row.deletion?.requested"
+                        v-if="canManageRow(row) && !row.deletion?.requested"
                         class="btn btn-danger btn-sm"
                         @click="requestDeletion(row.submission_id)"
                       >
                         Request Deletion
                       </button>
-                      <span v-else-if="!isOthersScope" class="badge text-bg-secondary deletion-chip">Deletion Requested</span>
+                      <span v-else-if="canManageRow(row)" class="badge text-bg-secondary deletion-chip">Deletion Requested</span>
                     </div>
                   </td>
                 </tr>
@@ -233,12 +254,10 @@
             >
               <div class="fw-semibold">{{ f.sample_id }}</div>
               <div v-if="f.raw_url">
-                <a v-if="canDownloadCurrentScope" :href="f.raw_url" target="_blank" rel="noopener noreferrer">{{ f.raw_name }}</a>
-                <span v-else class="text-muted">{{ f.raw_name }}</span>
+                <a :href="f.raw_url" target="_blank" rel="noopener noreferrer">{{ f.raw_name }}</a>
               </div>
               <div v-if="f.cleaned_url">
-                <a v-if="canDownloadCurrentScope" :href="f.cleaned_url" target="_blank" rel="noopener noreferrer">{{ f.cleaned_name }}</a>
-                <span v-else class="text-muted">{{ f.cleaned_name }}</span>
+                <a :href="f.cleaned_url" target="_blank" rel="noopener noreferrer">{{ f.cleaned_name }}</a>
               </div>
             </div>
           </template>
@@ -251,8 +270,7 @@
             <div v-for="(files, sid) in selectedSubmission.fastq.grouped" :key="sid" class="small mb-2">
               <div class="fw-semibold">{{ sid }}</div>
               <div v-for="f in files" :key="f.url">
-                <a v-if="canDownloadCurrentScope" :href="f.url" target="_blank" rel="noopener noreferrer">{{ f.name }}</a>
-                <span v-else class="text-muted">{{ f.name }}</span>
+                <a :href="f.url" target="_blank" rel="noopener noreferrer">{{ f.name }}</a>
               </div>
             </div>
           </template>
@@ -273,12 +291,13 @@ const loading = ref(false);
 const error = ref("");
 const selectedSubmission = ref(null);
 const activeWarning = ref(null);
-const selectedScope = ref("mine");
+const selectedScope = ref("all");
 
 const authStore = useAuthStore();
-const showScopeToggle = computed(() => !authStore.isSuperuser && !authStore.isStaff);
-const isOthersScope = computed(() => selectedScope.value === "others");
-const canDownloadCurrentScope = computed(() => !isOthersScope.value || authStore.isSuperuser);
+
+function canManageRow(row) {
+  return !!row.is_own || authStore.isSuperuser || authStore.isStaff;
+}
 
 const enrichedRows = computed(() => {
   return rows.value.map((row) => {
@@ -311,6 +330,11 @@ function metadataViewerHref(fileUrl, fileName) {
   return `/metadata-file-view?${params.toString()}`;
 }
 
+function qcBadgeClass(qc) {
+  if (!qc || qc.total === 0) return "text-bg-secondary";
+  return qc.failed > 0 ? "text-bg-danger" : "text-bg-success";
+}
+
 function hasCompletedStatus(row) {
   const statuses = Object.values(row.analysis?.statuses || {});
   return statuses.some((status) => status === "completed" || status === "finished");
@@ -318,6 +342,22 @@ function hasCompletedStatus(row) {
 
 function isArchiveSubmission(row) {
   return row.institution === "COGDAT (Archive)";
+}
+
+const SUBMISSION_TYPE_BADGES = {
+  gensurv: { label: "Gensurv", class: "text-bg-success" },
+  bacteria: { label: "Gensurv", class: "text-bg-success" }, // legacy value, same meaning as "gensurv"
+  "num-sar_bacteria": { label: "NUM-SAR", class: "text-bg-info" },
+  "num-sar_virus": { label: "NUM-SAR", class: "text-bg-primary" },
+  cogdat: { label: "COGDAT", class: "text-bg-warning" },
+};
+
+function submissionTypeLabel(row) {
+  return SUBMISSION_TYPE_BADGES[row.submission_type]?.label || row.submission_type || "Gensurv";
+}
+
+function submissionTypeBadgeClass(row) {
+  return SUBMISSION_TYPE_BADGES[row.submission_type]?.class || "text-bg-success";
 }
 
 function warningToText(rawWarning) {
@@ -513,7 +553,12 @@ watch(selectedScope, () => {
 }
 
 .actions-col {
-  min-width: 240px;
+  min-width: 420px;
+}
+
+.action-group {
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
 
 .deletion-chip {

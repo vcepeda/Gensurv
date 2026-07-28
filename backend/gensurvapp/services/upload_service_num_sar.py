@@ -70,35 +70,39 @@ def _expected_files_for_row(row):
 
 
 def _validate_row_files(sample_id, file_1, file_2, expected_files, uploaded_names):
-    """Apply the NUM-SAR file rules to a single metadata row."""
+    """Apply the NUM-SAR file rules to a single metadata row. Returns a list of error strings (empty if valid)."""
+    errors = []
+
     if not file_1:
-        raise ValueError(
-            f"Sample '{sample_id}': FILE_1_NAME is required but missing."
-        )
+        errors.append(f"Sample '{sample_id}': FILE_1_NAME is required but missing.")
+        return errors
 
     if file_2 and not file_1:
-        raise ValueError(
-            f"Sample '{sample_id}': FILE_2_NAME provided without FILE_1_NAME."
-        )
+        errors.append(f"Sample '{sample_id}': FILE_2_NAME provided without FILE_1_NAME.")
 
-    for fname in expected_files:
-        if not any(fname.lower().endswith(ext) for ext in VALID_FASTQ_EXTENSIONS):
-            raise ValueError(
-                f"Sample '{sample_id}': File '{fname}' has an invalid extension.\n"
-                f"Allowed extensions: {', '.join(VALID_FASTQ_EXTENSIONS)}"
-            )
+    bad_extension_files = [
+        fname for fname in expected_files
+        if not any(fname.lower().endswith(ext) for ext in VALID_FASTQ_EXTENSIONS)
+    ]
+    if bad_extension_files:
+        errors.append(
+            f"Sample '{sample_id}': File(s) with invalid extension: {', '.join(bad_extension_files)}.\n"
+            f"Allowed extensions: {', '.join(VALID_FASTQ_EXTENSIONS)}"
+        )
 
     missing = [f for f in expected_files if f not in uploaded_names]
     if missing:
-        raise ValueError(
+        errors.append(
             f"Sample '{sample_id}': Some sequencing files listed in metadata are missing from the upload.\n"
             f"Missing files: {', '.join(sorted(missing))}\n"
             f"Expected: {', '.join(expected_files)}"
         )
 
+    return errors
+
 
 @transaction.atomic
-def handle_single_upload(*, user, metadata_file, fastq_files, submission_type, submit_to_pipeline=False):
+def handle_single_upload(*, user, metadata_file, fastq_files, submission_type, submit_to_pipeline=False, dry_run=False):
 
     server_start = time.time()
 
@@ -122,6 +126,7 @@ def handle_single_upload(*, user, metadata_file, fastq_files, submission_type, s
         NUM_SAR_METADATA_COLUMNS,
         NUM_SAR_ESSENTIAL_METADATA_COLUMNS,
         submission_type=submission_type,
+        max_rows=1,
     )
     logger.debug(f"Detected delimiter (metadata): {detected_delimiter_meta}")
 
@@ -159,7 +164,9 @@ def handle_single_upload(*, user, metadata_file, fastq_files, submission_type, s
     logger.debug(f"Uploaded sequencing filenames: {uploaded_names}")
 
     file_1, file_2, expected_files = _expected_files_for_row(metadata_df.loc[0])
-    _validate_row_files(sample_id, file_1, file_2, expected_files, uploaded_names)
+    row_errors = _validate_row_files(sample_id, file_1, file_2, expected_files, uploaded_names)
+    if row_errors:
+        raise ValueError("\n\n".join(row_errors))
 
     extra_fastq_warning = ""
     extra_files = uploaded_names - set(expected_files)
@@ -171,6 +178,21 @@ def handle_single_upload(*, user, metadata_file, fastq_files, submission_type, s
         logger.warning(extra_fastq_warning)
 
     logger.info(f"Sample '{sample_id}': All expected sequencing files validated successfully.")
+
+    if dry_run:
+        upload_duration = time.time() - server_start
+        message = "Validation passed: metadata and file names look correct."
+        if warning_message:
+            message += f"\n{warning_message}"
+        if extra_fastq_warning:
+            message += f"\n{extra_fastq_warning}"
+        return {
+            "submission_id": None,
+            "resubmission_allowed": bool(metadata_warning),
+            "message": message,
+            "upload_duration": upload_duration,
+            "dry_run": True,
+        }
 
     submission = Submission(user=user)
     submission.submission_type = submission_type
@@ -237,7 +259,7 @@ def handle_single_upload(*, user, metadata_file, fastq_files, submission_type, s
 
 
 @transaction.atomic
-def handle_bulk_upload(*, user, metadata_file, fastq_files, submission_type, submit_to_pipeline=False):
+def handle_bulk_upload(*, user, metadata_file, fastq_files, submission_type, submit_to_pipeline=False, dry_run=False):
 
     server_start = time.time()
 
@@ -298,23 +320,46 @@ def handle_bulk_upload(*, user, metadata_file, fastq_files, submission_type, sub
     logger.debug(f"Uploaded sequencing filenames: {uploaded_names}")
 
     matched_files = set()
+    row_errors = []
 
     # Validation pass
     for idx, row in metadata_df.iterrows():
         sample_id = _safe_str(row.get(SAMPLE_ID_COLUMN))
         if not sample_id:
-            raise ValueError(f"Row {idx + 1}: Missing or invalid {SAMPLE_ID_COLUMN.upper()}.")
+            row_errors.append(f"Row {idx + 1}: Missing or invalid {SAMPLE_ID_COLUMN.upper()}.")
+            continue
 
         file_1, file_2, expected_files = _expected_files_for_row(row)
-        _validate_row_files(sample_id, file_1, file_2, expected_files, uploaded_names)
+        this_row_errors = _validate_row_files(sample_id, file_1, file_2, expected_files, uploaded_names)
         matched_files.update(expected_files)
-        logger.info(f"Sample '{sample_id}': All expected sequencing files validated successfully.")
+        if this_row_errors:
+            row_errors.extend(this_row_errors)
+        else:
+            logger.info(f"Sample '{sample_id}': All expected sequencing files validated successfully.")
+
+    if row_errors:
+        raise ValueError("\n\n".join(row_errors))
 
     extra_fastq_warning_message = ""
     extra_files = uploaded_names - matched_files
     if extra_files:
         extra_fastq_warning_message = f"Extra sequencing file(s) ignored: {', '.join(sorted(extra_files))}\n"
         logger.warning(extra_fastq_warning_message.strip())
+
+    if dry_run:
+        upload_duration = time.time() - server_start
+        messages = ["Validation passed: metadata and file names look correct."]
+        if metadata_warning_message.strip():
+            messages.append("⚠️ Metadata file accepted with warnings.")
+        if extra_fastq_warning_message.strip():
+            messages.append(f"⚠️ {extra_fastq_warning_message.strip()}")
+        return {
+            "submission_id": None,
+            "resubmission_allowed": bool(metadata_warning_message.strip()),
+            "message": "\n".join(messages),
+            "upload_duration": upload_duration,
+            "dry_run": True,
+        }
 
     submission = Submission(user=user, is_bulk_upload=True)
     submission.submission_type = submission_type
@@ -371,7 +416,7 @@ def handle_bulk_upload(*, user, metadata_file, fastq_files, submission_type, sub
     if metadata_warning_message.strip():
         success_messages.append("⚠️ Metadata file accepted with warnings.")
     if extra_fastq_warning_message.strip():
-        success_messages.append("⚠️ Extra sequencing files were ignored.")
+        success_messages.append(f"⚠️ {extra_fastq_warning_message.strip()}")
 
     bulk_success_message = "\n".join(success_messages)
 

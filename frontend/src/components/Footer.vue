@@ -3,11 +3,16 @@
     <div class="container">
       <div class="row align-items-center justify-content-between">
         <!-- Left logos -->
-        <div class="col-md-4 text-center text-md-start mb-3 mb-md-0">
-          <img src="../assets/NUM_u_BMBF_Querformat_en.jpg"
-               alt="NUM / BMBF"
-               class="img-fluid"
-               style="max-height: 120px;">
+        <div class="col-md-5 text-center text-md-start mb-3 mb-md-0">
+          <div class="footer-logo-panel">
+            <img src="../assets/NUM-LOGO-POS-EN-RGB.png"
+                 alt="NUM - Network of University Medicine"
+                 class="img-fluid footer-logo">
+            <img src="../assets/BMFTR_de_DTP_CMYK_gef_durch.png"
+                 alt="Gefördert durch: Bundesministerium für Forschung, Technologie und Raumfahrt"
+                 class="img-fluid footer-logo">
+            <p class="footer-fkz mb-0">Funding reference number (FKZ): 01KX2524</p>
+          </div>
         </div>
 
         <!-- Right text + links -->
@@ -64,5 +69,26 @@ footer .footer-links a {
 
 footer .footer-links a:hover {
   color: #f27f8d;
+}
+
+.footer-logo-panel {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  background: #ffffff;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+}
+
+.footer-logo {
+  max-height: 60px;
+  width: auto;
+}
+
+.footer-fkz {
+  width: 100%;
+  color: var(--num-slate);
+  font-size: 0.75rem;
 }
 </style>

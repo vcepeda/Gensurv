@@ -29,6 +29,7 @@ VALID_MELDETATBESTAND_CODES = {
 }
 
 NUM_SAR_ESSENTIAL_METADATA_COLUMNS = {
+    "STATUS": (str, True),
     "LAB_SEQUENCE_ID": (str, True),
     "MELDETATBESTAND": (str, True),
     "SPECIES_CODE": (str, True),

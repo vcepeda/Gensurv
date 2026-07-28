@@ -268,7 +268,7 @@ def generate_statistics(metadata_df, submission_type, antibiotics_dfs=None):
 
 
 @transaction.atomic
-def handle_single_upload(*, user, metadata_file, uploaded_antibiotics_file, fastq_files, submission_type, submit_to_pipeline=False):
+def handle_single_upload(*, user, metadata_file, uploaded_antibiotics_file, fastq_files, submission_type, submit_to_pipeline=False, dry_run=False):
 
     server_start = time.time()
 
@@ -300,7 +300,8 @@ def handle_single_upload(*, user, metadata_file, uploaded_antibiotics_file, fast
     valid_metadata, metadata_warning, metadata_message, detected_delimiter_meta, metadata_df = validate_and_save_csv(
         metadata_file,
         METADATA_COLUMNS,
-        ESSENTIAL_METADATA_COLUMNS
+        ESSENTIAL_METADATA_COLUMNS,
+        max_rows=1,
     )
     logger.debug(f"Detected delimiter (metadata): {detected_delimiter_meta}")
 
@@ -394,13 +395,15 @@ def handle_single_upload(*, user, metadata_file, uploaded_antibiotics_file, fast
     if illumina_r2 and not illumina_r1:
         raise ValueError(f"Sample '{sample_id}': Illumina R2 file provided without Illumina R1.")
 
-    for fname in expected_fastq_files:
-        if not any(fname.lower().endswith(ext) for ext in valid_extensions):
-            raise ValueError(
-                f"Sample '{sample_id}': File '{fname}' has an invalid extension.\n"
-                f"Allowed extensions: {', '.join(valid_extensions)}"
-            )
-        logger.debug(f"File '{fname}' passed extension check.")
+    bad_extension_files = [
+        fname for fname in expected_fastq_files
+        if not any(fname.lower().endswith(ext) for ext in valid_extensions)
+    ]
+    if bad_extension_files:
+        raise ValueError(
+            f"Sample '{sample_id}': File(s) with invalid extension: {', '.join(bad_extension_files)}.\n"
+            f"Allowed extensions: {', '.join(valid_extensions)}"
+        )
 
     missing_fastq_files = set(expected_fastq_files) - uploaded_fastq_files_names
     if missing_fastq_files:
@@ -472,6 +475,23 @@ def handle_single_upload(*, user, metadata_file, uploaded_antibiotics_file, fast
         antibiotics_df.columns = antibiotics_df.columns.str.lower().str.strip()
         antibiotics_dfs_for_stats.append(antibiotics_df)
 
+    if dry_run:
+        upload_duration = time.time() - server_start
+        message = "Validation passed: metadata and file names look correct."
+        if warning_message:
+            message += f"\n{warning_message}"
+        if ab_warning:
+            message += f"\n{antibiotics_message}"
+        if extra_fastq_warning:
+            message += f"\n{extra_fastq_warning}"
+        return {
+            "submission_id": None,
+            "resubmission_allowed": bool(metadata_warning),
+            "message": message,
+            "upload_duration": upload_duration,
+            "dry_run": True,
+        }
+
     submission = Submission(user=user)
     submission.submission_type = submission_type
     submission.resubmission_allowed = bool(metadata_warning)
@@ -482,7 +502,7 @@ def handle_single_upload(*, user, metadata_file, uploaded_antibiotics_file, fast
         submission.antibiotics_warnings = antibiotics_message
 
     if extra_fastq_files:
-        submission.fastq_warning = extra_fastq_warning
+        submission.fastq_warnings = extra_fastq_warning
 
     submission.submit_to_pipeline = bool(submit_to_pipeline)
     submission.metadata_statistics = generate_statistics(
@@ -552,7 +572,7 @@ def handle_single_upload(*, user, metadata_file, uploaded_antibiotics_file, fast
     }
 
 @transaction.atomic
-def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, submission_type, submit_to_pipeline=False):
+def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, submission_type, submit_to_pipeline=False, dry_run=False):
 
     submission_type = normalize_submission_type(submission_type)
 
@@ -639,10 +659,13 @@ def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, s
             return None
         return s
 
+    fastq_row_errors = []
+
     for idx, row in metadata_df.iterrows():
         sample_id = _safe_str(row.get("sample identifier")) or f"row {idx + 1}"
         if sample_id.startswith("row "):
-            raise ValueError(f"Row {idx + 1}: Missing or invalid sample identifier.")
+            fastq_row_errors.append(f"Row {idx + 1}: Missing or invalid sample identifier.")
+            continue
 
         illumina_r1 = _safe_str(row.get("illumina r1"))
         illumina_r2 = _safe_str(row.get("illumina r2"))
@@ -654,30 +677,38 @@ def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, s
         logger.debug(f"Sample '{sample_id}' expects FASTQ files: {expected_fastq_files}")
 
         if not any([illumina_r1, nanopore, pacbio]):
-            raise ValueError(
+            fastq_row_errors.append(
                 f"Sample '{sample_id}': Must include at least one platform file (Illumina R1, Nanopore, or PacBio)."
-            ) 
+            )
+            continue
 
         if illumina_r2 and not illumina_r1:
-            raise ValueError(f"Sample '{sample_id}': Illumina R2 file provided without Illumina R1.")
+            fastq_row_errors.append(f"Sample '{sample_id}': Illumina R2 file provided without Illumina R1.")
 
-        for fname in expected_fastq_files:
-            if not any(fname.lower().endswith(ext) for ext in valid_extensions):
-                raise ValueError(
-                    f"Sample '{sample_id}': File '{fname}' has an invalid extension.\n"
-                    f"Allowed extensions: {', '.join(valid_extensions)}"
-                )
-            matched_fastq_files.add(fname)
+        bad_extension_files = [
+            fname for fname in expected_fastq_files
+            if not any(fname.lower().endswith(ext) for ext in valid_extensions)
+        ]
+        if bad_extension_files:
+            fastq_row_errors.append(
+                f"Sample '{sample_id}': File(s) with invalid extension: {', '.join(bad_extension_files)}.\n"
+                f"Allowed extensions: {', '.join(valid_extensions)}"
+            )
+        matched_fastq_files.update(expected_fastq_files)
 
         missing = [f for f in expected_fastq_files if f not in uploaded_fastq_names]
         if missing:
-            raise ValueError(
+            fastq_row_errors.append(
                 f"Sample '{sample_id}': Some FASTQ files listed in metadata are missing from the upload.\n"
                 f"Missing: {', '.join(sorted(missing))}\n"
                 f"Expected: {', '.join(expected_fastq_files)}"
             )
 
-        logger.info(f"Sample '{sample_id}': All expected FASTQ files validated successfully.")
+        if not missing and not bad_extension_files:
+            logger.info(f"Sample '{sample_id}': All expected FASTQ files validated successfully.")
+
+    if fastq_row_errors:
+        raise ValueError("\n\n".join(fastq_row_errors))
 
     extra_fastq = uploaded_fastq_names - matched_fastq_files
     if extra_fastq:
@@ -689,10 +720,13 @@ def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, s
     antibiotics_dfs_for_stats = []
     stats_seen_antibiotics_files = set()
 
+    ab_row_errors = []
+
     for idx, row in metadata_df.iterrows():
         sample_id = _safe_str(row.get("sample identifier")) or f"row {idx + 1}"
         if sample_id.startswith("row "):
-            raise ValueError(f"Row {idx + 1}: Missing or invalid sample identifier.")
+            ab_row_errors.append(f"Row {idx + 1}: Missing or invalid sample identifier.")
+            continue
 
         expected_ab_file = _safe_str(row.get("antibiotics file"))
         antibiotics_info = _safe_str(row.get("antibiotics info"))
@@ -700,24 +734,27 @@ def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, s
         # inside handle_bulk_upload loop that processes antibiotics fields
         if submission_type in VIRUS_SUBMISSION_TYPES:
             if expected_ab_file or antibiotics_info:
-                raise ValueError(f"Sample '{sample_id}': Virus submissions must not include antibiotics fields.")
+                ab_row_errors.append(f"Sample '{sample_id}': Virus submissions must not include antibiotics fields.")
             continue
 
         if expected_ab_file and antibiotics_info:
-            raise ValueError(
+            ab_row_errors.append(
                 f"Sample '{sample_id}': Both 'Antibiotics File' (metadata) and 'Antibiotics Info' (metadata) cannot be provided simultaneously."
             )
+            continue
 
         if expected_ab_file:
             uploaded_file = uploaded_antibiotics_by_name.get(expected_ab_file)
             if not uploaded_file:
-                raise ValueError(f"Sample '{sample_id}': Missing expected antibiotics file '{expected_ab_file}'.")
+                ab_row_errors.append(f"Sample '{sample_id}': Missing expected antibiotics file '{expected_ab_file}'.")
+                continue
 
             valid_ab, ab_warning, msg, delim, ab_df = validate_and_save_csv(uploaded_file, ANTIBIOTICS_COLUMNS)
             logger.debug(f"Detected delimiter (antibiotics): {delim}")
 
             if not valid_ab:
-                raise ValueError(f"Sample '{sample_id}': Antibiotics file error: {msg}")
+                ab_row_errors.append(f"Sample '{sample_id}': Antibiotics file error: {msg}")
+                continue
 
             if ab_warning:
                 antibiotics_warning_message += f"Sample '{sample_id}': {msg}\n"
@@ -733,6 +770,26 @@ def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, s
         else:
             logger.info(f"Sample '{sample_id}': No antibiotics file or info provided.")
 
+    if ab_row_errors:
+        raise ValueError("\n\n".join(ab_row_errors))
+
+    if dry_run:
+        upload_duration = time.time() - server_start
+        messages = ["Validation passed: metadata and file names look correct."]
+        if metadata_warning_message.strip():
+            messages.append("⚠️ Metadata file accepted with warnings.")
+        if antibiotics_warning_message.strip():
+            messages.append("⚠️ Antibiotics file accepted with warnings.")
+        if extra_fastq_warning_message.strip():
+            messages.append(f"⚠️ {extra_fastq_warning_message.strip()}")
+        return {
+            "submission_id": None,
+            "resubmission_allowed": bool(metadata_warning_message.strip()),
+            "message": "\n".join(messages),
+            "upload_duration": upload_duration,
+            "dry_run": True,
+        }
+
     submission = Submission(user=user, is_bulk_upload=True)
     submission.submission_type = submission_type 
     submission.resubmission_allowed = bool(metadata_warning_message.strip())
@@ -743,7 +800,7 @@ def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, s
         submission.antibiotics_warnings = antibiotics_warning_message.strip()
 
     if extra_fastq_warning_message.strip():
-        submission.fastq_warning = extra_fastq_warning_message.strip()
+        submission.fastq_warnings = extra_fastq_warning_message.strip()
 
     submission.submit_to_pipeline = bool(submit_to_pipeline)
     submission.metadata_statistics = generate_statistics(
@@ -838,7 +895,7 @@ def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, s
     if antibiotics_warning_message.strip():
         success_messages.append("⚠️ Some antibiotics files accepted with warnings.")
     if extra_fastq_warning_message.strip():
-        success_messages.append("⚠️ Extra FASTQ files were ignored.")
+        success_messages.append(f"⚠️ {extra_fastq_warning_message.strip()}")
 
     bulk_success_message = "\n".join(success_messages)
 

@@ -170,7 +170,23 @@ class GlobalStatistics(models.Model):
 
     map_location_counts = models.JSONField(default=list, blank=True)
 
+    qc_rank_counts = models.JSONField(default=dict, blank=True)
+
     last_recomputed_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"Global Statistics v{self.stats_version}"
+
+
+class CogdatSampleId(models.Model):
+    """
+    Roster of valid COGDAT sample IDs, refreshed from the project's periodic
+    CoGDat_<timestamp>.csv(.gz) export via the import_cogdat_roster management
+    command. Used to validate FASTQ filenames on COGDAT's fastq-only uploads,
+    since those submissions have no metadata file to declare sample IDs.
+    """
+    sample_id = models.CharField(max_length=100, unique=True)
+    imported_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.sample_id

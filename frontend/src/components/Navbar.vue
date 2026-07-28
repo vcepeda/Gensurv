@@ -4,7 +4,7 @@
       <div class="container-fluid">
         <!-- Brand -->
         <RouterLink class="navbar-brand" to="/">
-          <img src="../assets/gensurv-removebg-preview.png" alt="GenSurv Logo" />
+          <img src="../assets/NUM-SAR-LOGO-POS-DE-RGB.png" alt="NUM-SAR Logo" class="brand-logo" />
         </RouterLink>
 
         <!-- Toggler -->
@@ -44,10 +44,16 @@
                 <li>
                   <RouterLink class="dropdown-item" to="/upload/num-sar" @click="closeUploadDropdown">NUM-SAR</RouterLink>
                 </li>
+                <li>
+                  <RouterLink class="dropdown-item" to="/upload/cogdat" @click="closeUploadDropdown">COGDAT</RouterLink>
+                </li>
               </ul>
             </li>
             <li class="nav-item">
               <RouterLink class="nav-link" to="/dashboard" active-class="active" @click="closeNavbar">Dashboard</RouterLink>
+            </li>
+            <li class="nav-item">
+              <RouterLink class="nav-link" to="/results" active-class="active" @click="closeNavbar">Results</RouterLink>
             </li>
             <li class="nav-item">
               <RouterLink class="nav-link" to="/statistics" active-class="active" @click="closeNavbar">Statistics</RouterLink>
@@ -97,9 +103,34 @@
             </li>
           </ul>
 
+          <!-- Content language toggle - Home/About only -->
+          <div v-if="isHomeOrAbout" class="lang-toggle me-3" role="group" aria-label="Content language">
+            <button
+              type="button"
+              class="lang-btn"
+              :class="{ active: contentLang.lang === 'de' }"
+              @click="contentLang.setLang('de')"
+            >
+              DE
+            </button>
+            <button
+              type="button"
+              class="lang-btn"
+              :class="{ active: contentLang.lang === 'en' }"
+              @click="contentLang.setLang('en')"
+            >
+              EN
+            </button>
+          </div>
+
           <!-- Right auth nav -->
           <ul class="navbar-nav mb-0 me-3 align-items-start">
             <template v-if="auth.isAuthenticated && auth.username">
+              <li v-if="auth.isHijacked" class="nav-item">
+                <button class="btn btn-warning btn-sm" type="button" @click="onReleaseHijack">
+                  Return to admin
+                </button>
+              </li>
               <li class="nav-item">
                 <span class="nav-link">Welcome, {{ auth.username }}!</span>
               </li>
@@ -144,11 +175,17 @@
 
 <script setup>
 import router from "../router"
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
+import { useRoute } from "vue-router";
 import { useAuthStore } from "@/stores/auth";
+import { useContentLanguageStore } from "@/stores/contentLanguage";
 import { Collapse } from "bootstrap";
 
 const auth = useAuthStore();
+const contentLang = useContentLanguageStore();
+const route = useRoute();
+const BILINGUAL_PATHS = new Set(["/", "/about", "/impressum", "/contact", "/privacy", "/accessibility"]);
+const isHomeOrAbout = computed(() => BILINGUAL_PATHS.has(route.path));
 const collapseId = "navbarSupportedContent";
 let collapseInstance = null;
 const uploadDropdownOpen = ref(false);
@@ -203,6 +240,12 @@ function onLogout() {
   auth.logout();
   router.push('/logout')
 }
+
+async function onReleaseHijack() {
+  closeNavbar();
+  await auth.releaseHijack();
+  router.push('/');
+}
 // Emits
 const emit = defineEmits(["logout", "search"]);
 
@@ -230,12 +273,23 @@ header {
 
 header .navbar {
   background: linear-gradient(90deg, var(--num-aqua) 0%, var(--num-slate) 100%) !important;
-  padding: 10px 24px;
+  padding: 4px 24px 4px 8px;
   box-shadow: 0 2px 10px rgba(16, 24, 40, 0.12);
 }
 
+header .navbar-brand {
+  margin-right: 0.5rem;
+}
+
 header .navbar-brand img {
-  height: 46px;
+  height: 56px;
+}
+
+header .navbar-brand .brand-logo {
+  height: 56px;
+  background: #ffffff;
+  padding: 4px 10px;
+  border-radius: 6px;
 }
 
 header .nav-link {
@@ -282,6 +336,33 @@ header .form-control:focus {
   header .navbar-nav {
     align-items: flex-start !important;
   }
+}
+
+.lang-toggle {
+  display: inline-flex;
+  border: 1px solid #bbbbbb;
+  border-radius: 999px;
+  overflow: hidden;
+  height: 32px;
+  align-self: center;
+}
+
+.lang-btn {
+  border: none;
+  background: #ffffff;
+  color: #333333;
+  font-weight: 700;
+  font-size: 0.8rem;
+  padding: 0 1rem;
+  cursor: pointer;
+  text-decoration: underline;
+  line-height: 1;
+}
+
+.lang-btn.active {
+  background: #6c6c6c;
+  color: #ffffff;
+  text-decoration: none;
 }
 
 /* Optional: make the logout button look exactly like a link */

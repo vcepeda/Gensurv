@@ -1,6 +1,17 @@
 :root {
   --nav-h: 70px;
   --right-w: 250px;
+
+  /* NUM brand palette (fallbacks; also defined in scss/custom.scss) */
+  --num-aqua: #42d1b8;
+  --num-slate: #485156;
+  --num-rose: #ea5167;
+  --num-gold: #ffcc00;
+  --num-slate-dark: #3a4145;
+}
+
+body {
+  font-family: "Montserrat", "Helvetica Neue", Arial, sans-serif;
 }
 
 *,
@@ -35,40 +46,44 @@ header {
 }
 
 header .navbar {
-  background: linear-gradient(90deg, #4b79a1 0%, #003366 100%) !important;
-  padding: 10px 20px;
+  background: linear-gradient(90deg, var(--num-aqua) 0%, var(--num-slate) 100%) !important;
+  padding: 10px 24px;
+  box-shadow: 0 2px 10px rgba(16, 24, 40, 0.12);
 }
 
 header .navbar-brand img {
-  height: 50px;
+  height: 46px;
 }
 
 header .nav-link {
-  color: #fff !important;
+  color: #ffffff !important;
+  font-weight: 500;
   padding: 10px 15px !important;
-  transition: color 0.3s ease;
+  transition: color 0.2s ease;
 }
 
-header .nav-link:hover {
-  color: #ffcc00 !important;
+header .nav-link:hover,
+header .nav-link:focus {
+  color: var(--num-gold) !important;
+}
+
+header .nav-link.active,
+header .nav-link.router-link-active {
+  color: var(--num-gold) !important;
 }
 
 header .navbar-toggler {
-  border-color: rgba(255, 255, 255, 0.5);
+  border-color: rgba(255, 255, 255, 0.4);
 }
 
 header .navbar-toggler-icon {
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%28255, 255, 255, 0.85%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
 }
 
-header .btn-outline-primary {
+header .dropdown-item.active,
+header .dropdown-item:active {
+  background-color: var(--num-aqua);
   color: #fff;
-  border-color: #fff;
-}
-
-header .btn-outline-primary:hover {
-  background-color: #fff;
-  color: #003366;
 }
 
 header .form-control {
@@ -127,10 +142,19 @@ main h2:first-child {
 footer.site-footer,
 footer {
   width: 100%;
-  background: linear-gradient(90deg, #4b79a1 0%, #003366 100%);
+  background: linear-gradient(90deg, var(--num-slate) 0%, var(--num-slate-dark) 100%);
   color: white;
   margin-top: auto;
-  padding: 1.5rem 0; 
+  padding: 1.5rem 0;
+  border-width: 4px 0 0 0;
+  border-style: solid;
+  border-image: linear-gradient(
+      90deg,
+      var(--num-aqua) 0%,
+      var(--num-gold) 50%,
+      var(--num-rose) 100%
+    )
+    1;
 }
 
 footer .footer-copy,
@@ -139,11 +163,157 @@ footer .footer-links {
 }
 
 footer .footer-links a {
-  color: white;
+  color: var(--num-rose);
   text-decoration: none;
   transition: color 0.3s ease;
 }
 
 footer .footer-links a:hover {
-  color: #ffcc00;
+  color: #f27f8d;
+}
+
+
+/* =============================================================
+   NUM aesthetic polish — app-wide
+   Clean, white-dominant, teal-accented look inspired by
+   https://www.netzwerk-universitaetsmedizin.de/plattformen/num-sar
+   ============================================================= */
+
+/* Soft page background so white cards/sections lift off the page */
+body {
+  background-color: #f5f7f8;
+  color: var(--num-slate);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Headings: Montserrat, confident weight, slate tone */
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Montserrat", "Helvetica Neue", Arial, sans-serif;
+  color: var(--num-slate);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+h1 { font-size: clamp(1.9rem, 1.4rem + 1.6vw, 2.6rem); }
+h2 { font-size: clamp(1.5rem, 1.2rem + 1vw, 2rem); }
+
+/* A teal accent rule used under section titles */
+.section-title {
+  position: relative;
+  padding-bottom: 0.6rem;
+  margin-bottom: 1.5rem;
+}
+.section-title::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 84px;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--num-aqua) 0%,
+    var(--num-gold) 50%,
+    var(--num-rose) 100%
+  );
+}
+.section-title.text-center::after {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* Comfortable reading width / breathing room for main content */
+.app-main {
+  padding-top: 1.5rem;
+  padding-bottom: 3rem;
+}
+
+/* Cards: soft border + shadow, subtle lift on hover.
+   Each card carries an --card-accent used for a top stripe + header icon,
+   so the palette (teal / gold / rose) is distributed across the UI. */
+.card {
+  --card-accent: var(--num-aqua);
+  border: 1px solid #eceff1;
+  border-top: 3px solid var(--card-accent);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.card:hover {
+  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.08);
+  transform: translateY(-2px);
+}
+.card .card-header {
+  background: #fff;
+  border-bottom: 1px solid #eceff1;
+  color: var(--num-slate);
+  font-weight: 700;
+}
+.card .card-header i,
+.card .card-header .accent-icon {
+  color: var(--card-accent);
+}
+
+/* Brand accent variants — apply to .card (or any element using --card-accent) */
+.accent-teal  { --card-accent: var(--num-aqua); }
+.accent-gold  { --card-accent: var(--num-gold); }
+.accent-rose  { --card-accent: var(--num-rose); }
+.accent-slate { --card-accent: var(--num-slate); }
+
+/* Buttons: brand colours already applied via SCSS; add motion + weight */
+.btn {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition: all 0.18s ease;
+}
+.btn:hover {
+  transform: translateY(-1px);
+}
+.btn-primary {
+  --bs-btn-color: #fff;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-active-color: #fff;
+}
+
+/* Links: rose by default, lighter rose on hover */
+a {
+  text-decoration: none;
+  color: var(--num-rose);
+}
+a:hover {
+  text-decoration: underline;
+  color: #f27f8d;
+}
+
+/* Tables: clean, light, brand-tinted hover */
+.table {
+  --bs-table-hover-bg: rgba(66, 209, 184, 0.08);
+}
+.table > thead {
+  background-color: var(--num-slate);
+  color: #fff;
+}
+.table > thead th {
+  font-weight: 600;
+  border-color: transparent;
+}
+
+/* Form controls: brand focus ring */
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--num-aqua);
+  box-shadow: 0 0 0 0.2rem rgba(66, 209, 184, 0.2);
+}
+
+/* Badges keep brand contrast */
+.badge.text-bg-primary {
+  color: #fff !important;
+}
+
+/* Right sidebar matches the lighter aesthetic */
+.sidebar-right {
+  border-left: 1px solid #eceff1;
+  background: #fff;
 }

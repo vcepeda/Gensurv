@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { me, logout as apiLogout } from "@/api/auth";
+import { me, logout as apiLogout, releaseHijack } from "@/api/auth";
 
 export const useAuthStore = defineStore("auth", {
   state: () => ({
@@ -7,6 +7,7 @@ export const useAuthStore = defineStore("auth", {
     username: null,
     isSuperuser: false,
     isStaff: false,
+    isHijacked: false,
     isLoading: false,
   }),
 
@@ -19,11 +20,13 @@ export const useAuthStore = defineStore("auth", {
         this.username = data?.username ?? null;
         this.isSuperuser = !!data?.is_superuser;
         this.isStaff = !!data?.is_staff;
+        this.isHijacked = !!data?.is_hijacked;
       } catch (e) {
         this.isAuthenticated = false;
         this.username = null;
         this.isSuperuser = false;
         this.isStaff = false;
+        this.isHijacked = false;
       } finally {
         this.isLoading = false;
       }
@@ -35,6 +38,12 @@ export const useAuthStore = defineStore("auth", {
       this.username = null;
       this.isSuperuser = false;
       this.isStaff = false;
+      this.isHijacked = false;
+    },
+
+    async releaseHijack() {
+      await releaseHijack();
+      await this.fetchUser();
     }
   }
 });

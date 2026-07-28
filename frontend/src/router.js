@@ -5,14 +5,20 @@ import LogoutView from "@/views/LogoutView.vue";
 import RegisterView from "./views/RegisterView.vue";
 import PasswordResetView from "./views/PasswordReset.vue";
 import HomeView from "./views/HomeView.vue";
-import HelpView from "./views/HelpView.vue";
+import HelpGensurvView from "./views/HelpGensurvView.vue";
+import HelpNumSarView from "./views/HelpNumSarView.vue";
+import HelpCogdatView from "./views/HelpCogdatView.vue";
 import FooterLinksView from "./views/FooterLinksView.vue";
 import AboutView from "./views/AboutView.vue";
 import ResearchView from "./views/ResearchView.vue";
-import UploadView from "./views/UploadView.vue";
-import DashboardView from "./views/DashboardView.vue";
+import UploadGensurvView from "./views/UploadGensurvView.vue";
+import UploadNumSarView from "./views/UploadNumSarView.vue";
+import UploadCogdatView from "./views/UploadCogdatView.vue";
+import DashboardView from "./views/DashboardView.vue"
+import ResultsView from "./views/ResultsView.vue";
 import ResubmitView from "./views/ResubmitView.vue";
 import SubmissionResultsView from "./views/SubmissionResultView.vue"
+import SubmissionResultsDashboardView from "./views/SubmissionResultsDashboardView.vue"
 import SubmissionSampleResultFilesView from "./views/SubmissionSampleResultFilesView.vue"
 import SubmissionSampleResultFileView from "./views/SubmissionSampleResultFileView.vue"
 import MetadataFileView from "./views/MetadataFileView.vue"
@@ -31,15 +37,22 @@ const routes = [
     component: PasswordResetView,
     props: true,
   },
-  { path: "/help", component: HelpView },
+  { path: "/help", component: HelpGensurvView },
+  { path: "/help/gensurv", component: HelpGensurvView },
+  { path: "/help/num-sar", component: HelpNumSarView },
+  { path: "/help/cogdat", component: HelpCogdatView },
   { path: "/impressum", component: FooterLinksView, meta: {pageKey: "impressum" }},
   { path: "/contact", component: FooterLinksView, meta: {pageKey: "contact" }},
   { path: "/privacy", component: FooterLinksView, meta: {pageKey: "privacy" }},
   { path: "/accessibility", component: FooterLinksView, meta: {pageKey: "accessibility" }},
   { path: "/about", component: AboutView },
   { path: "/research", component: ResearchView },
-  { path: "/upload", component: UploadView },
+  { path: "/upload", redirect: "/upload/gensurv" },
+  { path: "/upload/gensurv", component: UploadGensurvView },
+  { path: "/upload/num-sar", component: UploadNumSarView },
+  { path: "/upload/cogdat", component: UploadCogdatView },
   { path: "/dashboard", component: DashboardView },
+  { path: "/results", name: "results_overview", component: ResultsView },
   {
     path: "/statistics",
     name: "global_statistics",
@@ -49,6 +62,11 @@ const routes = [
       path: "/submissions/:submissionId/results",
       name: "submission_results",
       component: SubmissionResultsView,
+    },
+  {
+      path: "/submissions/:submissionId/results/dashboard",
+      name: "submission_results_dashboard",
+      component: SubmissionResultsDashboardView,
     },
   {
       path: "/submissions/:submissionId/results/:sampleId/files",

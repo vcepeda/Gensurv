@@ -283,9 +283,90 @@ def generate_cleaned_file(original_filename, df):
     return cleaned
 
 
+NCBI_TAXONOMY_CSV = os.path.join(os.path.dirname(__file__), "data", "ncbi_taxonomy.csv")
+SNOMED_ORGANISMS_CSV = os.path.join(os.path.dirname(__file__), "data", "snomed_organisms.csv")
+
+
+@lru_cache(maxsize=1)
+def _load_ncbi_taxonomy_lookup():
+    """Load local NCBI taxonomy dictionary: (id_to_name, name_to_id), both keyed by normalized strings."""
+    id_to_name, name_to_id = {}, {}
+    try:
+        df = pd.read_csv(NCBI_TAXONOMY_CSV, dtype=str)
+    except Exception as e:
+        logger.error(f"Could not load NCBI taxonomy lookup from {NCBI_TAXONOMY_CSV}: {e}")
+        return id_to_name, name_to_id
+
+    for _, row in df.iterrows():
+        taxid = str(row.get("taxid", "")).strip()
+        name = str(row.get("name", "")).strip()
+        if not taxid or not name:
+            continue
+        id_to_name[taxid] = name
+        name_to_id[name.lower()] = taxid
+    return id_to_name, name_to_id
+
+
+@lru_cache(maxsize=1)
+def _load_snomed_organism_lookup():
+    """Load local SNOMED CT organism dictionary: (code_to_name, name_to_code), both keyed by normalized strings."""
+    code_to_name, name_to_code = {}, {}
+    try:
+        df = pd.read_csv(SNOMED_ORGANISMS_CSV, dtype=str)
+    except Exception as e:
+        logger.error(f"Could not load SNOMED organism lookup from {SNOMED_ORGANISMS_CSV}: {e}")
+        return code_to_name, name_to_code
+
+    for _, row in df.iterrows():
+        code = str(row.get("code", "")).strip()
+        name = str(row.get("name", "")).strip()
+        if not code or not name:
+            continue
+        code_to_name[code] = name
+        name_to_code[name.lower()] = code
+    return code_to_name, name_to_code
+
+
+def is_valid_local_taxonomy(value: str):
+    """
+    Validate a Taxonomy ID or organism Name against local NCBI taxonomy and
+    SNOMED CT organism dictionaries (no network calls).
+
+    Parameters:
+        value (str): An NCBI Taxonomy ID, a SNOMED CT organism code, or an organism Name.
+
+    Returns:
+        tuple: (bool, str) where the boolean indicates validity and the string provides
+               the matched name (if input was an ID/code) or the matched ID/code (if input was a name).
+    """
+    value = str(value).strip()
+    if not value:
+        return False, "Empty value."
+
+    ncbi_id_to_name, ncbi_name_to_id = _load_ncbi_taxonomy_lookup()
+    snomed_code_to_name, snomed_name_to_code = _load_snomed_organism_lookup()
+
+    if value.isdigit():
+        if value in ncbi_id_to_name:
+            return True, ncbi_id_to_name[value]
+        if value in snomed_code_to_name:
+            return True, snomed_code_to_name[value]
+        return False, f"'{value}' is not a recognized NCBI Taxonomy ID or SNOMED CT organism code."
+
+    value_lower = value.lower()
+    if value_lower in ncbi_name_to_id:
+        return True, ncbi_name_to_id[value_lower]
+    if value_lower in snomed_name_to_code:
+        return True, snomed_name_to_code[value_lower]
+    return False, f"'{value}' is not a recognized organism name in the local NCBI or SNOMED CT dictionaries."
+
+
 def is_valid_ncbi_tax_id_or_name(value: str):
     """
     Validate or convert a Taxonomy ID or Name using the NCBI E-Utilities API.
+
+    NOTE: superseded by is_valid_local_taxonomy() to avoid blocking a web worker on a slow/
+    unreliable external API call. Kept here unused in case local lookups need a live fallback.
 
     Parameters:
         value (str): A Taxonomy ID (numeric) or Name (string) to validate or convert.
@@ -410,16 +491,19 @@ def validate_age_group_field(value):
     """
     Validate the 'Age Group' field.
 
-    - Accepts case-insensitive inputs for: 'neonate', 'pediatric', 'adult', 'pensioner'.
+    - Accepts case-insensitive inputs for: 'neonate', 'pediatric', 'adult', 'pensioner',
+      'geriatric', 'elderly', 'unknown'.
+    - Also accepts known synonyms (e.g. 'child' -> 'pediatric'), normalizing them before validation.
     - Does not accept abbreviations like 'N', 'P', etc.
     """
-    from .constants import VALID_AGE_GROUPS
-    
+    from .constants import VALID_AGE_GROUPS, AGE_GROUP_SYNONYMS
+
     if not isinstance(value, str):
         return False, "Invalid data type for 'Age Group'. Expected a string."
 
     # Normalize the input by stripping whitespace and converting to lowercase
     normalized_value = value.strip().lower()
+    normalized_value = AGE_GROUP_SYNONYMS.get(normalized_value, normalized_value)
 
     # Check if the normalized value is in the valid set
     if normalized_value in VALID_AGE_GROUPS:
@@ -466,34 +550,61 @@ def validate_mic_value(value):
     return False  # Invalid type
 
 
+def _validate_single_platform_token(token: str):
+    """Validate one platform token (used both standalone and inside a multi-platform value)."""
+    from .constants import VALID_PLATFORMS
+
+    normalized_value = token.strip().lower()
+
+    if normalized_value in VALID_PLATFORMS:
+        return True, normalized_value.capitalize()
+
+    if normalized_value.startswith("other:"):
+        description = normalized_value[6:].strip()
+        if description:
+            return True, token.strip()
+        return False, "'Other' requires a description (e.g., 'Other: Custom Platform')."
+
+    return False, None
+
+
 def validate_sequencing_platform_field(value):
     """
     Validate the 'Sequencing Platform' field.
 
-    - Accepts: Illumina, ONT, Nanopore, PacBio, Other: <Text> (case-insensitive).
-    - Rejects unrecognized or incomplete 'Other' values.
+    - Accepts a single platform: Illumina, ONT, Nanopore, PacBio, Other: <Text> (case-insensitive).
+    - Accepts multiple platforms for one sample, e.g. "Illumina, ONT" or "Multiple - Illumina, ONT".
+    - Rejects unrecognized or incomplete 'Other' values, and any unrecognized platform in a multi-value list.
     """
-    from .constants import VALID_PLATFORMS
-    
     if not isinstance(value, str):
         logger.debug(f"⚠️ Non-string value received: {value} ({type(value)})")
         return False, "Invalid data type for 'Sequencing Platform'. Expected a string."
 
-    # Normalize the input
-    normalized_value = value.strip().lower()
-    logger.debug(f"🧪 Normalized platform value: '{normalized_value}'")
+    stripped_value = value.strip()
+    logger.debug(f"🧪 Validating platform value: '{stripped_value}'")
 
-    # Check for standard platforms
-    if normalized_value in VALID_PLATFORMS:
-        return True, normalized_value.capitalize()  # Return normalized value if valid
+    # Single-value fast path (covers the plain "Illumina" / "Other: X" cases)
+    is_valid, result = _validate_single_platform_token(stripped_value)
+    if is_valid:
+        return True, result
 
-    # Check for "Other: <description>" format
-    if normalized_value.startswith("other:"):
-        description = normalized_value[6:].strip()  # Extract description
-        if description:
-            return True, value  # Return the original "Other: <description>" value if valid
-        else:
-            return False, "Invalid value for 'Sequencing Platform': 'Other' requires a description (e.g., 'Other: Custom Platform')."
+    # Strip an optional "Multiple - " / "Multiple:" prefix, then treat the rest as a
+    # comma-separated list of platforms (e.g. "Multiple - Illumina, ONT").
+    multi_match = re.match(r"^multiple\s*[-:]?\s*(.+)$", stripped_value, re.IGNORECASE)
+    candidate_list = multi_match.group(1) if multi_match else stripped_value
+
+    tokens = [t for t in (part.strip() for part in candidate_list.split(",")) if t]
+    if len(tokens) > 1:
+        normalized_tokens = []
+        for token in tokens:
+            token_valid, token_result = _validate_single_platform_token(token)
+            if not token_valid:
+                return False, (
+                    f"Invalid value for 'Sequencing Platform': '{token}' in '{value}' is not recognized. "
+                    "Accepted values are: Illumina, ONT, Nanopore, PacBio, Other: <Text>."
+                )
+            normalized_tokens.append(token_result)
+        return True, ", ".join(normalized_tokens)
 
     return False, f"Invalid value for 'Sequencing Platform': {value}. Accepted values are: Illumina, ONT, Nanopore, PacBio, Other: <Text>."
 
@@ -767,7 +878,7 @@ def validate_csv_columns(df: pd.DataFrame, expected_columns: dict, submission_ty
 
                 if column == "isolate species" and not non_empty_values.empty:
                     for idx, val in non_empty_values.items():
-                        is_valid, result = is_valid_ncbi_tax_id_or_name(val)
+                        is_valid, result = is_valid_local_taxonomy(val)
                         if not is_valid:
                             validation_results["is_valid"] = False
                             validation_results["type_mismatches"].append(f"Row {idx + 1}, Isolate Species: {result}")
@@ -846,7 +957,7 @@ def validate_csv_columns(df: pd.DataFrame, expected_columns: dict, submission_ty
     return validation_results
 
 
-def validate_and_save_csv(file, expected_columns, essential_columns=None, submission_type=None):
+def validate_and_save_csv(file, expected_columns, essential_columns=None, submission_type=None, max_rows=None):
     """
     Validates and saves a CSV or Excel (.xlsx) file by:
     - Detecting delimiters (For CSV files)
@@ -858,6 +969,10 @@ def validate_and_save_csv(file, expected_columns, essential_columns=None, submis
         submission_type (str, optional): Controls which field-specific validators run.
             Pass 'gensurv' (or None) for Gensurv uploads, 'num-sar_bacteria' or
             'num-sar_virus' for NUM-SAR uploads.
+        max_rows (int, optional): If set and the file has more rows than this, the
+            dataframe is truncated to the first `max_rows` row(s) BEFORE validation
+            runs, so the extra rows are never validated (only a warning is raised).
+            Used for single-sample uploads to reject the rest of a bulk-shaped file.
 
     Returns:
         tuple: (is_valid: bool, has_warnings: bool, message: str, delimiter: str, dataframe: pd.DataFrame or None)
@@ -910,6 +1025,18 @@ def validate_and_save_csv(file, expected_columns, essential_columns=None, submis
     except Exception as e:
         logger.error(f"Error reading file: {e}")
         return False, False, f"Error reading file: {str(e)}", None, None
+
+    # Truncate to max_rows BEFORE validation, so any extra rows are dropped and never
+    # validated (used for single-sample uploads receiving a bulk-shaped file).
+    if max_rows is not None and len(df) > max_rows:
+        dropped_count = len(df) - max_rows
+        has_warnings = True
+        warning_messages.append(
+            f"Metadata file contained {len(df)} rows; only the first {max_rows} row(s) were used "
+            f"for this submission. {dropped_count} extra row(s) were ignored and not validated."
+        )
+        logger.warning(f"Truncating metadata from {len(df)} to {max_rows} row(s) for this submission.")
+        df = df.iloc[:max_rows].reset_index(drop=True)
 
     # Validate the DataFrame using `validate_csv_columns`
     logger.debug("Entering def validate_csv_columns")
@@ -1036,7 +1163,7 @@ def parse_metadata_antibiotics_info(metadata_path, target_sample_id=None):
     If `target_sample_id` is None, return a dict mapping all sample_ids → info.
     """
     try:
-        with open(metadata_path, 'r') as file:
+        with open(metadata_path, 'rb') as file:
             delimiter = detect_delimiter(file)
             cleaned_file = fix_trailing_empty_columns_new(file, delimiter)
             df = pd.read_csv(cleaned_file, sep=delimiter)
@@ -1070,7 +1197,7 @@ def parse_metadata_antibiotics_info(metadata_path, target_sample_id=None):
                     return str(value).strip()
 
     except Exception as e:
-        print(f"Error parsing antibiotics info: {e}")
+        logger.error(f"Error parsing antibiotics info from {metadata_path}: {e}")
 
     return {} if target_sample_id is None else None
 
