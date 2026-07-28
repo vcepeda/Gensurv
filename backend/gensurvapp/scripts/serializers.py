@@ -30,6 +30,15 @@ class BulkUploadSerializer(serializers.Serializer):
     submit_to_pipeline = serializers.BooleanField(required=False, default=False)
     upload_start_time = serializers.FloatField(required=False)
 
+
+class CogdatUploadSerializer(serializers.Serializer):
+    fastq_files = serializers.ListField(
+        child=serializers.FileField(),
+        required=True,
+        allow_empty=False
+    )
+    upload_start_time = serializers.FloatField(required=False)
+
 # Dashboard serializer
 
 class UploadedFileSerializer(serializers.ModelSerializer):
@@ -61,11 +70,13 @@ class SubmissionDashboardRowSerializer(serializers.Serializer):
     submission_id = serializers.IntegerField()
     created_at = serializers.DateTimeField()
     submission_type = serializers.CharField(required=False, default="gensurv")
+    is_own = serializers.BooleanField()
 
     metadata = serializers.DictField()
     antibiotics = serializers.DictField()
     fastq = serializers.DictField()
     analysis = serializers.DictField()
+    qc = serializers.DictField()
     deletion = serializers.DictField()
 
 class SubmissionSampleListSerializer(serializers.Serializer):

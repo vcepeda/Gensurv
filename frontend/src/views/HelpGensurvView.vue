@@ -2,12 +2,24 @@
   <div class="container-fluid">
     <!-- Page Header -->
     <div class="mb-5">
+      <div class="text-center mb-3">
+        <img src="../assets/gensurv-removebg-preview.png" alt="GenSurv logo" style="max-height: 50px;">
+      </div>
       <h1 class="text-center">Help: Gensurv Data Format and Upload Instructions</h1>
       <p class="lead">
         This section provides detailed guidelines for uploading single or multiple samples, including the
         required formats for <strong>Sample Metadata</strong>, <strong>Antibiotic Testing Results</strong>,
         and <strong>NGS Data</strong>. Please carefully follow these instructions to ensure successful uploads.
       </p>
+    </div>
+
+    <div class="alert alert-warning">
+      <strong>⚠️ Uploading large sequencing files (multiple GB)?</strong>
+      Please use <strong>Google Chrome, Microsoft Edge, or Safari</strong> rather than Firefox.
+      Firefox has known issues completing very large uploads on some networks — especially
+      corporate/institute networks with antivirus or web-filtering software — where the upload
+      can stall partway through and never finish. Chromium-based browsers and Safari do not show
+      this problem.
     </div>
 
     <!-- Single Sample Upload -->
@@ -126,7 +138,7 @@
           <tr>
             <td>Single Platform: <code>Paired-end Illumina</code></td>
             <td>sample_001_R1.fastq.gz</td>
-            <td>sample_001_R1.fastq.gz</td>
+            <td>sample_001_R2.fastq.gz</td>
             <td></td>
             <td></td>
           </tr>
@@ -149,19 +161,19 @@
             <td></td>
             <td></td>
             <td></td>
-            <td></td>
+            <td>sample_pacbio.fastq.gz</td>
           </tr>
           <tr>
             <td>Multiple Platforms: <code>Paired-end Illumina</code> and <code>Nanopore</code></td>
             <td>sample_001_R1.fastq.gz</td>
-            <td>sample_001_R1.fastq.gz</td>
+            <td>sample_001_R2.fastq.gz</td>
             <td>sample_ont.fastq.gz</td>
             <td></td>
           </tr>
           <tr>
             <td>Multiple Platforms: <code>Paired-end Illumina</code> and <code>PacBio</code></td>
             <td>sample_001_R1.fastq.gz</td>
-            <td>sample_001_R1.fastq.gz</td>
+            <td>sample_001_R2.fastq.gz</td>
             <td></td>
             <td>sample_pacbio.fastq.gz</td>
           </tr>
@@ -175,7 +187,7 @@
           <tr>
             <td>Multiple Platforms: <code>Paired-end Illumina</code>, <code>Nanopore</code> and <code>PacBio</code></td>
             <td>sample_001_R1.fastq.gz</td>
-            <td>sample_001_R1.fastq.gz</td>
+            <td>sample_001_R2.fastq.gz</td>
             <td>sample_ont.fastq.gz</td>
             <td>sample_pacbio.fastq.gz</td>
           </tr>
@@ -519,14 +531,127 @@
           <tr>
             <td>Sample Source</td>
             <td>Type of sample source.</td>
-            <td>Human clinical (hospital), human screening (hospital), medical devices, etc.</td>
+            <td>Human clinical (hospital), human screening (hospital), human clinical (community), human screening (community), animal, environment, wastewater, air filter, medical devices, other [Text]</td>
             <td class="cell-mandatory">Mandatory</td>
           </tr>
           <tr>
             <td>Collection Method</td>
             <td>Method used to collect the sample.</td>
+            <td>Swab, blood culture, BAL, aspirate, other [Text]</td>
+            <td class="cell-optional">Optional</td>
+          </tr>
+          <tr>
+            <td>City</td>
+            <td>City where the sample was collected.</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>Postal Code</td>
+            <td>Postal code where the sample was collected.</td>
+            <td>Number</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>County</td>
+            <td>County where the sample was collected.</td>
             <td>Text</td>
             <td class="cell-optional">Optional</td>
+          </tr>
+          <tr>
+            <td>State</td>
+            <td>State where the sample was collected.</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>Country</td>
+            <td>Country where the sample was collected.</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+
+          <tr class="table-primary">
+            <td colspan="4"><strong>Lab and Patient Information</strong></td>
+          </tr>
+          <tr>
+            <td>Lab Identifier</td>
+            <td>Internal lab ID for the sample, if different from the Sample Identifier.</td>
+            <td>Unique ID</td>
+            <td class="cell-optional">Optional</td>
+          </tr>
+          <tr>
+            <td>Sex</td>
+            <td>Biological sex of the host.</td>
+            <td>Male, female, other [Text]</td>
+            <td class="cell-optional">Optional</td>
+          </tr>
+          <tr>
+            <td>Age Group</td>
+            <td>Age range of the host.</td>
+            <td>Neonate, pediatric, adult, pensioner, NA</td>
+            <td class="cell-optional">Optional</td>
+          </tr>
+          <tr>
+            <td>Country of Putative Exposure</td>
+            <td>Country where infection is suspected to have occurred, if known.</td>
+            <td>Text</td>
+            <td class="cell-optional">Optional</td>
+          </tr>
+
+          <tr class="table-primary">
+            <td colspan="4"><strong>Sequencing Details</strong></td>
+          </tr>
+          <tr>
+            <td>Sequencing Platform</td>
+            <td>
+              Platform used for sequencing. For samples sequenced on more than one platform, list them
+              together.
+            </td>
+            <td>Illumina, PacBio, ONT/Nanopore, Multiple - Illumina, ONT, Multiple - Illumina, ONT, PacBio</td>
+            <td class="cell-optional">Optional</td>
+          </tr>
+          <tr>
+            <td>Sequencing Type</td>
+            <td>Type of sequencing performed.</td>
+            <td>Whole genome sequencing, amplicon sequencing, metagenome sequencing</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>Library Preparation Kit</td>
+            <td>Kit used for preparing the sequencing library.</td>
+            <td>Text</td>
+            <td class="cell-optional">Optional</td>
+          </tr>
+          <tr>
+            <td>Sequencing Chemistry</td>
+            <td>Sequencing chemistry/kit version used.</td>
+            <td>Text</td>
+            <td class="cell-optional">Optional</td>
+          </tr>
+          <tr>
+            <td>Illumina R1</td>
+            <td>Filename of the Illumina paired-end R1 FASTQ file.</td>
+            <td><code>sample_001_R1.fastq.gz</code></td>
+            <td class="cell-groupone">At least one required</td>
+          </tr>
+          <tr>
+            <td>Illumina R2</td>
+            <td>Filename of the Illumina paired-end R2 FASTQ file.</td>
+            <td><code>sample_001_R2.fastq.gz</code></td>
+            <td class="cell-groupone">At least one required</td>
+          </tr>
+          <tr>
+            <td>Nanopore</td>
+            <td>Filename of the Oxford Nanopore sequencing file.</td>
+            <td><code>sample_ont.fastq.gz</code></td>
+            <td class="cell-groupone">At least one required</td>
+          </tr>
+          <tr>
+            <td>PacBio</td>
+            <td>Filename of the PacBio sequencing file.</td>
+            <td><code>sample_pacbio.fastq.gz</code></td>
+            <td class="cell-groupone">At least one required</td>
           </tr>
 
           <tr class="table-primary">
@@ -710,6 +835,9 @@
 }
 .cell-optional {
   background-color: #ffffe0 !important;
+}
+.cell-groupone {
+  background-color: #ffe5b4 !important;
 }
 
 /* Table borders + font */

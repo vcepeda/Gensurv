@@ -8,6 +8,7 @@ urlpatterns = [
     # uploads (already exist)
     path("api/upload/single/", views.SingleUploadAPIView.as_view(), name="single-upload"),
     path("api/upload/bulk/", views.BulkUploadAPIView.as_view(), name="bulk-upload"),
+    path("api/upload/cogdat/", views.CogdatUploadAPIView.as_view(), name="cogdat-upload"),
 
     # dashboard
     path("api/dashboard/", views.DashboardAPIView.as_view(), name="dashboard"),
@@ -22,6 +23,11 @@ urlpatterns = [
 
     # submission
     path("api/submissions/<int:submission_id>/samples/", views.SubmissionSamplesAPIView.as_view(), name="submission_samples_api"),
+    path(
+        "api/submissions/<int:submission_id>/results/dashboard/",
+        views.SubmissionResultsDashboardAPIView.as_view(),
+        name="submission_results_dashboard_api",
+    ),
     path(
         "api/submissions/<int:submission_id>/samples/<str:sample_id>/result-files/",
         views.SubmissionSampleResultFilesAPIView.as_view(),

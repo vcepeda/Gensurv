@@ -35,7 +35,8 @@ def _json_form_errors(form):
     return errors
 
 
-def _user_payload(user):
+def _user_payload(request):
+    user = request.user
     return {
         "is_authenticated": True,
         "username": user.get_username(),
@@ -43,6 +44,7 @@ def _user_payload(user):
         "is_staff": bool(getattr(user, "is_staff", False)),
         "is_approved": bool(getattr(user, "is_approved", False)),
         "is_active": bool(getattr(user, "is_active", False)),
+        "is_hijacked": bool(request.session.get("hijack_history")),
     }
 
 
@@ -55,7 +57,7 @@ def api_csrf(request):
 @require_GET
 def api_me(request):
     if request.user.is_authenticated:
-        return JsonResponse(_user_payload(request.user))
+        return JsonResponse(_user_payload(request))
     return JsonResponse({"is_authenticated": False, "username": None})
 
 
@@ -75,7 +77,8 @@ def api_register(request):
     user.save()
 
     message = form.cleaned_data.get("message")
-    admin_email = settings.ADMIN_EMAIL if not settings.DEBUG else "linksiddharthp@gmail.com"
+    #uncomment for testing or 
+    admin_email = settings.ADMIN_EMAIL #if not settings.DEBUG else "linksiddharthp@gmail.com"
     site_url = settings.SITE_URL
 
     subject = "New User Registration Pending Approval"
@@ -130,7 +133,7 @@ def api_login(request):
 
     if getattr(user, "is_superuser", False):
         login(request, user)
-        return JsonResponse({"ok": True, "user": _user_payload(user)})
+        return JsonResponse({"ok": True, "user": _user_payload(request)})
 
     if not getattr(user, "is_approved", False):
         return JsonResponse(
@@ -139,7 +142,7 @@ def api_login(request):
         )
 
     login(request, user)
-    return JsonResponse({"ok": True, "user": _user_payload(user)})
+    return JsonResponse({"ok": True, "user": _user_payload(request)})
 
 
 @require_POST

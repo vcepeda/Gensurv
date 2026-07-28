@@ -72,6 +72,23 @@
                 <input ref="singleFastqInput" class="form-control" type="file" multiple @change="onSingleFastq" required />
               </div>
 
+              <div
+                v-if="singleTotalSize > 0"
+                class="mb-3 small"
+                :class="singleTotalSize > MAX_SUBMISSION_SIZE_BYTES ? 'text-danger fw-bold' : 'text-muted'"
+              >
+                Total submission size: {{ formatBytes(singleTotalSize) }} / {{ formatBytes(MAX_SUBMISSION_SIZE_BYTES) }} limit
+              </div>
+
+              <div
+                v-if="singleTotalSize > LARGE_UPLOAD_WARNING_THRESHOLD_BYTES && singleTotalSize <= MAX_SUBMISSION_SIZE_BYTES"
+                class="alert alert-warning mt-2"
+              >
+                ⏳ This is a large submission ({{ formatBytes(singleTotalSize) }}). Depending on your network speed, the
+                upload could take several hours. Please keep this browser tab open and prevent your computer from
+                sleeping until it completes.
+              </div>
+
               <div class="form-check mb-4" style="font-size: 1.1em; text-align: left;">
                 <input
                   class="form-check-input"
@@ -87,12 +104,41 @@
               <div class="text-center">
                 <button class="btn btn-primary btn-lg mt-3" type="submit" :disabled="single.loading">
                   <i class="fas fa-upload"></i>
-                  {{ single.loading ? "Uploading..." : "Upload Single Sample" }}
+                  {{ single.loading ? (single.stage === "validating" ? "Validating..." : "Uploading...") : "Upload Single Sample" }}
                 </button>
+                <button
+                  v-if="single.loading"
+                  type="button"
+                  class="btn btn-outline-danger btn-lg mt-3 ms-2"
+                  @click="cancelSingle"
+                >
+                  Cancel
+                </button>
+              </div>
+
+              <div v-if="single.loading && single.stage === 'uploading'">
+                <div class="progress mt-3" style="height: 24px;">
+                  <div
+                    class="progress-bar progress-bar-striped progress-bar-animated"
+                    role="progressbar"
+                    :style="{ width: single.progress + '%' }"
+                    :aria-valuenow="single.progress"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                  ></div>
+                </div>
+                <div class="text-center small fw-bold mt-1">
+                  {{ single.progress }}%{{ single.eta ? ` — ${single.eta} remaining` : "" }}
+                </div>
               </div>
             </form>
 
             <!-- messages -->
+            <div v-if="single.cancelled" class="alert alert-secondary mt-3">
+              <i class="fas fa-ban"></i>
+              <span style="white-space: pre-wrap;"> {{ single.cancelled }} </span>
+            </div>
+
             <div v-if="single.error" class="alert alert-danger mt-3">
               <i class="fas fa-exclamation-circle"></i>
               <span style="white-space: pre-wrap;"> {{ single.error }} </span>
@@ -141,6 +187,23 @@
                 <input ref="bulkFastqInput" class="form-control" type="file" multiple @change="onBulkFastq" required />
               </div>
 
+              <div
+                v-if="bulkTotalSize > 0"
+                class="mb-3 small"
+                :class="bulkTotalSize > MAX_SUBMISSION_SIZE_BYTES ? 'text-danger fw-bold' : 'text-muted'"
+              >
+                Total submission size: {{ formatBytes(bulkTotalSize) }} / {{ formatBytes(MAX_SUBMISSION_SIZE_BYTES) }} limit
+              </div>
+
+              <div
+                v-if="bulkTotalSize > LARGE_UPLOAD_WARNING_THRESHOLD_BYTES && bulkTotalSize <= MAX_SUBMISSION_SIZE_BYTES"
+                class="alert alert-warning mt-2"
+              >
+                ⏳ This is a large submission ({{ formatBytes(bulkTotalSize) }}). Depending on your network speed, the
+                upload could take several hours. Please keep this browser tab open and prevent your computer from
+                sleeping until it completes.
+              </div>
+
               <div class="form-check mb-4" style="font-size: 1.1em; text-align: left;">
                 <input
                   class="form-check-input"
@@ -156,10 +219,39 @@
               <div class="text-center">
                 <button class="btn btn-warning btn-lg mt-3" type="submit" :disabled="bulk.loading">
                   <i class="fas fa-file-upload"></i>
-                  {{ bulk.loading ? "Uploading..." : "Upload Bulk Data" }}
+                  {{ bulk.loading ? (bulk.stage === "validating" ? "Validating..." : "Uploading...") : "Upload Bulk Data" }}
+                </button>
+                <button
+                  v-if="bulk.loading"
+                  type="button"
+                  class="btn btn-outline-danger btn-lg mt-3 ms-2"
+                  @click="cancelBulk"
+                >
+                  Cancel
                 </button>
               </div>
+
+              <div v-if="bulk.loading && bulk.stage === 'uploading'">
+                <div class="progress mt-3" style="height: 24px;">
+                  <div
+                    class="progress-bar progress-bar-striped progress-bar-animated"
+                    role="progressbar"
+                    :style="{ width: bulk.progress + '%' }"
+                    :aria-valuenow="bulk.progress"
+                    aria-valuemin="0"
+                    aria-valuemax="100"
+                  ></div>
+                </div>
+                <div class="text-center small fw-bold mt-1">
+                  {{ bulk.progress }}%{{ bulk.eta ? ` — ${bulk.eta} remaining` : "" }}
+                </div>
+              </div>
             </form>
+
+            <div v-if="bulk.cancelled" class="alert alert-secondary mt-3">
+              <i class="fas fa-ban"></i>
+              <span style="white-space: pre-wrap;"> {{ bulk.cancelled }} </span>
+            </div>
 
             <div v-if="bulk.error" class="alert alert-danger mt-3">
               <i class="fas fa-exclamation-circle"></i>
@@ -194,9 +286,11 @@
 </template>
 
 <script setup>
+import axios from "axios";
 import apiClinet from "../api/client"
 import { reactive, ref, computed } from "vue";
 import { useAuthStore } from "@/stores/auth";
+import { toPrecheckFormData, extractErrorMessage } from "@/utils/uploadPrecheck";
 
 const auth = useAuthStore();
 
@@ -213,12 +307,27 @@ const uploadSubmissionType = computed(() => {
   return submissionType.value === "bacteria" ? "num-sar_bacteria" : "num-sar_virus";
 });
 
+let singleAbortController = null;
+let bulkAbortController = null;
+
+function cancelSingle() {
+  singleAbortController?.abort();
+}
+
+function cancelBulk() {
+  bulkAbortController?.abort();
+}
+
 const single = reactive({
   metadata: null,
   fastq: [],
   submit_to_pipeline: false,
   loading: false,
+  stage: "",
+  progress: 0,
+  eta: "",
   error: "",
+  cancelled: "",
   success: "",
   timing: null,
   submission_id: null,
@@ -230,12 +339,50 @@ const bulk = reactive({
   fastq: [],
   submit_to_pipeline: false,
   loading: false,
+  stage: "",
+  progress: 0,
+  eta: "",
   error: "",
+  cancelled: "",
   success: "",
   timing: null,
   submission_id: null,
   resubmission_allowed: false,
 });
+
+const MAX_SUBMISSION_SIZE_BYTES = 100 * 1024 * 1024 * 1024; // 100 GB, matches the server's client_max_body_size
+const LARGE_UPLOAD_WARNING_THRESHOLD_BYTES = 20 * 1024 * 1024 * 1024; // 20 GB, warn about long upload times
+
+function formatBytes(bytes) {
+  const gb = bytes / 1024 ** 3;
+  if (gb >= 1) return `${gb.toFixed(2)} GB`;
+  const mb = bytes / 1024 ** 2;
+  return `${mb.toFixed(1)} MB`;
+}
+
+function formatDuration(seconds) {
+  if (!isFinite(seconds) || seconds < 60) return "less than a minute";
+  const totalMinutes = Math.round(seconds / 60);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return hours > 0 ? `${hours}h ${minutes}m` : `${minutes}m`;
+}
+
+function getSubmissionSize(...fileGroups) {
+  let total = 0;
+  for (const group of fileGroups) {
+    if (!group) continue;
+    if (Array.isArray(group)) {
+      total += group.reduce((sum, f) => sum + (f?.size || 0), 0);
+    } else {
+      total += group.size || 0;
+    }
+  }
+  return total;
+}
+
+const singleTotalSize = computed(() => getSubmissionSize(single.metadata, single.fastq));
+const bulkTotalSize = computed(() => getSubmissionSize(bulk.metadata, bulk.fastq));
 
 function onSingleMetadata(e) { single.metadata = e.target.files?.[0] ?? null; }
 function onSingleFastq(e) { single.fastq = Array.from(e.target.files ?? []); }
@@ -244,8 +391,15 @@ function onBulkMetadata(e) { bulk.metadata = e.target.files?.[0] ?? null; }
 function onBulkFastq(e) { bulk.fastq = Array.from(e.target.files ?? []); }
 
 async function submitSingle() {
+  const totalSize = getSubmissionSize(single.metadata, single.fastq);
+  if (totalSize > MAX_SUBMISSION_SIZE_BYTES) {
+    single.error = `Your submission is ${formatBytes(totalSize)}, which exceeds the maximum allowed size of ${formatBytes(MAX_SUBMISSION_SIZE_BYTES)}. Please reduce the number/size of files and try again.`;
+    return;
+  }
+
   single.loading = true;
   single.error = "";
+  single.cancelled = "";
   single.success = "";
   single.timing = null;
   single.submission_id = null;
@@ -259,9 +413,42 @@ async function submitSingle() {
   fd.append("submit_to_pipeline", String(single.submit_to_pipeline));
   fd.append("upload_start_time", String(start));
 
+  singleAbortController = new AbortController();
+
   try {
+    single.stage = "validating";
+    await apiClinet.post(`/api/upload/single/?type=${uploadSubmissionType.value}&dry_run=true`, toPrecheckFormData(fd), {
+      headers: { "Content-Type": "multipart/form-data" },
+      signal: singleAbortController.signal,
+    });
+  } catch (err) {
+    if (axios.isCancel(err)) {
+      single.cancelled = "Upload cancelled.";
+    } else {
+      single.error = extractErrorMessage(err);
+    }
+    single.loading = false;
+    single.stage = "";
+    return;
+  }
+
+  try {
+    single.stage = "uploading";
+    single.progress = 0;
+    single.eta = "";
+    const uploadStartedAt = Date.now();
     const res = await apiClinet.post(`/api/upload/single/?type=${uploadSubmissionType.value}`, fd, {
       headers: { "Content-Type": "multipart/form-data" },
+      signal: singleAbortController.signal,
+      onUploadProgress: (evt) => {
+        if (!evt.total) return;
+        single.progress = Math.round((evt.loaded / evt.total) * 100);
+        const elapsedSec = (Date.now() - uploadStartedAt) / 1000;
+        if (elapsedSec > 3 && evt.loaded > 0) {
+          const rate = evt.loaded / elapsedSec;
+          single.eta = formatDuration((evt.total - evt.loaded) / rate);
+        }
+      },
     });
     single.success = res.data.message;
     single.submission_id = res.data.submission_id;
@@ -281,16 +468,28 @@ async function submitSingle() {
     if (singleMetadataInput.value) singleMetadataInput.value.value = "";
     if (singleFastqInput.value) singleFastqInput.value.value = "";
   } catch (err) {
-    const data = err?.response?.data;
-    single.error = data?.error || JSON.stringify(data?.errors || data || err.message, null, 2);
+    if (axios.isCancel(err)) {
+      single.cancelled = "Upload cancelled.";
+    } else {
+      single.error = extractErrorMessage(err);
+    }
   } finally {
     single.loading = false;
+    single.stage = "";
+    single.eta = "";
   }
 }
 
 async function submitBulk() {
+  const totalSize = getSubmissionSize(bulk.metadata, bulk.fastq);
+  if (totalSize > MAX_SUBMISSION_SIZE_BYTES) {
+    bulk.error = `Your submission is ${formatBytes(totalSize)}, which exceeds the maximum allowed size of ${formatBytes(MAX_SUBMISSION_SIZE_BYTES)}. Please reduce the number/size of files and try again.`;
+    return;
+  }
+
   bulk.loading = true;
   bulk.error = "";
+  bulk.cancelled = "";
   bulk.success = "";
   bulk.timing = null;
   bulk.submission_id = null;
@@ -304,9 +503,42 @@ async function submitBulk() {
   fd.append("submit_to_pipeline", String(bulk.submit_to_pipeline));
   fd.append("upload_start_time", String(start));
 
+  bulkAbortController = new AbortController();
+
   try {
+    bulk.stage = "validating";
+    await apiClinet.post(`/api/upload/bulk/?type=${uploadSubmissionType.value}&dry_run=true`, toPrecheckFormData(fd), {
+      headers: { "Content-Type": "multipart/form-data" },
+      signal: bulkAbortController.signal,
+    });
+  } catch (err) {
+    if (axios.isCancel(err)) {
+      bulk.cancelled = "Upload cancelled.";
+    } else {
+      bulk.error = extractErrorMessage(err);
+    }
+    bulk.loading = false;
+    bulk.stage = "";
+    return;
+  }
+
+  try {
+    bulk.stage = "uploading";
+    bulk.progress = 0;
+    bulk.eta = "";
+    const uploadStartedAt = Date.now();
     const res = await apiClinet.post(`/api/upload/bulk/?type=${uploadSubmissionType.value}`, fd, {
       headers: { "Content-Type": "multipart/form-data" },
+      signal: bulkAbortController.signal,
+      onUploadProgress: (evt) => {
+        if (!evt.total) return;
+        bulk.progress = Math.round((evt.loaded / evt.total) * 100);
+        const elapsedSec = (Date.now() - uploadStartedAt) / 1000;
+        if (elapsedSec > 3 && evt.loaded > 0) {
+          const rate = evt.loaded / elapsedSec;
+          bulk.eta = formatDuration((evt.total - evt.loaded) / rate);
+        }
+      },
     });
     bulk.success = res.data.message;
     bulk.submission_id = res.data.submission_id;
@@ -326,10 +558,15 @@ async function submitBulk() {
     if (bulkMetadataInput.value) bulkMetadataInput.value.value = "";
     if (bulkFastqInput.value) bulkFastqInput.value.value = "";
   } catch (err) {
-    const data = err?.response?.data;
-    bulk.error = data?.error || JSON.stringify(data?.errors || data || err.message, null, 2);
+    if (axios.isCancel(err)) {
+      bulk.cancelled = "Upload cancelled.";
+    } else {
+      bulk.error = extractErrorMessage(err);
+    }
   } finally {
     bulk.loading = false;
+    bulk.stage = "";
+    bulk.eta = "";
   }
 }
 </script>

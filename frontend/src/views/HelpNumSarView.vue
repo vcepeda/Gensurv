@@ -10,6 +10,15 @@
       </p>
     </div>
 
+    <div class="alert alert-warning">
+      <strong>⚠️ Uploading large sequencing files (multiple GB)?</strong>
+      Please use <strong>Google Chrome, Microsoft Edge, or Safari</strong> rather than Firefox.
+      Firefox has known issues completing very large uploads on some networks — especially
+      corporate/institute networks with antivirus or web-filtering software — where the upload
+      can stall partway through and never finish. Chromium-based browsers and Safari do not show
+      this problem.
+    </div>
+
     <!-- Single Sample Upload -->
     <h2 id="single-upload" class="text-info">Single Sample Upload</h2>
     <p>For single sample uploads, ensure that your files adhere to the following format requirements:</p>
@@ -33,14 +42,15 @@
             <code>.csv</code>, <code>.tsv</code>, <code>.txt</code>, <code>.xlsx</code>.
           </li>
           <li>
-            <strong>FASTQ File Fields:</strong> You must list the FASTQ file names in one or more of the following fields:
+            <strong>FASTQ File Fields:</strong> You must list the sequencing file names in the following fields:
             <ul>
-              <li><code>Illumina R1</code> — required if using Illumina platform (paired-end R1 file).</li>
-              <li><code>Illumina R2</code> — optional; must be provided only if <code>Illumina R1</code> is provided (paired-end R2 file).</li>
-              <li><code>Nanopore</code> — required if using Oxford Nanopore platform.</li>
-              <li><code>PacBio</code> — required if using PacBio platform.</li>
+              <li><code>FILE_1_NAME</code> — required. The primary sequencing file (or paired-end R1 file, for Illumina).</li>
+              <li><code>FILE_2_NAME</code> — optional; only for paired-end Illumina data (the R2 file).</li>
+              <li><code>SEQUENCING_PLATFORM</code> — required. The platform used for sequencing (e.g. Illumina, PacBio, ONT).</li>
             </ul>
-            <strong>Important:</strong> FASTQ file names must exactly match the actual uploaded file names (case-sensitive).
+            <strong>Important:</strong> File names must exactly match the actual uploaded file names (case-sensitive), and
+            each file's SHA256 checksum must be provided in the matching <code>FILE_1_SHA256SUM</code> /
+            <code>FILE_2_SHA256SUM</code> field.
           </li>
           <li>Ensure all <strong>mandatory metadata fields</strong> are included.</li>
         </ul>
@@ -78,77 +88,45 @@
     <!-- NGS Files Formatting Guide -->
     <h3 id="ngs-formatting-guide">📌 Example of NGS Files inputs</h3>
     <p>
-      The <code>"Illumina R1", "Illumina R2", "Nanopore", and "PacBio"</code> fields in the metadata file must follow a structured
-      format to indicate sequencing platforms and their corresponding files.
+      Unlike Gensurv, NUM-SAR metadata does not use separate fields per platform. Each sample row has two generic
+      file-name fields, <code>FILE_1_NAME</code> (required) and <code>FILE_2_NAME</code> (optional, paired-end R2
+      only), plus a <code>SEQUENCING_PLATFORM</code> field stating which technology was used.
     </p>
 
     <div class="table-responsive">
       <table class="table table-bordered">
         <thead class="thead-dark">
           <tr>
-            <th>Examples of accepted NGS inputs</th>
-            <th>Illumina R1</th>
-            <th>Illumina R2</th>
-            <th>Nanopore</th>
-            <th>PacBio</th>
+            <th>Example scenario</th>
+            <th>FILE_1_NAME</th>
+            <th>FILE_2_NAME</th>
+            <th>SEQUENCING_PLATFORM</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>Single Platform: <code>Paired-end Illumina</code></td>
+            <td>Paired-end Illumina</td>
             <td>sample_001_R1.fastq.gz</td>
-            <td>sample_001_R1.fastq.gz</td>
-            <td></td>
-            <td></td>
+            <td>sample_001_R2.fastq.gz</td>
+            <td>Illumina</td>
           </tr>
           <tr>
-            <td>Single Platform: <code>Single-end Illumina</code></td>
+            <td>Single-end Illumina</td>
             <td>sample_001_R1.fastq.gz</td>
             <td></td>
-            <td></td>
-            <td></td>
+            <td>Illumina</td>
           </tr>
           <tr>
-            <td>Single Platform: <code>Nanopore</code></td>
-            <td></td>
-            <td></td>
+            <td>Nanopore (ONT)</td>
             <td>sample_ont.fastq.gz</td>
             <td></td>
+            <td>ONT</td>
           </tr>
           <tr>
-            <td>Single Platform: <code>PacBio</code></td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td></td>
-          </tr>
-          <tr>
-            <td>Multiple Platforms: <code>Paired-end Illumina</code> and <code>Nanopore</code></td>
-            <td>sample_001_R1.fastq.gz</td>
-            <td>sample_001_R1.fastq.gz</td>
-            <td>sample_ont.fastq.gz</td>
-            <td></td>
-          </tr>
-          <tr>
-            <td>Multiple Platforms: <code>Paired-end Illumina</code> and <code>PacBio</code></td>
-            <td>sample_001_R1.fastq.gz</td>
-            <td>sample_001_R1.fastq.gz</td>
-            <td></td>
+            <td>PacBio</td>
             <td>sample_pacbio.fastq.gz</td>
-          </tr>
-          <tr>
-            <td>Multiple Platforms: <code>Nanopore</code> and <code>PacBio</code></td>
             <td></td>
-            <td></td>
-            <td>sample_ont.fastq.gz</td>
-            <td>sample_pacbio.fastq.gz</td>
-          </tr>
-          <tr>
-            <td>Multiple Platforms: <code>Paired-end Illumina</code>, <code>Nanopore</code> and <code>PacBio</code></td>
-            <td>sample_001_R1.fastq.gz</td>
-            <td>sample_001_R1.fastq.gz</td>
-            <td>sample_ont.fastq.gz</td>
-            <td>sample_pacbio.fastq.gz</td>
+            <td>PacBio</td>
           </tr>
         </tbody>
       </table>
@@ -194,12 +172,14 @@
         <ul>
           <li>One metadata file in CSV format, following the single upload metadata format.</li>
           <li>
-            At least one FASTQ file per sample, with filenames matching exactly as listed in the metadata file platform fields.
+            At least one FASTQ file per sample, with filenames matching exactly as listed in the metadata file's
+            <code>FILE_1_NAME</code> / <code>FILE_2_NAME</code> fields.
           </li>
         </ul>
       </li>
       <li>
-        The metadata file must specify the expected filenames for FASTQ files in the platform fields.
+        The metadata file must specify the expected filenames for FASTQ files in the <code>FILE_1_NAME</code> /
+        <code>FILE_2_NAME</code> fields.
       </li>
       <li>
         Uploaded FASTQ files must match the filenames listed in the metadata file.
@@ -275,9 +255,20 @@
     <!-- Legend -->
     <h3 id="sample-meta">Sample Metadata for Single Upload</h3>
     <p>
-      Please use the detailed metadata fields table below for the sample metadata format. The grouped metadata overview table was
-      removed so the page stays aligned with the current help-page format.
+      Please use the detailed metadata fields table below for the sample metadata format.
     </p>
+
+    <div class="mb-3">
+      <p><strong>Legend: Field Requirements</strong></p>
+      <div>
+        <span class="legend-box mandatory"></span>
+        <span>Mandatory Fields</span>
+      </div>
+      <div>
+        <span class="legend-box optional"></span>
+        <span>Optional Fields</span>
+      </div>
+    </div>
 
     <a href="/download_sample_csv/" class="btn btn-secondary">Download Sample CSV</a>
 
@@ -302,6 +293,12 @@
         <tbody>
           <tr class="table-primary">
             <td colspan="4"><strong>Sample and Isolate Information</strong></td>
+          </tr>
+          <tr>
+            <td>STATUS</td>
+            <td>Status of the test results.</td>
+            <td>Text. Example: final</td>
+            <td class="cell-mandatory">Mandatory</td>
           </tr>
           <tr>
             <td>LAB_SEQUENCE_ID</td>
@@ -351,7 +348,7 @@
           </tr>
           <tr>
             <td>DATE_OF_SAMPLING</td>
-            <td>Date on which the sample was collected from the host or environment. Example: 15-02-2025</td>
+            <td>Date on which the sample was collected from the host or environment. Example: 2025-02-15</td>
             <td>YYYY-MM-DD</td>
             <td class="cell-optional">Optional</td>
           </tr>
@@ -391,24 +388,6 @@
           </tr>
           <tr>
             <td>PRIME_DIAGNOSTIC_LAB.CITY</td>
-            <td>City code of the prime diagnostic lab.</td>
-            <td>Text</td>
-            <td class="cell-mandatory">Mandatory</td>
-          </tr>
-          <tr>
-            <td>PRIME_DIAGNOSTIC_LAB.POSTAL_CODE</td>
-            <td>Zip code of the prime diagnostic lab.</td>
-            <td>Number</td>
-            <td class="cell-mandatory">Mandatory</td>
-          </tr>
-          <tr>
-            <td>PRIME_DIAGNOSTIC_LAB.COUNTRY</td>
-            <td>Country of the prime diagnostic lab.</td>
-            <td>Text</td>
-            <td class="cell-mandatory">Mandatory</td>
-          </tr>
-          <tr>
-            <td>PRIME_DIAGNOSTIC_LAB.CITY</td>
             <td>City where the sample was collected. City code of the prime diagnostic lab.</td>
             <td>Text</td>
             <td class="cell-mandatory">Mandatory</td>
@@ -417,6 +396,12 @@
             <td>PRIME_DIAGNOSTIC_LAB.POSTAL_CODE</td>
             <td>Postal code where the sample was collected. Zip code of the prime diagnostic lab. Example: 13353</td>
             <td>Number</td>
+            <td class="cell-mandatory">Mandatory</td>
+          </tr>
+          <tr>
+            <td>PRIME_DIAGNOSTIC_LAB.COUNTRY</td>
+            <td>Country of the prime diagnostic lab.</td>
+            <td>Text</td>
             <td class="cell-mandatory">Mandatory</td>
           </tr>
           <tr>
@@ -434,12 +419,6 @@
           <tr>
             <td>Country</td>
             <td>Country where the sample was collected.</td>
-            <td>Text</td>
-            <td class="cell-mandatory">Mandatory</td>
-          </tr>
-          <tr>
-            <td>SEQUENCING_LAB.DEMIS_LAB_ID</td>
-            <td>DEMIS lab ID of sequencing lab where the biological sample was sequenced.</td>
             <td>Text</td>
             <td class="cell-mandatory">Mandatory</td>
           </tr>
@@ -593,7 +572,7 @@
             <td>FILE_2_SHA256SUM</td>
             <td>The SHA256SUM of the file provided.</td>
             <td>Text</td>
-            <td class="cell-mandatory">Mandatory</td>
+            <td class="cell-optional">Optional</td>
           </tr>
           <tr>
             <td>FILE_1_NAME</td>

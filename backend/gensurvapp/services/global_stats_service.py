@@ -5,7 +5,8 @@ from collections import Counter
 import pandas as pd
 from django.db import transaction
 
-from gensurvapp.models import GlobalStatistics, Submission, UploadedFile
+from gensurvapp.models import GlobalStatistics, Submission, UploadedFile, AnalysisResult
+from gensurvapp.services.bactopia_report_service import load_bactopia_report
 
 
 METADATA_FILE_TYPES = ("metadata_cleaned", "metadata_raw")
@@ -178,6 +179,24 @@ def recompute_global_statistics():
     global_stats.sir_counts = sir_counts
     global_stats.mic_numeric_values = mic_values
     global_stats.map_location_counts = map_location_counts
+    global_stats.qc_rank_counts = _compute_qc_rank_counts()
     global_stats.save()
 
     return global_stats
+
+
+def _compute_qc_rank_counts():
+    report_rows = load_bactopia_report()
+    counts = {"gold": 0, "silver": 0, "bronze": 0, "exclude": 0}
+
+    finished_sample_ids = (
+        AnalysisResult.objects.filter(status="finished")
+        .values_list("sample_id", flat=True)
+        .distinct()
+    )
+    for sample_id in finished_sample_ids:
+        rank = report_rows.get(sample_id, {}).get("rank")
+        if rank in counts:
+            counts[rank] += 1
+
+    return counts

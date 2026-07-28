@@ -58,6 +58,48 @@
 
       <div class="card mb-4">
         <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">QC Pass/Fail Overview</h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3 text-center mb-2">
+            <div class="col-6 col-md-3">
+              <div class="p-2">
+                <h3 class="mb-0">{{ qcPassRate === null ? "-" : `${qcPassRate}%` }}</h3>
+                <p class="mb-0 text-muted">Passed</p>
+              </div>
+            </div>
+          </div>
+          <div class="row g-3">
+            <div class="col-6 col-md-3">
+              <div class="text-center p-3 border rounded">
+                <h4 class="text-dark">{{ qcRankCounts.gold || 0 }}</h4>
+                <p class="mb-0">Gold</p>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="text-center p-3 border rounded">
+                <h4 class="text-dark">{{ qcRankCounts.silver || 0 }}</h4>
+                <p class="mb-0">Silver</p>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="text-center p-3 border rounded">
+                <h4 class="text-dark">{{ qcRankCounts.bronze || 0 }}</h4>
+                <p class="mb-0">Bronze</p>
+              </div>
+            </div>
+            <div class="col-6 col-md-3">
+              <div class="text-center p-3 border rounded">
+                <h4 class="text-dark">{{ qcRankCounts.exclude || 0 }}</h4>
+                <p class="mb-0">Excluded</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
           <h5 class="mb-0">Sequencing Platform Distribution</h5>
         </div>
         <div class="card-body">
@@ -104,7 +146,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, nextTick } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from "vue";
 import * as PlotlyModule from "plotly.js-dist-min";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -124,6 +166,14 @@ const mapContainerRef = ref(null);
 const micValues = ref([]);
 const germanyTotalCount = ref(0);
 const germanyLocations = ref([]);
+
+const qcRankCounts = computed(() => stats.value?.qc_rank_counts || {});
+const qcPassRate = computed(() => {
+  const c = qcRankCounts.value;
+  const total = (c.gold || 0) + (c.silver || 0) + (c.bronze || 0) + (c.exclude || 0);
+  if (total === 0) return null;
+  return Math.round((((c.gold || 0) + (c.silver || 0) + (c.bronze || 0)) / total) * 1000) / 10;
+});
 
 let germanyMap = null;
 let germanyMarkersLayer = null;

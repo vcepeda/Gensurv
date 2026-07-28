@@ -13,6 +13,10 @@ export async function logout() {
   await apiClient.post("/api/logout/");
 }
 
+export async function releaseHijack() {
+  await apiClient.post("/hijack/release/");
+}
+
 export async function me() {
   const res = await apiClient.get("/api/me/");
   return res.data;

@@ -95,6 +95,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'hijack.middleware.HijackUserMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     "corsheaders.middleware.CorsMiddleware", # Beacause CORS was added above
@@ -208,6 +209,10 @@ MEDIA_ROOT = '/mnt/storage/ahcepev1/Gensurv_data/media'
 MEDIA_URL = '/media/' 
 
 # MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Bactopia's `bactopia summary` report (rank/reason per sample), used by the
+# results dashboard to show which samples passed/failed QC cutoffs.
+BACTOPIA_REPORT_PATH = '/mnt/storage/ahcepev1/Bactopia-runs/runs/all_results/bactopia-report.tsv'
 
 
 # Default primary key field type
