@@ -110,5 +110,31 @@ created in step 5.
   sending (see the `runserver` console output) - `EMAIL_BACKEND` is set to
   the console backend on purpose, so no real email credentials are needed.
 - **No nginx/gunicorn** - `manage.py runserver` + Vite's dev server are
-  fine for testing the app itself. You only need those for a
-  production-style deployment, which this tutorial deliberately skips.
+  fine for testing the app itself. See the optional section below if you
+  specifically need to test nginx/gunicorn behavior too.
+
+## Optional: nginx + gunicorn (production-style) setup
+
+Only do this if you need to test something specific to the reverse-proxy
+setup itself (e.g. the large-upload timeout/buffering behavior) - for
+testing the app, steps 1-8 above are enough on their own.
+
+`nginx_reverse_proxy_template.conf` and `gunicorn_gensurv_template.service`
+in this folder are adapted from the real production configs - no SSL/
+certbot (not needed on a laptop that isn't exposed to the internet) and
+every server-specific path/username replaced with a placeholder.
+
+1. Build the frontend for real (gunicorn/nginx serve the built files, not
+   Vite's dev server): `cd frontend && npm run build`.
+2. Copy `gunicorn_gensurv_template.service`, fill in `<YOUR-USERNAME>`,
+   `<YOUR-GROUP>`, `<PATH-TO-GENSURV>`, and `<PATH-TO-CONDA-ENV>` (find the
+   latter with `mamba activate gensurv && which gunicorn`), then install it
+   as a systemd service (`sudo cp ... /etc/systemd/system/`,
+   `sudo systemctl daemon-reload`, `sudo systemctl start
+   gunicorn_gensurv_test`) - or just run the `ExecStart` command directly
+   in a terminal if you don't want a full systemd service for a quick test.
+3. Copy `nginx_reverse_proxy_template.conf`, fill in `<PATH-TO-GENSURV>`,
+   and enable it the same way you would any nginx site
+   (`sites-available`/`sites-enabled`, or `nginx -c` pointed straight at
+   the file for a one-off test).
+4. Visit `http://localhost:8080` (the port set in the template).

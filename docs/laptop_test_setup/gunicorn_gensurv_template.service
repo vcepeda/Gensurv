@@ -1,0 +1,26 @@
+# Template based on the real production gunicorn service
+# (/etc/systemd/system/gunicorn_gensurv.service). Replace <YOUR-USERNAME>,
+# <YOUR-GROUP>, <PATH-TO-GENSURV>, and <PATH-TO-CONDA-ENV> for your own
+# laptop before installing this as a systemd service.
+#
+# Only needed if you specifically want to test nginx/gunicorn behavior
+# itself - see TUTORIAL.md for the simpler runserver-based setup that's
+# enough for testing the app itself.
+
+[Unit]
+Description=Gunicorn for Gensurv Django Project (local test)
+After=network.target
+
+[Service]
+User=<YOUR-USERNAME>
+Group=<YOUR-GROUP>
+WorkingDirectory=<PATH-TO-GENSURV>/backend
+ExecStart=<PATH-TO-CONDA-ENV>/bin/gunicorn \
+          --access-logfile - \
+          --workers 3 \
+          --timeout 28800 \
+          --bind 127.0.0.1:8089 \
+          gensurv_project.wsgi:application
+
+[Install]
+WantedBy=multi-user.target
