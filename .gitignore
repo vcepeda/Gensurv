@@ -1,7 +1,7 @@
 .git
 .token
 token
-backend/gensurv_project/settings*.py
+backend/gensurv_project/settings.py
 *.pyc
 __pycache__/
 db.sqlite3
