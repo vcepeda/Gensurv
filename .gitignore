@@ -1,6 +1,8 @@
 .git
 .token
 token
+tmp
+backend/db.json
 backend/gensurv_project/settings.py
 *.pyc
 __pycache__/
