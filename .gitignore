@@ -4,6 +4,7 @@ token
 *.pyc
 __pycache__/
 db.sqlite3
+frontend/node_modules/.vite/
 /media/
 #/staticfiles/
 /.env

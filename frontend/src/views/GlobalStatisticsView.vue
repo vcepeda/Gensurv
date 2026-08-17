@@ -203,6 +203,62 @@ const germanStateCentroids = {
   thuringen: { lat: 50.9848, lon: 11.0299 },
 };
 
+// Common German state abbreviations seen in submission metadata (e.g. "NRW"),
+// resolved to the full-name keys used in germanStateCentroids above.
+const germanStateAbbreviations = {
+  bw: "badenwuerttemberg",
+  by: "bayern",
+  be: "berlin",
+  bb: "brandenburg",
+  hb: "bremen",
+  hh: "hamburg",
+  he: "hessen",
+  mv: "mecklenburgvorpommern",
+  ni: "niedersachsen",
+  nw: "nordrheinwestfalen",
+  nrw: "nordrheinwestfalen",
+  rp: "rheinlandpfalz",
+  sl: "saarland",
+  sn: "sachsen",
+  st: "sachsenanhalt",
+  sh: "schleswigholstein",
+  th: "thueringen",
+};
+
+// DEMIS/RKI reports anonymize patient location down to a 3-digit postal code
+// prefix (no city name) - see
+// https://wiki.gematik.de/spaces/DSKB/pages/659360260. These are Germany's
+// well-known first-digit postal code zones, used as a coarse fallback so
+// that data plots in roughly the right region instead of being scattered
+// across the whole country or dropped entirely.
+const germanPlzZoneCentroids = {
+  0: { lat: 51.05, lon: 13.2 }, // Sachsen / Thueringen (Leipzig/Dresden area)
+  1: { lat: 52.5, lon: 13.4 }, // Berlin / Brandenburg
+  2: { lat: 53.55, lon: 10.0 }, // Hamburg / Schleswig-Holstein / Bremen
+  3: { lat: 52.4, lon: 9.7 }, // Niedersachsen / Sachsen-Anhalt (Hannover area)
+  4: { lat: 51.4, lon: 6.9 }, // NRW west (Ruhrgebiet/Duesseldorf)
+  5: { lat: 50.8, lon: 7.0 }, // NRW south / Rheinland (Koeln/Bonn)
+  6: { lat: 50.1, lon: 8.7 }, // Hessen / Rheinland-Pfalz south (Frankfurt)
+  7: { lat: 48.8, lon: 9.2 }, // Baden-Wuerttemberg (Stuttgart)
+  8: { lat: 48.3, lon: 11.6 }, // Bayern south (Muenchen)
+  9: { lat: 49.6, lon: 11.0 }, // Bayern north / Sachsen east (Nuernberg)
+};
+
+// Human-readable name for each zone, used in the map popup so an anonymized
+// postal code shows an actual region instead of just echoing the digits back.
+const germanPlzZoneNames = {
+  0: "Sachsen / Thueringen",
+  1: "Berlin / Brandenburg",
+  2: "Hamburg / Schleswig-Holstein / Bremen",
+  3: "Niedersachsen / Sachsen-Anhalt",
+  4: "Nordrhein-Westfalen (west)",
+  5: "Nordrhein-Westfalen (south) / Rheinland",
+  6: "Hessen / Rheinland-Pfalz / Saarland",
+  7: "Baden-Wuerttemberg",
+  8: "Bayern (south)",
+  9: "Bayern (north) / Sachsen (east)",
+};
+
 function formatDate(iso) {
   if (!iso) return "N/A";
   const d = new Date(iso);
@@ -310,7 +366,39 @@ function normalizeStateKey(value) {
 
 function fallbackPointFromState(row) {
   const key = normalizeStateKey(row?.state || "");
-  return germanStateCentroids[key] || null;
+  if (!key) return null;
+  const resolvedKey = germanStateAbbreviations[key] || key;
+  return germanStateCentroids[resolvedKey] || null;
+}
+
+function isPlausiblePostalCode(value) {
+  return /^\d{2,5}$/.test(String(value || "").trim());
+}
+
+function extractPlzZoneDigit(value) {
+  const text = String(value || "").trim();
+  return isPlausiblePostalCode(text) ? text.charAt(0) : null;
+}
+
+function fallbackPointFromPlz(row) {
+  const digit = extractPlzZoneDigit(row?.postal_code);
+  return digit ? germanPlzZoneCentroids[digit] || null : null;
+}
+
+function plzRegionLabel(postalCode) {
+  const digit = extractPlzZoneDigit(postalCode);
+  const zoneName = digit ? germanPlzZoneNames[digit] : null;
+  return zoneName
+    ? `${zoneName} (approx., from anonymized postal code "${postalCode}")`
+    : `Postal code "${postalCode}" (anonymized)`;
+}
+
+function resolveBaseLocation(row) {
+  const stateBase = fallbackPointFromState(row);
+  if (stateBase) return { point: stateBase, precision: "state" };
+  const plzBase = fallbackPointFromPlz(row);
+  if (plzBase) return { point: plzBase, precision: "plz-zone" };
+  return { point: { lat: 51.1657, lon: 10.4515 }, precision: "unknown" };
 }
 
 function clamp(value, min, max) {
@@ -325,17 +413,21 @@ function hashString(input) {
   return hash;
 }
 
+const plzZoneRadius = { lat: 0.32, lon: 0.45 };
+const stateRadius = { lat: 0.18, lon: 0.28 };
+const unknownRadius = { lat: 0.55, lon: 0.75 };
+
 function estimatePointFromRow(row) {
-  const base = fallbackPointFromState(row) || { lat: 51.1657, lon: 10.4515 };
+  const { point: base, precision } = resolveBaseLocation(row);
   const key = buildGermanyLocationKey(row);
   const hashA = hashString(key);
   const hashB = hashString(`${key}#b`);
 
   const factor = 0.35 + (hashA % 100) / 160;
 
-  const hasStateBase = Boolean(fallbackPointFromState(row));
-  const latRadius = hasStateBase ? 0.18 : 0.55;
-  const lonRadius = hasStateBase ? 0.28 : 0.75;
+  const radius = precision === "state" ? stateRadius : precision === "plz-zone" ? plzZoneRadius : unknownRadius;
+  const latRadius = radius.lat;
+  const lonRadius = radius.lon;
   const angle = ((hashA % 360) * Math.PI) / 180;
 
   const lat = clamp(base.lat + Math.cos(angle) * latRadius * factor, germanyBounds[0][0], germanyBounds[1][0]);
@@ -431,8 +523,12 @@ async function renderGermanyMap() {
     placedPoints.push(point);
 
     const marker = L.marker([point.lat, point.lon], { icon: markerIcon(row.count) });
-    const locationLabel = [row.city, row.state].filter(Boolean).join(", ");
-    marker.bindPopup(`<strong>${locationLabel || "Germany"}</strong><br/>Count: ${row.count}`);
+    const locationLabel = row.city
+      ? [row.city, row.state].filter(Boolean).join(", ")
+      : row.postal_code
+      ? plzRegionLabel(row.postal_code)
+      : row.state || "Germany";
+    marker.bindPopup(`<strong>${locationLabel}</strong><br/>Count: ${row.count}`);
     marker.addTo(germanyMarkersLayer);
     bounds.push([point.lat, point.lon]);
   }
@@ -486,16 +582,33 @@ async function fetchGlobalStatistics() {
       if (!Number.isFinite(count) || count <= 0) return;
       if (isGermanyCountry(countryRaw)) {
         germanyCount += count;
-        const city = normalizeLocationPart(row?.city);
-        const state = normalizeLocationPart(row?.state);
-        if (!city) return;
 
-        const key = `${city.toLowerCase()}|${state.toLowerCase()}`;
+        const rawCity = normalizeLocationPart(row?.city);
+        const rawState = normalizeLocationPart(row?.state);
+        const rawPostal = normalizeLocationPart(row?.postal_code);
+
+        // A city/state field containing a bare number is usually a DEMIS-style
+        // anonymized 3-digit postal code entered into the wrong column, not a
+        // real place name - don't display it as if it were one.
+        const city = isPlausiblePostalCode(rawCity) ? "" : rawCity;
+        const state = isPlausiblePostalCode(rawState) ? "" : rawState;
+        const plzSource = [rawPostal, rawCity, rawState].find(isPlausiblePostalCode) || "";
+
+        const hasState = Boolean(fallbackPointFromState({ state: rawState }));
+        if (!city && !hasState && !plzSource) return; // nothing usable to place on the map
+
+        // Group by city+state when a real city is known (regardless of postal
+        // code, which can vary row-to-row for the same city - see Jena bug
+        // below); fall back to postal-code+state grouping only when there's
+        // no city, so distinct anonymized postal-code regions stay separate.
+        const key = city
+          ? `${city.toLowerCase()}|${(state || rawState).toLowerCase()}`
+          : `${plzSource}|${(state || rawState).toLowerCase()}`;
         if (!cityAggregate.has(key)) {
           cityAggregate.set(key, {
             city,
-            postal_code: "",
-            state,
+            postal_code: plzSource,
+            state: state || rawState,
             country: row?.country || "",
             count: 0,
           });
