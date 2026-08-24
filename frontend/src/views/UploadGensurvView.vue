@@ -6,8 +6,7 @@
     </div>
     
     <div v-else class="text-center mb-5">
-      <img src="../assets/gensurv-removebg-preview.png" alt="GenSurv logo" class="mb-3" style="max-height: 50px;">
-      <h1 class="section-title text-center">Upload Your Gensurv Data Files</h1>
+      <h1 class="section-title text-center">Upload Your GenSurv (NUM-SAR) Data Files</h1>
       <p class="lead">
         Choose between single sample upload or bulk upload options to upload your data.
       </p>

@@ -40,7 +40,7 @@ from gensurvapp.scripts.serializers import (
     CogdatUploadSerializer,
     AdminToggleAnalysisStatusSerializer,
 )
-from gensurvapp.utils import admin_only_upload_test, archive_file_to_submission_history
+from gensurvapp.utils import admin_only_upload_test, archive_file_to_submission_history, notify_admin_of_upload
 
 from gensurvapp.utils import (
     validate_and_save_csv,
@@ -112,6 +112,9 @@ class SingleUploadAPIView(APIView):
                     submission_type=submission_type,
                     dry_run=dry_run,
                 )
+
+            if not result.get("dry_run"):
+                notify_admin_of_upload(Submission.objects.get(id=result["submission_id"]))
 
             response_data = {
                 "success": True,
@@ -218,6 +221,9 @@ class BulkUploadAPIView(APIView):
                     dry_run=dry_run,
                 )
 
+            if not result.get("dry_run"):
+                notify_admin_of_upload(Submission.objects.get(id=result["submission_id"]))
+
             # Calculate timing metrics if client sent start time
             response_data = {
                 "success": True,
@@ -296,6 +302,9 @@ class CogdatUploadAPIView(APIView):
                 fastq_files=fastq_files,
                 dry_run=dry_run,
             )
+
+            if not result.get("dry_run"):
+                notify_admin_of_upload(Submission.objects.get(id=result["submission_id"]))
 
             response_data = {
                 "success": True,

@@ -150,6 +150,7 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick } from "vue";
 import * as PlotlyModule from "plotly.js-dist-min";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import bundeslaenderGeoJson from "../assets/bundeslaender.geo.json";
 import apiClient from "../api/client";
 
 const Plotly = PlotlyModule?.default || PlotlyModule;
@@ -177,6 +178,7 @@ const qcPassRate = computed(() => {
 
 let germanyMap = null;
 let germanyMarkersLayer = null;
+let germanyStatesLayer = null;
 const germanyBounds = [
   [47.2, 5.5],
   [55.2, 15.6],
@@ -201,62 +203,6 @@ const germanStateCentroids = {
   schleswigholstein: { lat: 54.2194, lon: 9.6961 },
   thueringen: { lat: 50.9848, lon: 11.0299 },
   thuringen: { lat: 50.9848, lon: 11.0299 },
-};
-
-// Common German state abbreviations seen in submission metadata (e.g. "NRW"),
-// resolved to the full-name keys used in germanStateCentroids above.
-const germanStateAbbreviations = {
-  bw: "badenwuerttemberg",
-  by: "bayern",
-  be: "berlin",
-  bb: "brandenburg",
-  hb: "bremen",
-  hh: "hamburg",
-  he: "hessen",
-  mv: "mecklenburgvorpommern",
-  ni: "niedersachsen",
-  nw: "nordrheinwestfalen",
-  nrw: "nordrheinwestfalen",
-  rp: "rheinlandpfalz",
-  sl: "saarland",
-  sn: "sachsen",
-  st: "sachsenanhalt",
-  sh: "schleswigholstein",
-  th: "thueringen",
-};
-
-// DEMIS/RKI reports anonymize patient location down to a 3-digit postal code
-// prefix (no city name) - see
-// https://wiki.gematik.de/spaces/DSKB/pages/659360260. These are Germany's
-// well-known first-digit postal code zones, used as a coarse fallback so
-// that data plots in roughly the right region instead of being scattered
-// across the whole country or dropped entirely.
-const germanPlzZoneCentroids = {
-  0: { lat: 51.05, lon: 13.2 }, // Sachsen / Thueringen (Leipzig/Dresden area)
-  1: { lat: 52.5, lon: 13.4 }, // Berlin / Brandenburg
-  2: { lat: 53.55, lon: 10.0 }, // Hamburg / Schleswig-Holstein / Bremen
-  3: { lat: 52.4, lon: 9.7 }, // Niedersachsen / Sachsen-Anhalt (Hannover area)
-  4: { lat: 51.4, lon: 6.9 }, // NRW west (Ruhrgebiet/Duesseldorf)
-  5: { lat: 50.8, lon: 7.0 }, // NRW south / Rheinland (Koeln/Bonn)
-  6: { lat: 50.1, lon: 8.7 }, // Hessen / Rheinland-Pfalz south (Frankfurt)
-  7: { lat: 48.8, lon: 9.2 }, // Baden-Wuerttemberg (Stuttgart)
-  8: { lat: 48.3, lon: 11.6 }, // Bayern south (Muenchen)
-  9: { lat: 49.6, lon: 11.0 }, // Bayern north / Sachsen east (Nuernberg)
-};
-
-// Human-readable name for each zone, used in the map popup so an anonymized
-// postal code shows an actual region instead of just echoing the digits back.
-const germanPlzZoneNames = {
-  0: "Sachsen / Thueringen",
-  1: "Berlin / Brandenburg",
-  2: "Hamburg / Schleswig-Holstein / Bremen",
-  3: "Niedersachsen / Sachsen-Anhalt",
-  4: "Nordrhein-Westfalen (west)",
-  5: "Nordrhein-Westfalen (south) / Rheinland",
-  6: "Hessen / Rheinland-Pfalz / Saarland",
-  7: "Baden-Wuerttemberg",
-  8: "Bayern (south)",
-  9: "Bayern (north) / Sachsen (east)",
 };
 
 function formatDate(iso) {
@@ -366,39 +312,7 @@ function normalizeStateKey(value) {
 
 function fallbackPointFromState(row) {
   const key = normalizeStateKey(row?.state || "");
-  if (!key) return null;
-  const resolvedKey = germanStateAbbreviations[key] || key;
-  return germanStateCentroids[resolvedKey] || null;
-}
-
-function isPlausiblePostalCode(value) {
-  return /^\d{2,5}$/.test(String(value || "").trim());
-}
-
-function extractPlzZoneDigit(value) {
-  const text = String(value || "").trim();
-  return isPlausiblePostalCode(text) ? text.charAt(0) : null;
-}
-
-function fallbackPointFromPlz(row) {
-  const digit = extractPlzZoneDigit(row?.postal_code);
-  return digit ? germanPlzZoneCentroids[digit] || null : null;
-}
-
-function plzRegionLabel(postalCode) {
-  const digit = extractPlzZoneDigit(postalCode);
-  const zoneName = digit ? germanPlzZoneNames[digit] : null;
-  return zoneName
-    ? `${zoneName} (approx., from anonymized postal code "${postalCode}")`
-    : `Postal code "${postalCode}" (anonymized)`;
-}
-
-function resolveBaseLocation(row) {
-  const stateBase = fallbackPointFromState(row);
-  if (stateBase) return { point: stateBase, precision: "state" };
-  const plzBase = fallbackPointFromPlz(row);
-  if (plzBase) return { point: plzBase, precision: "plz-zone" };
-  return { point: { lat: 51.1657, lon: 10.4515 }, precision: "unknown" };
+  return germanStateCentroids[key] || null;
 }
 
 function clamp(value, min, max) {
@@ -413,21 +327,17 @@ function hashString(input) {
   return hash;
 }
 
-const plzZoneRadius = { lat: 0.32, lon: 0.45 };
-const stateRadius = { lat: 0.18, lon: 0.28 };
-const unknownRadius = { lat: 0.55, lon: 0.75 };
-
 function estimatePointFromRow(row) {
-  const { point: base, precision } = resolveBaseLocation(row);
+  const base = fallbackPointFromState(row) || { lat: 51.1657, lon: 10.4515 };
   const key = buildGermanyLocationKey(row);
   const hashA = hashString(key);
   const hashB = hashString(`${key}#b`);
 
   const factor = 0.35 + (hashA % 100) / 160;
 
-  const radius = precision === "state" ? stateRadius : precision === "plz-zone" ? plzZoneRadius : unknownRadius;
-  const latRadius = radius.lat;
-  const lonRadius = radius.lon;
+  const hasStateBase = Boolean(fallbackPointFromState(row));
+  const latRadius = hasStateBase ? 0.18 : 0.55;
+  const lonRadius = hasStateBase ? 0.28 : 0.75;
   const angle = ((hashA % 360) * Math.PI) / 180;
 
   const lat = clamp(base.lat + Math.cos(angle) * latRadius * factor, germanyBounds[0][0], germanyBounds[1][0]);
@@ -446,6 +356,78 @@ function normalizeLocationPart(value) {
   return text;
 }
 
+const STATE_FILL_WITH_DATA = "#ffffff";
+const STATE_FILL_NO_DATA = "#f0f0f0";
+const STATE_FILL_HOVER = "#e4e8ec";
+const STATE_BORDER = "#c6cbd1";
+
+// Maps the many spellings that show up in uploaded metadata (umlaut vs. "ue",
+// English names, common abbreviations) onto the ISO codes the GeoJSON uses.
+// Note that normalizeStateKey strips umlauts rather than expanding them, so
+// "Thüringen" normalizes to "thuringen" while "Thueringen" stays "thueringen" -
+// both spellings need an entry here.
+const STATE_ALIAS_TO_ISO = {
+  badenwuerttemberg: "DE-BW", badenwurttemberg: "DE-BW", bw: "DE-BW",
+  bayern: "DE-BY", bavaria: "DE-BY", by: "DE-BY",
+  berlin: "DE-BE", be: "DE-BE",
+  brandenburg: "DE-BB", bb: "DE-BB",
+  bremen: "DE-HB", hb: "DE-HB",
+  hamburg: "DE-HH", hh: "DE-HH",
+  hessen: "DE-HE", hesse: "DE-HE", he: "DE-HE",
+  mecklenburgvorpommern: "DE-MV", mv: "DE-MV",
+  niedersachsen: "DE-NI", lowersaxony: "DE-NI", ni: "DE-NI",
+  nordrheinwestfalen: "DE-NW", northrhinewestphalia: "DE-NW", nrw: "DE-NW", nw: "DE-NW",
+  rheinlandpfalz: "DE-RP", rhinelandpalatinate: "DE-RP", rp: "DE-RP",
+  saarland: "DE-SL", sl: "DE-SL",
+  sachsen: "DE-SN", saxony: "DE-SN", sn: "DE-SN",
+  sachsenanhalt: "DE-ST", saxonyanhalt: "DE-ST", st: "DE-ST",
+  schleswigholstein: "DE-SH", sh: "DE-SH",
+  thueringen: "DE-TH", thuringen: "DE-TH", thuringia: "DE-TH", th: "DE-TH",
+};
+
+function stateIsoFromValue(value) {
+  return STATE_ALIAS_TO_ISO[normalizeStateKey(value)] || null;
+}
+
+function statesWithData() {
+  const codes = new Set();
+  for (const row of germanyLocations.value) {
+    const iso = stateIsoFromValue(row?.state || "");
+    if (iso) codes.add(iso);
+  }
+  return codes;
+}
+
+function stateStyle(feature, dataCodes) {
+  const iso = feature?.properties?.id || "";
+  return {
+    fillColor: dataCodes.has(iso) ? STATE_FILL_WITH_DATA : STATE_FILL_NO_DATA,
+    fillOpacity: 1,
+    color: STATE_BORDER,
+    weight: 1.2,
+  };
+}
+
+// Small states get a smaller label so the text doesn't overrun the shape.
+const SMALL_STATE_ISO_CODES = new Set(["DE-HB", "DE-HH", "DE-BE", "DE-SL"]);
+
+function bindStateNameLabel(feature, layer) {
+  const name = feature?.properties?.name;
+  if (!name) return;
+  const sizeClass = SMALL_STATE_ISO_CODES.has(feature?.properties?.id)
+    ? "state-name-label--small"
+    : "";
+  // Not permanent: Leaflet shows/hides this automatically on the layer's own
+  // mouseover/mouseout. Pins sit in a separate, higher pane, so hovering a
+  // pin never fires the polygon's mouseover - the state label stays hidden
+  // and only the pin's own tooltip shows.
+  layer.bindTooltip(name, {
+    direction: "center",
+    className: `state-name-label ${sizeClass}`.trim(),
+    interactive: false,
+  });
+}
+
 function ensureGermanyMap() {
   if (germanyMap || !mapContainerRef.value) return;
   germanyMap = L.map(mapContainerRef.value, {
@@ -457,14 +439,54 @@ function ensureGermanyMap() {
     maxBoundsViscosity: 1.0,
     worldCopyJump: false,
     zoomSnap: 0.25,
+    zoomControl: false,
+    attributionControl: false,
   });
 
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    maxZoom: 19,
-    attribution: "&copy; OpenStreetMap contributors",
+  L.control.zoom({ position: "bottomleft" }).addTo(germanyMap);
+
+  // No tile basemap on purpose - the Bundesland outlines are the whole map.
+  germanyStatesLayer = L.geoJSON(bundeslaenderGeoJson, {
+    style: (feature) => stateStyle(feature, statesWithData()),
+    onEachFeature: (feature, layer) => {
+      bindStateNameLabel(feature, layer);
+      layer.on({
+        mouseover: () => layer.setStyle({ fillColor: STATE_FILL_HOVER }),
+        mouseout: () => layer.setStyle(stateStyle(feature, statesWithData())),
+        click: (event) => {
+          // Keep the map-level click (which resets the view) from also firing.
+          L.DomEvent.stopPropagation(event);
+          germanyMap.fitBounds(layer.getBounds(), { padding: [24, 24] });
+        },
+      });
+    },
   }).addTo(germanyMap);
 
+  // Clicking empty space zooms back out to the whole country.
+  germanyMap.on("click", () => resetGermanyMapView());
+
   germanyMarkersLayer = L.layerGroup().addTo(germanyMap);
+}
+
+function resetGermanyMapView() {
+  if (!germanyMap || !germanyStatesLayer) return;
+  germanyMap.fitBounds(germanyStatesLayer.getBounds(), { padding: [16, 16] });
+}
+
+function refreshStateStyles() {
+  if (!germanyStatesLayer) return;
+  const dataKeys = statesWithData();
+  germanyStatesLayer.eachLayer((layer) => {
+    layer.setStyle(stateStyle(layer.feature, dataKeys));
+  });
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 function markerSize(count) {
@@ -479,6 +501,7 @@ function markerIcon(count) {
     iconSize: [size, size],
     iconAnchor: [size / 2, size],
     popupAnchor: [0, -size + 4],
+    tooltipAnchor: [0, -size + 4],
   });
 }
 
@@ -522,18 +545,26 @@ async function renderGermanyMap() {
     const point = spreadPointIfOverlapping(basePoint, placedPoints);
     placedPoints.push(point);
 
-    const marker = L.marker([point.lat, point.lon], { icon: markerIcon(row.count) });
-    const locationLabel = row.city
-      ? [row.city, row.state].filter(Boolean).join(", ")
-      : row.postal_code
-      ? plzRegionLabel(row.postal_code)
-      : row.state || "Germany";
-    marker.bindPopup(`<strong>${locationLabel}</strong><br/>Count: ${row.count}`);
+    const marker = L.marker([point.lat, point.lon], {
+      icon: markerIcon(row.count),
+      riseOnHover: true,
+    });
+    const locationLabel = [row.city, row.state].filter(Boolean).join(", ");
+    const sampleLabel = `${row.count} sample${row.count === 1 ? "" : "s"}`;
+    marker.bindTooltip(
+      `<strong>${escapeHtml(locationLabel || "Germany")}</strong><br/>${sampleLabel}`,
+      { direction: "top", opacity: 1 }
+    );
+    marker.on("click", (event) => L.DomEvent.stopPropagation(event));
     marker.addTo(germanyMarkersLayer);
     bounds.push([point.lat, point.lon]);
   }
 
-  if (bounds.length > 0) {
+  refreshStateStyles();
+
+  if (germanyStatesLayer) {
+    germanyMap.fitBounds(germanyStatesLayer.getBounds(), { padding: [16, 16] });
+  } else if (bounds.length > 0) {
     germanyMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 8 });
   } else {
     germanyMap.setView([51.1657, 10.4515], 6);
@@ -582,33 +613,16 @@ async function fetchGlobalStatistics() {
       if (!Number.isFinite(count) || count <= 0) return;
       if (isGermanyCountry(countryRaw)) {
         germanyCount += count;
+        const city = normalizeLocationPart(row?.city);
+        const state = normalizeLocationPart(row?.state);
+        if (!city) return;
 
-        const rawCity = normalizeLocationPart(row?.city);
-        const rawState = normalizeLocationPart(row?.state);
-        const rawPostal = normalizeLocationPart(row?.postal_code);
-
-        // A city/state field containing a bare number is usually a DEMIS-style
-        // anonymized 3-digit postal code entered into the wrong column, not a
-        // real place name - don't display it as if it were one.
-        const city = isPlausiblePostalCode(rawCity) ? "" : rawCity;
-        const state = isPlausiblePostalCode(rawState) ? "" : rawState;
-        const plzSource = [rawPostal, rawCity, rawState].find(isPlausiblePostalCode) || "";
-
-        const hasState = Boolean(fallbackPointFromState({ state: rawState }));
-        if (!city && !hasState && !plzSource) return; // nothing usable to place on the map
-
-        // Group by city+state when a real city is known (regardless of postal
-        // code, which can vary row-to-row for the same city - see Jena bug
-        // below); fall back to postal-code+state grouping only when there's
-        // no city, so distinct anonymized postal-code regions stay separate.
-        const key = city
-          ? `${city.toLowerCase()}|${(state || rawState).toLowerCase()}`
-          : `${plzSource}|${(state || rawState).toLowerCase()}`;
+        const key = `${city.toLowerCase()}|${state.toLowerCase()}`;
         if (!cityAggregate.has(key)) {
           cityAggregate.set(key, {
             city,
-            postal_code: plzSource,
-            state: state || rawState,
+            postal_code: "",
+            state,
             country: row?.country || "",
             count: 0,
           });
@@ -651,6 +665,7 @@ onBeforeUnmount(() => {
     germanyMap.remove();
     germanyMap = null;
     germanyMarkersLayer = null;
+    germanyStatesLayer = null;
   }
 });
 </script>
@@ -674,7 +689,17 @@ onBeforeUnmount(() => {
   height: 420px;
   border: 1px solid #ced4da;
   border-radius: 0.375rem;
-  background: #f8f9fa;
+  background: #ffffff;
+}
+
+/* No tile layer, so the container's default grey would show through. */
+:deep(.leaflet-container) {
+  background: #ffffff;
+}
+
+:deep(.leaflet-interactive) {
+  cursor: pointer;
+  transition: fill 0.12s ease-in-out;
 }
 
 :deep(.germany-pin-marker) {
@@ -690,6 +715,64 @@ onBeforeUnmount(() => {
   border-radius: 50% 50% 50% 0;
   transform: rotate(-45deg);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: background 0.12s ease-in-out;
+}
+
+:deep(.germany-pin-marker:hover .pin-drop) {
+  background: #6c757d;
+}
+
+:deep(.leaflet-tooltip) {
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #ced4da;
+  border-radius: 0.25rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  font-size: 0.8125rem;
+  color: #212529;
+}
+
+/* Permanent Bundesland name labels - plain text, no bubble, sits under the pins. */
+:deep(.leaflet-tooltip.state-name-label) {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #97a1ab;
+}
+
+:deep(.leaflet-tooltip.state-name-label--small) {
+  font-size: 0.55rem;
+}
+
+:deep(.leaflet-control-zoom) {
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+:deep(.leaflet-control-zoom a) {
+  width: 34px;
+  height: 34px;
+  line-height: 34px;
+  background: #343a40;
+  color: #ffffff;
+  border: none;
+  font-size: 1.1rem;
+}
+
+:deep(.leaflet-control-zoom a:hover) {
+  background: #23272b;
+  color: #ffffff;
+}
+
+:deep(.leaflet-control-zoom a.leaflet-disabled) {
+  background: #6c757d;
+  color: #dee2e6;
 }
 
 :deep(.germany-pin-marker .pin-drop::after) {

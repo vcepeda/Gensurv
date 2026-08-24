@@ -55,6 +55,7 @@
     <!-- Projects -->
     <div class="mb-5">
       <h3 class="text-center mb-4">{{ t.ourProjects }}</h3>
+      <p class="text-center text-muted">{{ t.projectsIntro }}</p>
       <div class="row g-4">
         <div v-for="project in projects" :key="project.name" class="col-md-4">
           <div class="card h-100 shadow-sm">
@@ -86,53 +87,6 @@
           </div>
         </div>
       </div>
-    </div>
-
-    <!-- Overview Section -->
-    <div class="mb-5">
-      <h3 id="overview">{{ t.gensurvOverviewTitle }}</h3>
-      <p v-for="(para, i) in t.gensurvOverviewParagraphs" :key="`gensurv-p-${i}`">{{ para }}</p>
-    </div>
-
-    <!-- NUM-SAR Overview Section -->
-    <div class="mb-5">
-      <h3 id="num-sar-overview">{{ t.numSarOverviewTitle }}</h3>
-      <p>{{ t.numSarOverviewParagraph1 }}</p>
-      <p class="mb-0">
-        {{ t.numSarOverviewParagraph2 }}
-        <a
-          href="https://www.netzwerk-universitaetsmedizin.de/plattformen/num-sar"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          https://www.netzwerk-universitaetsmedizin.de/plattformen/num-sar
-        </a>.
-      </p>
-    </div>
-
-    <!-- COGDAT Overview Section -->
-    <div class="mb-5">
-      <h3 id="cogdat-overview">{{ t.cogdatOverviewTitle }}</h3>
-      <p class="mb-0">
-        {{ t.cogdatOverviewParagraph }}
-        <a href="https://cogdat.de/" target="_blank" rel="noopener noreferrer">cogdat.de</a>.
-      </p>
-    </div>
-
-    <!-- NUM Section -->
-    <div class="mb-5">
-      <h3 id="num">{{ t.numSectionTitle }}</h3>
-      <p v-for="(para, i) in t.numSectionParagraphs" :key="`num-p-${i}`">{{ para }}</p>
-      <p class="mb-0">
-        {{ t.moreInfoAt }}
-        <a
-          href="https://www.netzwerk-universitaetsmedizin.de"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          https://www.netzwerk-universitaetsmedizin.de
-        </a>.
-      </p>
     </div>
 
     <!-- Publications Section -->
@@ -222,7 +176,6 @@
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import apiClient from "../api/client";
-import gensurvLogo from "../assets/gensurv-removebg-preview.png";
 import { useContentLanguageStore } from "@/stores/contentLanguage";
 
 const contentLang = useContentLanguageStore();
@@ -236,21 +189,20 @@ const statsError = ref("");
 
 const projectsEn = [
   {
-    name: "GenSurv",
-    logo: gensurvLogo,
+    name: "Carbapenem resistant Enterobacterales",
     description: "Genomic pathogen surveillance for bacterial AMR — sequencing, antibiotic resistance profiling, and outbreak detection across German university hospitals.",
     uploadTo: "/upload/gensurv",
     helpTo: "/help/gensurv",
   },
   {
-    name: "NUM-SAR",
-    description: "Sequencing-based antimicrobial resistance surveillance, with reporting aligned to RKI/DEMIS metadata requirements.",
+    name: "Norovirus",
+    description: "Sequencing-based viral surveillance, with reporting aligned to RKI/DEMIS metadata requirements.",
     uploadTo: "/upload/num-sar",
     helpTo: "/help/num-sar",
     aboutHref: "https://www.netzwerk-universitaetsmedizin.de/plattformen/num-sar",
   },
   {
-    name: "COGDAT",
+    name: "SARS-CoV-2",
     description: "SARS-CoV-2 genomic surveillance and lineage tracking, hosted on its own dedicated platform.",
     external: true,
     href: "https://cogdat.de/",
@@ -259,8 +211,7 @@ const projectsEn = [
 
 const projectsDe = [
   {
-    name: "GenSurv",
-    logo: gensurvLogo,
+    name: "GenSurv (NUM-SAR)",
     description: "Genomische Erregerüberwachung für bakterielle Antibiotikaresistenzen (AMR) — Sequenzierung, Resistenzprofilierung und Ausbruchserkennung an deutschen Universitätskliniken.",
     uploadTo: "/upload/gensurv",
     helpTo: "/help/gensurv",
@@ -474,32 +425,11 @@ const T_EN = {
   viewFullStatistics: "View Full Statistics",
   viewDashboard: "View Dashboard",
   ourProjects: "Our Projects",
+  projectsIntro: "We are generally designed to support all bacteria and viruses, but we have defined use cases for testing the data hub.",
   visit: (name) => `Visit ${name}`,
   uploadData: "Upload Data",
   learnMore: "Learn More",
   about: "About",
-  gensurvOverviewTitle: "Gensurv Overview",
-  gensurvOverviewParagraphs: [
-    "The Genomic pathogen surveillance in German initiative, also known as \"GenSurv,\" is a public health initiative aimed at monitoring and tracking the spread of infectious diseases in Germany using genomic sequencing technology. The goal of GenSurv is to detect and identify emerging pathogens and outbreaks early, which can help public health officials respond more quickly to contain and control the spread of disease.",
-    "GenSurv involves sequencing the genomes of infectious agents, such as viruses and bacteria, found in patient samples collected from hospitals, clinics, and other healthcare facilities across Germany. The genomic data is then analyzed to identify patterns of transmission and genetic changes in the pathogens over time. This information can help researchers and public health officials understand how the disease is spreading, identify potential sources of infection, and develop strategies to prevent and control outbreaks.",
-    "Overall, the goal of GenSurv is to improve public health preparedness and response to infectious disease outbreaks in Germany by using genomic sequencing technology to track and monitor the spread of pathogens in real-time.",
-    "GenSurv is a collaborative effort between several institutions and organizations in Germany, including the Robert Koch Institute (RKI), the National Reference Center for Tropical Pathogens at the Bernhard Nocht Institute for Tropical Medicine (BNITM), and several university and hospital partners.",
-  ],
-  numSarOverviewTitle: "NUM-SAR Overview",
-  numSarOverviewParagraph1:
-    "NUM-SAR (\"NUM-Plattform für Surveillance und Rapid Response\") is the Network of University Medicine's platform for pandemic preparedness and rapid response. It coordinates several specialized modules across German university hospitals — including pathogen diagnostics (PAKOP), evidence synthesis (ESVE), health-system monitoring (MuSE), a real-time dashboard, and GenSurv's genomic surveillance data hub — to detect pathogens early and support real-time decision-making.",
-  numSarOverviewParagraph2:
-    "This site handles NUM-SAR's sequencing-based antimicrobial resistance (AMR) surveillance data submission, with reporting aligned to RKI/DEMIS metadata requirements. More information on the full NUM-SAR platform can be found at:",
-  cogdatOverviewTitle: "COGDAT Overview",
-  cogdatOverviewParagraph:
-    "COGDAT supports SARS-CoV-2 genomic surveillance in Germany, covering consensus sequence lineage assignment (Pangolin) and reporting of sequencing data to public health and international repositories such as RKI and GISAID. COGDAT is run on its own dedicated platform at",
-  numSectionTitle: "The Network of University Medicine (NUM)",
-  numSectionParagraphs: [
-    "Within the NUM, all 36 German university hospitals are, for the first time, jointly carrying out large-scale interdisciplinary research projects. The network was launched in 2020 to coordinate COVID-19 research across all university hospitals. In the future, the NUM will research further diseases and involve as many partners as possible from medical science, health care, and society.",
-    "The NUM focuses in particular on clinical research, the results of which directly support patient care. One major area of NUM activity is the joint collection and use of complex medical research data. To this end, the network has set up research infrastructures with which it is helping to better prepare the German healthcare system for future pandemics and crises.",
-    "The NUM is funded by the German Federal Ministries of Education and Research and is coordinated by \"Charité – Universitätsmedizin Berlin.\"",
-  ],
-  moreInfoAt: "More information can be found at:",
   publications: "Publications",
   pipelines: "Bioinformatics Pipelines",
   collaboratorWebsites: "Collaborator Websites",
@@ -519,32 +449,11 @@ const T_DE = {
   viewFullStatistics: "Vollständige Statistiken ansehen",
   viewDashboard: "Dashboard ansehen",
   ourProjects: "Unsere Projekte",
+  projectsIntro: "Wir sind grundsätzlich für alle Bakterien und Viren ausgelegt, haben jedoch definierte Anwendungsfälle zum Testen des Data Hubs festgelegt.",
   visit: (name) => `${name} besuchen`,
   uploadData: "Daten hochladen",
   learnMore: "Mehr erfahren",
   about: "Über",
-  gensurvOverviewTitle: "GenSurv im Überblick",
-  gensurvOverviewParagraphs: [
-    "Die Initiative \"Genomische Erregerüberwachung in Deutschland\", bekannt als \"GenSurv\", ist eine Public-Health-Initiative, die mithilfe genomischer Sequenzierungstechnologien die Ausbreitung von Infektionskrankheiten in Deutschland überwacht und verfolgt. Ziel von GenSurv ist es, neu auftretende Erreger und Ausbrüche frühzeitig zu erkennen und zu identifizieren, damit Gesundheitsbehörden schneller reagieren können, um die Ausbreitung von Krankheiten einzudämmen und zu kontrollieren.",
-    "Im Rahmen von GenSurv werden die Genome von Erregern wie Viren und Bakterien sequenziert, die in Patientenproben aus Krankenhäusern, Kliniken und anderen Gesundheitseinrichtungen in ganz Deutschland gesammelt wurden. Die genomischen Daten werden anschließend analysiert, um Übertragungsmuster und genetische Veränderungen der Erreger im Zeitverlauf zu erkennen. Diese Informationen helfen Forschenden und Gesundheitsbehörden zu verstehen, wie sich eine Krankheit ausbreitet, mögliche Infektionsquellen zu identifizieren und Strategien zur Prävention und Eindämmung von Ausbrüchen zu entwickeln.",
-    "Insgesamt verfolgt GenSurv das Ziel, die Vorbereitung und Reaktionsfähigkeit des öffentlichen Gesundheitswesens in Deutschland auf Ausbrüche von Infektionskrankheiten zu verbessern, indem genomische Sequenzierungstechnologie zur Echtzeitverfolgung und -überwachung der Erregerausbreitung eingesetzt wird.",
-    "GenSurv ist ein Gemeinschaftsprojekt mehrerer Institutionen und Organisationen in Deutschland, darunter das Robert Koch-Institut (RKI), das Nationale Referenzzentrum für tropische Infektionserreger am Bernhard-Nocht-Institut für Tropenmedizin (BNITM) sowie mehrere universitäre und klinische Partner.",
-  ],
-  numSarOverviewTitle: "NUM-SAR im Überblick",
-  numSarOverviewParagraph1:
-    "NUM-SAR (\"NUM-Plattform für Surveillance und Rapid Response\") ist die Plattform des Netzwerks Universitätsmedizin für Pandemievorsorge und schnelle Reaktionsfähigkeit. Sie koordiniert mehrere spezialisierte Module an deutschen Universitätskliniken — darunter Erregerdiagnostik (PAKOP), Evidenzsynthese (ESVE), Gesundheitssystem-Monitoring (MuSE), ein Echtzeit-Dashboard sowie den genomischen Surveillance-Datenhub von GenSurv —, um Erreger frühzeitig zu erkennen und Entscheidungen in Echtzeit zu unterstützen.",
-  numSarOverviewParagraph2:
-    "Diese Website übernimmt die sequenzierungsbasierte Datenübermittlung zur Überwachung antimikrobieller Resistenzen (AMR) im Rahmen von NUM-SAR, mit Meldungen gemäß den Metadatenanforderungen von RKI/DEMIS. Weitere Informationen zur gesamten NUM-SAR-Plattform finden Sie unter:",
-  cogdatOverviewTitle: "COGDAT im Überblick",
-  cogdatOverviewParagraph:
-    "COGDAT unterstützt die genomische Überwachung von SARS-CoV-2 in Deutschland, einschließlich der Zuordnung von Konsensussequenzen zu Viruslinien (Pangolin) und der Meldung von Sequenzierungsdaten an Gesundheitsbehörden und internationale Datenbanken wie RKI und GISAID. COGDAT wird auf einer eigenen dedizierten Plattform betrieben unter",
-  numSectionTitle: "Das Netzwerk Universitätsmedizin (NUM)",
-  numSectionParagraphs: [
-    "Im Rahmen des NUM führen erstmals alle 36 deutschen Universitätskliniken gemeinsam groß angelegte interdisziplinäre Forschungsprojekte durch. Das Netzwerk wurde 2020 gegründet, um die COVID-19-Forschung an allen Universitätskliniken zu koordinieren. Künftig wird das NUM weitere Erkrankungen erforschen und dabei möglichst viele Partner aus Medizin, Gesundheitsversorgung und Gesellschaft einbeziehen.",
-    "Das NUM konzentriert sich insbesondere auf die klinische Forschung, deren Ergebnisse unmittelbar der Patientenversorgung zugutekommen. Ein wesentlicher Schwerpunkt der NUM-Aktivitäten ist die gemeinsame Erhebung und Nutzung komplexer medizinischer Forschungsdaten. Zu diesem Zweck hat das Netzwerk Forschungsinfrastrukturen aufgebaut, mit denen es dazu beiträgt, das deutsche Gesundheitssystem besser auf künftige Pandemien und Krisen vorzubereiten.",
-    "Das NUM wird vom Bundesministerium für Bildung und Forschung gefördert und von der \"Charité – Universitätsmedizin Berlin\" koordiniert.",
-  ],
-  moreInfoAt: "Weitere Informationen finden Sie unter:",
   publications: "Publikationen",
   pipelines: "Bioinformatik-Pipelines",
   collaboratorWebsites: "Websites der Kooperationspartner",
