@@ -163,7 +163,9 @@ def api_password_reset(request):
     if not form.is_valid():
         return JsonResponse({"ok": False, "errors": _json_form_errors(form)}, status=400)
 
-    frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:5173").rstrip("/")
+    #frontend_url = getattr(settings, "PASSWORD_RESET_URL", "http://localhost:5173").rstrip("/")
+    frontend_url = settings.PASSWORD_RESET_URL.rstrip("/")
+
     form.save(
         request=request,
         use_https=frontend_url.startswith("https://"),
