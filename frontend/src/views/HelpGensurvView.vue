@@ -2,10 +2,7 @@
   <div class="container-fluid">
     <!-- Page Header -->
     <div class="mb-5">
-      <div class="text-center mb-3">
-        <img src="../assets/gensurv-removebg-preview.png" alt="GenSurv logo" style="max-height: 50px;">
-      </div>
-      <h1 class="text-center">Help: Gensurv Data Format and Upload Instructions</h1>
+      <h1 class="text-center">Help: GenSurv (NUM-SAR) Data Format and Upload Instructions</h1>
       <p class="lead">
         This section provides detailed guidelines for uploading single or multiple samples, including the
         required formats for <strong>Sample Metadata</strong>, <strong>Antibiotic Testing Results</strong>,

@@ -1202,7 +1202,42 @@ def parse_metadata_antibiotics_info(metadata_path, target_sample_id=None):
     return {} if target_sample_id is None else None
 
 def admin_only_upload_test(user):
-    return user.is_superuser or user.is_staff  
+    return user.is_superuser or user.is_staff
+
+def notify_admin_of_upload(submission):
+    """
+    Emails the admin (same ADMINS/DEFAULT_FROM_EMAIL convention used for
+    deletion-request notifications) with who uploaded, when, and what was
+    uploaded. Best-effort: a mail failure shouldn't fail the upload itself.
+    """
+    from django.core.mail import send_mail
+
+    try:
+        admin_email = settings.ADMINS[0][1] if settings.ADMINS else settings.DEFAULT_FROM_EMAIL
+
+        files = submission.files.all()
+        file_type_counts = Counter(f.get_file_type_display() for f in files)
+        files_summary = ", ".join(f"{count} {label}" for label, count in file_type_counts.items()) or "no files recorded"
+
+        sample_ids = sorted({f.sample_id for f in files if f.sample_id})
+        samples_summary = ", ".join(sample_ids) if sample_ids else "N/A"
+
+        send_mail(
+            subject=f"📤 New Upload: Submission #{submission.id}",
+            message=(
+                f"User: {submission.user.email} ({submission.user.institution or 'no institution set'})\n"
+                f"Uploaded at: {submission.created_at}\n\n"
+                f"Submission ID: {submission.id}\n"
+                f"Type: {submission.get_submission_type_display()}\n"
+                f"Bulk upload: {submission.is_bulk_upload}\n"
+                f"Files: {files_summary}\n"
+                f"Sample IDs: {samples_summary}"
+            ),
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[admin_email],
+        )
+    except Exception:
+        logger.exception(f"Failed to send admin upload notification for submission {submission.id}")
 
 def archive_file_to_submission_history(submission, old_file_field, original_filename, file_type, resubmission_count):
     """

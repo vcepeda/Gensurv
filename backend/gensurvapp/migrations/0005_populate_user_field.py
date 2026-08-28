@@ -1,11 +1,10 @@
 from django.conf import settings
-from django.db import migrations, models
-import django.db.models.deletion
-from django.contrib.auth.models import User
+from django.db import migrations
 
 
 def set_default_user(apps, schema_editor):
     TodoItem = apps.get_model('gensurvapp', 'TodoItem')
+    User = apps.get_model(settings.AUTH_USER_MODEL)
     default_user = User.objects.first()  # Assuming the first user is the default
     if default_user:
         TodoItem.objects.filter(user__isnull=True).update(user=default_user)
@@ -18,11 +17,8 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.AddField(
-            model_name='todoitem',
-            name='user',
-            field=models.ForeignKey(default=1, on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL),
-            preserve_default=False,
-        ),
+        # NOTE: the AddField for TodoItem.user was dropped here - 0004_todoitem_user
+        # (a parallel branch merged in by 0006) already adds the same field, so
+        # keeping both raised "column already exists" on a fresh database.
         migrations.RunPython(set_default_user),
     ]
