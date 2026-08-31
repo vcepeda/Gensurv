@@ -270,7 +270,7 @@
       </div>
     </div>
 
-    <a href="/download_sample_csv/" class="btn btn-secondary">Download Sample CSV</a>
+    <a href="/static/num-sar_metadata.csv" class="btn btn-secondary">Download Sample CSV</a>
 
     <br /><br />
 
