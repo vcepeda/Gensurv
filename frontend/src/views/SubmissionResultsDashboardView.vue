@@ -56,17 +56,30 @@
         <table class="table table-bordered align-middle">
           <thead class="table-light">
             <tr>
+              <th class="expand-column"><span class="visually-hidden">Expand</span></th>
               <th>Sample ID</th>
               <th>Species</th>
               <th>Sequencing Technology</th>
               <th v-for="stage in stageOrder" :key="stage">{{ stageLabel(stage) }}</th>
               <th>Status</th>
               <th>Tree</th>
-              <th>Download</th>
+              <th>ZIP</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="sample in samples" :key="sample.sample_id">
+            <template v-for="sample in samples" :key="sample.sample_id">
+            <tr :class="{ 'table-active': isSampleExpanded(sample.sample_id) }">
+              <td class="text-center">
+                <button
+                  class="btn btn-sm btn-link p-0 expand-button"
+                  type="button"
+                  :aria-expanded="isSampleExpanded(sample.sample_id) ? 'true' : 'false'"
+                  :aria-label="`${isSampleExpanded(sample.sample_id) ? 'Collapse' : 'Expand'} ${sample.sample_id} analyses`"
+                  @click="toggleSample(sample.sample_id)"
+                >
+                  {{ isSampleExpanded(sample.sample_id) ? "▾" : "▸" }}
+                </button>
+              </td>
               <td>
                 <a :href="`/dashboard#submission-${submissionId}`" title="View submission in Dashboard">
                   {{ sample.sample_id }}
@@ -74,41 +87,15 @@
               </td>
               <td>{{ sample.species || "—" }}</td>
               <td>{{ sample.sequencing_technology || "—" }}</td>
-              <td v-for="stage in stageOrder" :key="stage" class="text-center" :class="{ 'merlin-cell': stage === 'merlin' }">
-                <template v-if="stage === 'merlin' && sample.stages.merlin?.available">
-                  <div class="d-flex align-items-center justify-content-center gap-1">
-                    <RouterLink
-                      :to="sampleResultsRoute(sample.sample_id, sample.stages.merlin.path)"
-                      class="badge text-bg-light border text-dark text-decoration-none"
-                      title="Jump to this stage's results"
-                    >
-                      Merlin
-                    </RouterLink>
-                    <button
-                      class="btn btn-sm btn-link p-0 merlin-toggle"
-                      type="button"
-                      :aria-expanded="isMerlinExpanded(sample.sample_id) ? 'true' : 'false'"
-                      title="Show tools run"
-                      @click="toggleMerlin(sample.sample_id)"
-                    >
-                      {{ isMerlinExpanded(sample.sample_id) ? "▾" : "▸" }}
-                    </button>
-                  </div>
-                  <div v-if="isMerlinExpanded(sample.sample_id)" class="merlin-tools small text-muted mt-1">
-                    {{ sample.stages.merlin.tool }}
-                  </div>
-                </template>
-                <template v-else-if="stage !== 'merlin'">
-                  <RouterLink
-                    v-if="sample.stages[stage]?.available"
-                    :to="sampleResultsRoute(sample.sample_id, sample.stages[stage].path)"
-                    class="badge text-bg-light border text-dark text-decoration-none"
-                    title="Jump to this stage's results"
-                  >
-                    {{ sample.stages[stage].tool || "✓" }}
-                  </RouterLink>
-                  <span v-else class="text-muted">&mdash;</span>
-                </template>
+              <td v-for="stage in stageOrder" :key="stage" class="text-center">
+                <RouterLink
+                  v-if="sample.stages[stage]?.available"
+                  :to="sampleResultsRoute(sample.sample_id, sample.stages[stage].path)"
+                  class="badge text-bg-light border text-dark text-decoration-none"
+                  title="Jump to this stage's results"
+                >
+                  {{ sample.stages[stage].tool || "✓" }}
+                </RouterLink>
                 <span v-else class="text-muted">&mdash;</span>
               </td>
               <td>
@@ -146,8 +133,54 @@
                 </span>
               </td>
             </tr>
+            <tr v-if="isSampleExpanded(sample.sample_id)" class="analysis-detail-row">
+              <td :colspan="stageOrder.length + 7">
+                <div class="analysis-panel">
+                  <div v-if="analysisState[sample.sample_id]?.loading" class="text-muted py-2">Loading analyses…</div>
+                  <div v-else-if="analysisState[sample.sample_id]?.error" class="alert alert-danger mb-0">
+                    {{ analysisState[sample.sample_id].error }}
+                  </div>
+                  <div v-else class="analysis-list">
+                    <section
+                      v-for="analysis in analysisState[sample.sample_id]?.analyses || []"
+                      :key="analysis.key"
+                      class="analysis-section"
+                    >
+                      <button
+                        class="analysis-heading"
+                        type="button"
+                        :aria-expanded="isAnalysisExpanded(sample.sample_id, analysis.key) ? 'true' : 'false'"
+                        @click="toggleAnalysis(sample.sample_id, analysis.key)"
+                      >
+                        <span class="analysis-caret">{{ isAnalysisExpanded(sample.sample_id, analysis.key) ? "▾" : "▸" }}</span>
+                        <strong>{{ analysis.title }}</strong>
+                        <code>{{ analysis.folder }}</code>
+                        <span class="ms-auto text-muted small">
+                          {{ analysis.status === "not_run" ? "Not run" : `${analysis.rows.length} result row${analysis.rows.length === 1 ? "" : "s"}` }}
+                        </span>
+                      </button>
+                      <div v-if="isAnalysisExpanded(sample.sample_id, analysis.key)" class="analysis-body">
+                        <p v-if="analysis.status === 'not_run'" class="text-muted fst-italic mb-0">Not run</p>
+                        <p v-else-if="!analysis.rows.length" class="text-muted mb-0">No matching results.</p>
+                        <div v-else class="analysis-table-scroll">
+                          <table class="table table-sm mb-0 analysis-table">
+                            <thead><tr><th v-for="column in analysis.columns" :key="column">{{ column }}</th></tr></thead>
+                            <tbody>
+                              <tr v-for="(row, rowIndex) in analysis.rows" :key="rowIndex">
+                                <td v-for="(value, columnIndex) in row" :key="columnIndex">{{ value || "—" }}</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </div>
+              </td>
+            </tr>
+            </template>
             <tr v-if="!samples.length">
-              <td :colspan="stageOrder.length + 6" class="text-center text-muted">
+              <td :colspan="stageOrder.length + 7" class="text-center text-muted">
                 No samples found for this submission yet.
               </td>
             </tr>
@@ -166,12 +199,13 @@ import apiClient from "@/api/client";
 const STAGE_LABELS = {
   gather: "Gather",
   qc: "QC",
+  gtdbtk: "GTDB-Tk",
   assembler: "Assembler",
   annotator: "Annotator",
   sketcher: "Sketcher",
+  snippy_st: "Snippy",
   mlst: "MLST",
-  amrfinderplus: "AMRFinderPlus",
-  merlin: "Merlin (Optional)",
+  plasmid_mge: "Plasmid MGE",
 };
 
 const RANK_BADGE_CLASSES = {
@@ -185,12 +219,13 @@ const RANK_BADGE_CLASSES = {
 const STAGE_DESCRIPTIONS = {
   gather: "Collects all the raw sequencing data in one place, downloading samples from ENA/SRA or NCBI as needed.",
   qc: "Performs quality control on the raw reads, assessing and filtering out poor-quality data.",
+  gtdbtk: "Assigns a standardized bacterial species classification.",
   assembler: "Assembles the quality-controlled reads into contigs.",
   annotator: "Annotates the assembled contigs, identifying genes, proteins, rRNA, and tRNA.",
   sketcher: "Creates genomic sketches of the contigs and queries reference databases for rapid taxonomic classification.",
+  snippy_st: "Compares related isolates using core-genome variants.",
   mlst: "Determines the sequence type of the assembly by scanning it against PubMLST typing schemes.",
-  amrfinderplus: "Identifies antibiotic resistance genes and mutations in the contigs and proteins.",
-  merlin: "Automatically runs species-specific typing tools based on the sample's taxonomic classification. Depending on species, this can include: Kleborate, ClermonTyping, ECTyper, ShigaTyper, ShigEiFinder, ShigaPass, and STECFinder.",
+  plasmid_mge: "Reports resistance genes found on plasmids and mobile genetic elements.",
 };
 
 const route = useRoute();
@@ -202,6 +237,51 @@ const stageOrder = ref([]);
 const samples = ref([]);
 const summary = ref({ total: 0, succeeded: 0, failed: 0, pending: 0 });
 const expandedMerlin = ref({});
+const expandedSamples = ref({});
+const analysisState = ref({});
+const expandedAnalyses = ref({});
+
+function isSampleExpanded(sampleId) {
+  return !!expandedSamples.value[sampleId];
+}
+
+async function toggleSample(sampleId) {
+  expandedSamples.value = { ...expandedSamples.value, [sampleId]: !isSampleExpanded(sampleId) };
+  if (expandedSamples.value[sampleId] && !analysisState.value[sampleId]) {
+    await fetchAnalyses(sampleId);
+  }
+}
+
+async function fetchAnalyses(sampleId) {
+  analysisState.value = { ...analysisState.value, [sampleId]: { loading: true, error: "", analyses: [] } };
+  try {
+    const res = await apiClient.get(
+      `/api/submissions/${submissionId.value}/samples/${encodeURIComponent(sampleId)}/analyses/`
+    );
+    analysisState.value = {
+      ...analysisState.value,
+      [sampleId]: { loading: false, error: "", analyses: res.data?.analyses || [] },
+    };
+  } catch (e) {
+    analysisState.value = {
+      ...analysisState.value,
+      [sampleId]: { loading: false, error: e?.response?.data?.detail || "Failed to load analyses.", analyses: [] },
+    };
+  }
+}
+
+function analysisExpansionKey(sampleId, analysisKey) {
+  return `${sampleId}::${analysisKey}`;
+}
+
+function isAnalysisExpanded(sampleId, analysisKey) {
+  return !!expandedAnalyses.value[analysisExpansionKey(sampleId, analysisKey)];
+}
+
+function toggleAnalysis(sampleId, analysisKey) {
+  const key = analysisExpansionKey(sampleId, analysisKey);
+  expandedAnalyses.value = { ...expandedAnalyses.value, [key]: !expandedAnalyses.value[key] };
+}
 
 function isMerlinExpanded(sampleId) {
   return !!expandedMerlin.value[sampleId];
@@ -295,5 +375,74 @@ onMounted(fetchDashboard);
 
 .stage-legend li {
   margin-bottom: 0.15rem;
+}
+
+.expand-column {
+  width: 2.5rem;
+}
+
+.expand-button {
+  color: #495057;
+  font-size: 1.1rem;
+  text-decoration: none;
+}
+
+.analysis-detail-row > td {
+  background: #f8f9fa;
+  padding: 0;
+}
+
+.analysis-panel {
+  padding: 0.5rem 1rem 1rem 2.75rem;
+}
+
+.analysis-section {
+  border-bottom: 1px solid #dee2e6;
+}
+
+.analysis-heading {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.65rem 0.25rem;
+  text-align: left;
+  width: 100%;
+}
+
+.analysis-heading code {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 0.25rem;
+  color: #6c757d;
+  font-size: 0.72rem;
+  padding: 0.1rem 0.3rem;
+}
+
+.analysis-caret {
+  color: #6c757d;
+  width: 0.75rem;
+}
+
+.analysis-body {
+  padding: 0 0.25rem 0.8rem 1.6rem;
+}
+
+.analysis-table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.analysis-table {
+  min-width: max-content;
+}
+
+.analysis-table th,
+.analysis-table td {
+  max-width: 34rem;
+  white-space: normal;
+  word-break: break-word;
 }
 </style>
