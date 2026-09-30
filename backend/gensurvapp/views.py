@@ -32,6 +32,7 @@ from gensurvapp.models import *
 from gensurvapp.services.dashboard_service import build_dashboard_rows_for_user
 from gensurvapp.services.global_stats_service import recompute_global_statistics, _get_submission_metadata_df, _normalize_text
 from gensurvapp.services.bactopia_report_service import load_bactopia_report
+from gensurvapp.services.results_view_service import build_sample_analyses
 from gensurvapp.scripts.serializers import (
     SubmissionDashboardRowSerializer,
     SubmissionSampleListSerializer,
@@ -716,7 +717,11 @@ def _resolve_result_root_candidates(raw_directory: str) -> list[Path]:
 
 
 def _directory_has_files(directory: Path) -> bool:
-    return any(entry.is_file() for entry in directory.rglob("*"))
+    # A Bactopia isolate is identified by its main/ directory. Avoid recursively
+    # walking very large analysis folders merely to validate the result root.
+    if (directory / "main").is_dir():
+        return True
+    return any(entry.is_file() for entry in directory.iterdir())
 
 
 def _discover_result_root_by_sample(sample_id: str) -> Path | None:
@@ -799,39 +804,50 @@ def _safe_result_file_path(root: Path, relative_path: str) -> Path:
 PIPELINE_STAGE_ORDER = [
     "gather",
     "qc",
+    "gtdbtk",
     "assembler",
     "annotator",
     "sketcher",
-    "mlst",  # Sequence Typing
-    "amrfinderplus",  # Antibiotic Resistance
-    "merlin",
+    "snippy_st",
+    "mlst",
+    "plasmid_mge",
 ]
 PIPELINE_STAGE_PRIORITY = {name: idx for idx, name in enumerate(PIPELINE_STAGE_ORDER)}
-OPTIONAL_PIPELINE_STAGES = {"merlin"}
+OPTIONAL_PIPELINE_STAGES = {"snippy_st", "plasmid_mge"}
+
+PIPELINE_STAGE_PATHS = {
+    "gather": "main/gather",
+    "qc": "main/qc",
+    "gtdbtk": "tools/gtdbtk",
+    "assembler": "main/assembler",
+    "annotator": "main/annotator",
+    "sketcher": "main/sketcher",
+    "snippy_st": "tools/snippy_st",
+    "mlst": "tools/mlst",
+    "plasmid_mge": "tools/plasmid_mge",
+}
 
 
 def _stage_dirs_for_sample(root: Path) -> dict[str, Path]:
     """
-    Finds each pipeline stage's output folder under a sample's result root,
-    regardless of nesting (stages live under both main/ and tools/).
+    Finds configured pipeline stage folders at their known Bactopia locations.
     """
-    found: dict[str, Path] = {}
-    for child in root.rglob("*"):
-        if not child.is_dir():
-            continue
-        name_lower = child.name.lower()
-        if name_lower in PIPELINE_STAGE_PRIORITY and name_lower not in found:
-            found[name_lower] = child
-    return found
+    return {
+        stage: path
+        for stage, relative_path in PIPELINE_STAGE_PATHS.items()
+        if (path := root / relative_path).is_dir()
+    }
 
 
 # Stages whose underlying tool is fixed by Bactopia's own design, not
 # dependent on platform/species - safe to label statically.
 STATIC_STAGE_TOOLS = {
     "gather": "FASTQ-Scan",
+    "gtdbtk": "GTDB-Tk",
     "sketcher": "Mash + Sourmash",
+    "snippy_st": "Snippy",
     "mlst": "MLST",
-    "amrfinderplus": "AMRFinderPlus",
+    "plasmid_mge": "Plasmid MGE",
 }
 
 # Merlin dispatches different species-specific typing tools per sample; these
@@ -1004,11 +1020,8 @@ class SubmissionResultsDashboardAPIView(APIView):
 
             stages = {}
             for stage in PIPELINE_STAGE_ORDER:
-                if stage == "merlin":
-                    stage_dir, tool = (_merlin_tools_for_sample(root) if root else (None, None))
-                else:
-                    stage_dir = stage_dirs.get(stage)
-                    tool = _detect_stage_tool(stage, stage_dir) if stage_dir else None
+                stage_dir = stage_dirs.get(stage)
+                tool = _detect_stage_tool(stage, stage_dir) if stage_dir else None
 
                 stages[stage] = {
                     "available": stage_dir is not None,
@@ -1046,6 +1059,29 @@ class SubmissionResultsDashboardAPIView(APIView):
                 "samples": samples_payload,
             }
         )
+
+
+class SubmissionSampleAnalysesAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, submission_id: int, sample_id: str):
+        submission = get_object_or_404(Submission, id=submission_id)
+        sample_exists = AnalysisResult.objects.filter(
+            submission=submission,
+            sample_id=sample_id,
+            status="finished",
+        ).exists()
+        if not sample_exists:
+            return Response({"detail": "Sample is not part of this submission's finished results."}, status=404)
+
+        try:
+            root = _get_result_root_for_sample(submission, sample_id)
+        except FileNotFoundError as exc:
+            return Response({"detail": str(exc)}, status=404)
+
+        payload = build_sample_analyses(root, sample_id)
+        payload["submission_id"] = submission.id
+        return Response(payload)
 
 
 class SubmissionSampleResultFilesAPIView(APIView):

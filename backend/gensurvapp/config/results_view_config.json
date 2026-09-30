@@ -1,0 +1,23 @@
+[
+  {"key":"assembly","folder":"main/assembler","title":"Assembly","file":"{sample}.tsv","header":true,"columns":["total_contig","total_contig_length","n50_contig_length"]},
+  {"key":"species","folder":"tools/gtdbtk","title":"Species","file":"{sample}.tsv","header":true,"columns":["classification"]},
+  {"key":"sequence_type","folder":"tools/mlst_gtdb","title":"Sequence type","file":"{sample}.tsv","header":true,"columns":["gtdb_species","scheme","ST"]},
+  {"key":"resistance_genes","folder":"tools/amrfinderplus","title":"Resistance genes","file":"{sample}.tsv","header":true,"columns":["Element symbol","Class","Subclass","% Coverage of reference","% Identity to reference"],"filter":{"column":"Type","equals":"AMR"}},
+  {"key":"point_mutations","folder":"tools/amrfinderplus_point","title":"Point mutations","file":"{sample}.tsv","header":true,"columns":["porin_status","quinolone_mutations","colistin_mutations"]},
+  {"key":"plasmid_mge","folder":"tools/plasmid_mge","title":"Plasmids and mobile elements","file":"amr_mge_location_overview.tsv","header":true,"columns":["Plasmid","AMR Name","MGE Name","MGE Type","AMR-MGE Relationship"]},
+  {"key":"related_isolates","folder":"tools/snippy_st","title":"Related isolates","file":"{sample}.tsv","header":true,"columns":["group","group_size","nearest_sample","nearest_snps","cluster_size_le20","cluster_members"]},
+  {"key":"prophage_regions","folder":"tools/phispy","title":"Prophage regions","file":"{sample}.tsv","header":false,"columns":["Region","Contig","Start","Stop"],"use_columns":[0,1,2,3]},
+  {"key":"core_genome_mlst","folder":"tools/chewbbaca","title":"Core genome MLST","file":"{sample}.tsv","header":true,"columns":["scheme","loci_called"],"handler":"chewbbaca"},
+  {"key":"plasmid_types","folder":"tools/pling","title":"Plasmid types","file":"{sample}.tsv","header":true,"columns":["plasmid","type"]},
+  {"key":"kleborate","folder":"tools/kleborate","title":"Klebsiella typing","file":"{sample}.txt","header":true,"columns":["enterobacterales__species__species","klebsiella_pneumo_complex__mlst__ST","klebsiella_pneumo_complex__virulence_score__virulence_score","klebsiella_pneumo_complex__resistance_score__resistance_score"],"applies_to":{"species":["Klebsiella pneumoniae","Klebsiella oxytoca","Klebsiella variicola","Klebsiella michiganensis"]}},
+  {"key":"sequence_type_original","folder":"tools/mlst","title":"Sequence type (original)","file":"{sample}.tsv","header":false,"columns":["File","Scheme","ST"],"use_columns":[0,1,2]},
+  {"key":"clermontyping","folder":"tools/clermontyping","title":"E. coli phylogroup","file":"{sample}.phylogroups.txt","header":true,"columns":["phylogroup","mash_group","detected_genes"],"applies_to":{"genera":["Escherichia"]}},
+  {"key":"ectyper","folder":"tools/ectyper","title":"E. coli serotype","file":"{sample}.tsv","header":true,"columns":["O-type","H-type","Serotype","QC","Warnings"],"applies_to":{"genera":["Escherichia"]}},
+  {"key":"shigatyper","folder":"tools/shigatyper","title":"ShigaTyper","file":"{sample}.tsv","header":true,"columns":["prediction","ipaB","notes"],"applies_to":{"genera":["Escherichia","Shigella"]}},
+  {"key":"shigeifinder","folder":"tools/shigeifinder","title":"ShigEiFinder","file":"{sample}.tsv","header":true,"columns":["ipaH","VIRULENCE_PLASMID","CLUSTER","SEROTYPE","O_ANTIGEN","H_ANTIGEN","NOTES"],"applies_to":{"genera":["Escherichia","Shigella"]}},
+  {"key":"shigapass","folder":"tools/shigapass","title":"ShigaPass","file":"{sample}.tsv","header":true,"columns":["ipaH","Predicted_Serotype","Predicted_FlexSerotype","Comments"],"applies_to":{"genera":["Escherichia","Shigella"]}},
+  {"key":"stecfinder","folder":"tools/stecfinder","title":"STECFinder","file":"{sample}.tsv","header":true,"columns":["Cluster","Serotype","Big10 serotype","O antigens","H antigens","stx type","ipaH presence","Notes"],"applies_to":{"genera":["Escherichia"]}},
+  {"key":"seqsero2","folder":"tools/seqsero2","title":"Salmonella serotype","file":"{sample}_result.tsv","header":true,"columns":["O antigen prediction","H1 antigen prediction(fliC)","H2 antigen prediction(fljB)","Predicted identification","Predicted antigenic profile","Predicted serotype","Note"],"applies_to":{"genera":["Salmonella"]}},
+  {"key":"genotyphi","folder":"tools/genotyphi","title":"Salmonella Typhi typing","file":"{sample}.csv","delimiter":",","header":true,"columns":["phylo_group","species","lineage","drug","susceptibility"],"applies_to":{"genera":["Salmonella"]}},
+  {"key":"pasty","folder":"tools/pasty","title":"Pseudomonas aeruginosa serotype","file":"{sample}.tsv","header":true,"columns":["type","targets","coverage","hits","comment"],"applies_to":{"species":["Pseudomonas aeruginosa"]}}
+]
