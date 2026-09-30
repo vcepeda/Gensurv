@@ -438,7 +438,7 @@
       </table>
     </div>
 
-    <a href="/download_sample_csv/" class="btn btn-secondary">Download Sample CSV</a>
+    <a href="/static/gensurv_metadata.csv" class="btn btn-secondary">Download Sample CSV</a>
 
     <br /><br />
 
