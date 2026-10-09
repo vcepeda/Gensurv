@@ -1,5 +1,5 @@
 """
-Upload service for NUM-SAR submissions (num-sar_bacteria and num-sar_virus).
+Upload service for NUM-SAR submissions (num-sar_norovirus).
 
 Kept separate from gensurvapp.services.upload_service because the NUM-SAR
 metadata schema diverges substantially from the Gensurv schema:

@@ -87,17 +87,35 @@
               </td>
               <td>{{ sample.species || "—" }}</td>
               <td>{{ sample.sequencing_technology || "—" }}</td>
-              <td v-for="stage in stageOrder" :key="stage" class="text-center">
-                <RouterLink
-                  v-if="sample.stages[stage]?.available"
-                  :to="sampleResultsRoute(sample.sample_id, sample.stages[stage].path)"
-                  class="badge text-bg-light border text-dark text-decoration-none"
-                  title="Jump to this stage's results"
-                >
-                  {{ sample.stages[stage].tool || "✓" }}
-                </RouterLink>
-                <span v-else class="text-muted">&mdash;</span>
+              <td v-for="stage in stageOrder" :key="stage" class="text-center merlin-cell">
+                <template v-if="stage === 'merlin'">
+                  <div v-if="sample.stages.merlin?.tools?.length" class="merlin-tools">
+                    <RouterLink
+                      v-for="t in sample.stages.merlin.tools"
+                      :key="t.name"
+                      :to="sampleResultsRoute(sample.sample_id, t.path)"
+                      class="badge text-bg-light border text-dark text-decoration-none"
+                      title="Jump to this tool's results"
+                    >
+                      {{ t.name }}
+                    </RouterLink>
+                  </div>
+                  <span v-else class="text-muted">&mdash;</span>
+                </template>
+                <template v-else>
+                  <RouterLink
+                    v-if="sample.stages[stage]?.available"
+                    :to="sampleResultsRoute(sample.sample_id, sample.stages[stage].path)"
+                    class="badge text-bg-light border text-dark text-decoration-none"
+                    title="Jump to this stage's results"
+                  >
+                    {{ sample.stages[stage].tool || "✓" }}
+                  </RouterLink>
+                  <span v-else class="text-muted">&mdash;</span>
+                </template>
               </td>
+
+              
               <td>
                 <span
                   v-if="sample.rank"
@@ -362,10 +380,12 @@ onMounted(fetchDashboard);
 
 .merlin-tools {
   max-width: 220px;
-  white-space: normal;
-  word-break: break-word;
   margin-left: auto;
   margin-right: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  justify-content: center;
 }
 
 .stage-legend summary {

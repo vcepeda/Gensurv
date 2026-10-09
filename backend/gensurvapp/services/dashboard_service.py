@@ -1,5 +1,5 @@
 from collections import defaultdict
-from django.db.models import Prefetch, Count, Case, When, Value, IntegerField
+from django.db.models import Prefetch, Count, Case, When, Value, IntegerField, Q
 from gensurvapp.models import Submission, UploadedFile, FileHistory, AnalysisResult
 from gensurvapp.utils import (
     cached_parse_metadata_sample_ids,
@@ -24,10 +24,16 @@ def build_dashboard_rows_for_user(user, scope: str = "all"):
     elif scope == "others":
         submissions = base_qs.exclude(user=user).order_by("-created_at")
     else:
-        # "all": every submission, the user's own ones sorted first
-        submissions = base_qs.order_by(
-            Case(When(user=user, then=Value(0)), default=Value(1), output_field=IntegerField()),
-            "-created_at",
+        # "all": every real (non-admin-test) submission, plus the viewer's own
+        # submissions regardless of role, the user's own ones sorted first
+        submissions = (
+            base_qs.exclude(
+                (Q(user__is_superuser=True) | Q(user__is_staff=True)) & ~Q(user=user)
+            )
+            .order_by(
+                Case(When(user=user, then=Value(0)), default=Value(1), output_field=IntegerField()),
+                "-created_at",
+            )
         )
 
     report_rows = load_bactopia_report()

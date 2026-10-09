@@ -10,6 +10,36 @@
   --num-slate-dark: #3a4145;
 }
 
+/* NUM brand color tints — approved percentages: 20/40/60/80/100 */
+
+/* AquaVital #42D1B8 → rgb(66, 209, 184) */
+.bg-num-aqua-20  { background-color: rgba(66, 209, 184, 0.2); }
+.bg-num-aqua-40  { background-color: rgba(66, 209, 184, 0.4); }
+.bg-num-aqua-60  { background-color: rgba(66, 209, 184, 0.6); }
+.bg-num-aqua-80  { background-color: rgba(66, 209, 184, 0.8); }
+.bg-num-aqua-100 { background-color: var(--num-aqua); }
+
+/* DeepSlate #485156 → rgb(72, 81, 86) */
+.bg-num-slate-20  { background-color: rgba(72, 81, 86, 0.2); }
+.bg-num-slate-40  { background-color: rgba(72, 81, 86, 0.4); }
+.bg-num-slate-60  { background-color: rgba(72, 81, 86, 0.6); }
+.bg-num-slate-80  { background-color: rgba(72, 81, 86, 0.8); }
+.bg-num-slate-100 { background-color: var(--num-slate); }
+
+/* RosePulse #EA5167 → rgb(234, 81, 103) */
+.bg-num-rose-20  { background-color: rgba(234, 81, 103, 0.2); }
+.bg-num-rose-40  { background-color: rgba(234, 81, 103, 0.4); }
+.bg-num-rose-60  { background-color: rgba(234, 81, 103, 0.6); }
+.bg-num-rose-80  { background-color: rgba(234, 81, 103, 0.8); }
+.bg-num-rose-100 { background-color: var(--num-rose); }
+
+/* SunshineGold #FFCC00 → rgb(255, 204, 0) */
+.bg-num-gold-20  { background-color: rgba(255, 204, 0, 0.2); }
+.bg-num-gold-40  { background-color: rgba(255, 204, 0, 0.4); }
+.bg-num-gold-60  { background-color: rgba(255, 204, 0, 0.6); }
+.bg-num-gold-80  { background-color: rgba(255, 204, 0, 0.8); }
+.bg-num-gold-100 { background-color: var(--num-gold); }
+
 body {
   font-family: "Montserrat", "Helvetica Neue", Arial, sans-serif;
 }

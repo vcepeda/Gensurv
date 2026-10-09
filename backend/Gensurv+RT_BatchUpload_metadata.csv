@@ -1,0 +1,12 @@
+Sample Identifier;Isolate Species;Subtype;Collection Date;Sampling Strategy;Sample Source;Collection Method;City;Postal Code;County;State;Country;Lab Identifier;Sex;Age Group;Country of Putative Exposure;Sequencing Platform;Sequencing Type;Library Preparation Kit;Sequencing Chemistry;PacBio;Antibiotics File;Antibiotics Info
+NRZ89179RV;Klebsiella pneumoniae;;01.01.2000;;;;;;;NRW;Germany;IFH;;;Germany;PacBio;whole genome sequencing;;PacBio chemistry;NRZ89179RV-KP-PB1.fastq.gz;NRZ89179RV_antibiotics.csv;
+NRZ93617RV;Klebsiella pneumoniae;;01.01.2000;;;;;;;NRW;Germany;IFH;;;Germany;PacBio;whole genome sequencing;;PacBio chemistry;NRZ93617RV-KP-PB1.fastq.gz;NRZ93617RV_antibiotics.csv;
+NRZ94497RV;Klebsiella pneumoniae;;01.01.2000;;;;;;;NRW;Germany;IFH;;;Germany;PacBio;whole genome sequencing;;PacBio chemistry;NRZ94497RV-KP-PB1.fastq.gz;NRZ94497RV_antibiotics.csv;
+NRZ95265RV;Klebsiella pneumoniae;;01.01.2000;;;;;;;NRW;Germany;IFH;;;Germany;PacBio;whole genome sequencing;;PacBio chemistry;NRZ95265RV-KP-PB1.fastq.gz;NRZ95265RV_antibiotics.csv;
+NRZ97111RV;Escherichia coli;;01.01.2000;;;;;;;NRW;Germany;IFH;;;Germany;PacBio;whole genome sequencing;;PacBio chemistry;NRZ97111RV-EC1-PB1.fastq.gz;NRZ97111RV_antibiotics.csv;
+NRZ97177RV;Klebsiella pneumoniae;;01.01.2000;;;;;;;NRW;Germany;IFH;;;Germany;PacBio;whole genome sequencing;;PacBio chemistry;NRZ97177RV-KP-PB1.fastq.gz;NRZ97177RV_antibiotics.csv;
+NRZ97606RV;Klebsiella pneumoniae;;01.01.2000;;;;;;;NRW;Germany;IFH;;;Germany;PacBio;whole genome sequencing;;PacBio chemistry;NRZ97606RV-KP-PB1.fastq.gz;NRZ97606RV_antibiotics.csv;
+NRZ97819RV;Klebsiella pneumoniae;;01.01.2000;;;;;;;NRW;Germany;IFH;;;Germany;PacBio;whole genome sequencing;;PacBio chemistry;NRZ97819RV-KP-PB1.fastq.gz;NRZ97819RV_antibiotics.csv;
+NRZ99374aRV;Klebsiella pneumoniae;;01.01.2000;;;;;;;NRW;Germany;IFH;;;Germany;PacBio;whole genome sequencing;;PacBio chemistry;NRZ99374aRV-KP-PB1.fastq.gz;NRZ99374aRV_antibiotics.csv;
+NRZ99375RV;Klebsiella pneumoniae;;01.01.2000;;;;;;;NRW;Germany;IFH;;;Germany;PacBio;whole genome sequencing;;PacBio chemistry;NRZ99375RV-KP-PB1.fastq.gz;NRZ99375RV_antibiotics.csv;
+NRZ99715RV;Klebsiella pneumoniae;;01.01.2000;;;;;;;NRW;Germany;IFH;;;Germany;PacBio;whole genome sequencing;;PacBio chemistry;NRZ99715RV-KP-PB1.fastq.gz;NRZ99715RV_antibiotics.csv;

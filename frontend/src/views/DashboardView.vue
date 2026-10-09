@@ -13,41 +13,16 @@
         <p class="lead text-center mb-2">
           View uploaded data, including metadata, antibiotic files, FASTQ files, and their analysis statuses.
         </p>
-
-        <div class="scope-toggle-wrap">
-          <div class="btn-group" role="group" aria-label="Dashboard scope toggle">
-            <input
-              id="scope-all"
-              v-model="selectedScope"
-              class="btn-check"
-              type="radio"
-              name="dashboard-scope"
-              value="all"
-              autocomplete="off"
-            />
-            <label class="btn btn-outline-primary btn-sm" for="scope-all">All submissions</label>
-
-            <input
-              id="scope-mine"
-              v-model="selectedScope"
-              class="btn-check"
-              type="radio"
-              name="dashboard-scope"
-              value="mine"
-              autocomplete="off"
-            />
-            <label class="btn btn-outline-primary btn-sm" for="scope-mine">Your submissions</label>
-
-            <input
-              id="scope-others"
-              v-model="selectedScope"
-              class="btn-check"
-              type="radio"
-              name="dashboard-scope"
-              value="others"
-              autocomplete="off"
-            />
-            <label class="btn btn-outline-primary btn-sm" for="scope-others">Other's submissions</label>
+        <div class="d-flex gap-3 align-items-center flex-wrap mt-3">
+          <select v-model="typeFilter" class="form-select form-select-sm w-auto">
+            <option value="all">All types</option>
+            <option value="Gensurv">Gensurv</option>
+            <option value="NUM-SAR">NUM-SAR</option>
+            <option value="COGDAT">COGDAT</option>
+          </select>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="own-only-filter" v-model="ownOnlyFilter" />
+            <label class="form-check-label" for="own-only-filter">My submissions only</label>
           </div>
         </div>
       </div>
@@ -55,7 +30,7 @@
       <div class="card shadow-sm dashboard-card">
         <div class="card-header d-flex justify-content-between align-items-center">
           <span class="fw-semibold">Submission Details</span>
-          <button class="btn btn-outline-secondary btn-sm" @click="fetchRows" :disabled="loading">
+          <button class="btn bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle btn-sm" @click="fetchRows" :disabled="loading">
             Refresh
           </button>
         </div>
@@ -68,9 +43,9 @@
               {{ selectedScope === "others" ? "No other submissions available" : "No submissions available" }}
             </h5>
             <div v-if="selectedScope !== 'others'" class="d-flex justify-content-center gap-2 flex-wrap">
-              <router-link to="/upload/gensurv" class="btn btn-primary">Upload Gensurv</router-link>
-              <router-link to="/upload/num-sar" class="btn btn-outline-primary">Upload NUM-SAR</router-link>
-              <router-link to="/upload/cogdat" class="btn btn-outline-primary">Upload COGDAT</router-link>
+              <router-link to="/upload/gensurv" class="btn bg-primary-subtle text-primary-emphasis border border-primary-subtle">Upload Gensurv</router-link>
+              <router-link to="/upload/num-sar" class="btn bg-primary-subtle text-primary-emphasis border border-primary-subtle">Upload NUM-SAR</router-link>
+              <router-link to="/upload/cogdat" class="btn bg-primary-subtle text-primary-emphasis border border-primary-subtle">Upload COGDAT</router-link>
             </div>
           </div>
 
@@ -78,12 +53,12 @@
             <table class="table table-sm table-hover align-middle compact-table">
               <thead class="table-light sticky-header">
                 <tr>
-                  <th>Username</th>
                   <th>Institution</th>
                   <th>Submission</th>
+                  <th>Submission Type</th>
                   <th>Created</th>
                   <th>Metadata File</th>
-                  <th>QC Status</th>
+                  <th>Samples Passed</th>
                   <th class="actions-col">Actions</th>
                 </tr>
               </thead>
@@ -92,15 +67,18 @@
                   v-for="row in enrichedRows"
                   :key="row.submission_id"
                   :id="`submission-${row.submission_id}`"
+                  :class="{ 'own-row': row.is_own }"
                 >
-                  <td class="text-nowrap">{{ row.username || "-" }}</td>
-
                   <td>
                     <span class="institution-text">{{ row.institution || "-" }}</span>
                   </td>
-
+                    <td>
+                      <div class="fw-semibold" :title="row.username">
+                        #{{ row.submission_id }}
+                        <span v-if="row.is_own" class="badge text-bg-primary you-pill">YOU</span>
+                      </div>
+                    </td>
                   <td>
-                    <div class="fw-semibold">#{{ row.submission_id }}</div>
                     <span class="badge" :class="submissionTypeBadgeClass(row)">
                       {{ submissionTypeLabel(row) }}
                     </span>
@@ -145,7 +123,7 @@
                       <div class="metadata-actions">
                         <button
                           v-if="getWarningCount(row.metadata?.warnings) > 0"
-                          class="btn btn-warning btn-sm metadata-chip"
+                          class="btn bg-warning-subtle text-warning-emphasis border border-warning-subtle btn-sm metadata-chip"
                           type="button"
                           title="Show metadata warnings"
                           aria-label="Show metadata warnings"
@@ -155,7 +133,7 @@
                         </button>
                         <RouterLink
                           v-if="!isArchiveSubmission(row)"
-                          class="btn btn-info btn-sm metadata-chip"
+                          class="btn bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle btn-sm metadata-chip"
                           :to="{ name: 'metadata_statistics', params: { submissionId: row.submission_id } }"
                         >
                           View Statistics
@@ -179,7 +157,7 @@
 
                   <td>
                     <div class="d-flex flex-nowrap gap-2 action-group">
-                      <button class="btn btn-outline-primary btn-sm" @click="openSubmissionDetails(row)">
+                      <button class="btn bg-secondary-subtle text-secondary-emphasis border border-secondary-subtle btn-sm" @click="openSubmissionDetails(row)">
                         View Submission
                       </button>
                       <RouterLink
@@ -220,7 +198,7 @@
         </div>
         <div v-if="activeWarning.showResubmit && activeWarning.canResubmit" class="mb-3">
           <RouterLink
-            class="btn btn-warning btn-sm"
+            class="btn bg-warning-subtle text-warning-emphasis border border-warning-subtle btn-sm"
             :to="{
               name: 'resubmit',
               params: { submissionId: activeWarning.submissionId, fileType: 'metadata' },
@@ -244,9 +222,21 @@
           <button class="btn-close" @click="closeSubmissionDetails" aria-label="Close"></button>
         </div>
 
-        <section class="drawer-section">
+        <section class="drawer-section" v-if="selectedSubmission.submission_type === 'gensurv' || selectedSubmission.submission_type === 'bacteria'">
           <h6>Antibiotics Files</h6>
+
+          <button
+            v-if="getWarningCount(selectedSubmission.antibiotics?.warnings) > 0"
+            class="btn bg-warning-subtle text-warning-emphasis border border-warning-subtle btn-sm mb-2"
+            type="button"
+            title="Show antibiotics warnings"
+            aria-label="Show antibiotics warnings"
+            @click="openWarningModal(selectedSubmission, 'Antibiotics Warning', selectedSubmission.antibiotics?.warnings, false)"
+          >
+            Antibiotics Warning
+          </button>
           <template v-if="selectedSubmission.antibiotics?.files?.length">
+
             <div
               v-for="f in selectedSubmission.antibiotics.files"
               :key="f.sample_id + (f.raw_url || '')"
@@ -266,6 +256,16 @@
 
         <section class="drawer-section">
           <h6>FASTQ Files</h6>
+          <button
+            v-if="getWarningCount(selectedSubmission.fastq?.extra_warning) > 0"
+            class="btn bg-warning-subtle text-warning-emphasis border border-warning-subtle btn-sm mb-2"
+            type="button"
+            title="Show FASTQ warnings"
+            aria-label="Show FASTQ warnings"
+            @click="openWarningModal(selectedSubmission, 'FASTQ Warning', selectedSubmission.fastq?.extra_warning, false)"
+          >
+            FASTQ Warning
+          </button>
           <template v-if="selectedSubmission.fastq?.grouped && Object.keys(selectedSubmission.fastq.grouped).length">
             <div v-for="(files, sid) in selectedSubmission.fastq.grouped" :key="sid" class="small mb-2">
               <div class="fw-semibold">{{ sid }}</div>
@@ -287,6 +287,8 @@ import apiClient from "../api/client/";
 import { useAuthStore } from "@/stores/auth";
 
 const rows = ref([]);
+const typeFilter = ref("all");
+const ownOnlyFilter = ref(false);
 const loading = ref(false);
 const error = ref("");
 const selectedSubmission = ref(null);
@@ -300,11 +302,17 @@ function canManageRow(row) {
 }
 
 const enrichedRows = computed(() => {
-  return rows.value.map((row) => {
-    return {
-      ...row,
-    };
-  });
+  return rows.value
+    .filter((row) => {
+      if (ownOnlyFilter.value && !row.is_own) return false;
+      if (typeFilter.value !== "all" && submissionTypeLabel(row) !== typeFilter.value) return false;
+      return true;
+    })
+    .map((row) => {
+      return {
+        ...row,
+      };
+    });
 });
 
 function formatDate(iso) {
@@ -331,8 +339,10 @@ function metadataViewerHref(fileUrl, fileName) {
 }
 
 function qcBadgeClass(qc) {
-  if (!qc || qc.total === 0) return "text-bg-secondary";
-  return qc.failed > 0 ? "text-bg-danger" : "text-bg-success";
+  if (!qc || qc.total === 0) return "bg-num-slate-40 text-dark";
+  if (qc.failed === 0) return "bg-num-aqua-40 text-dark";
+  const failRate = qc.failed / qc.total;
+  return failRate > 0.5 ? "bg-num-rose-40 text-dark" : "bg-num-gold-40 text-dark";
 }
 
 function hasCompletedStatus(row) {
@@ -345,11 +355,10 @@ function isArchiveSubmission(row) {
 }
 
 const SUBMISSION_TYPE_BADGES = {
-  gensurv: { label: "Gensurv", class: "text-bg-success" },
-  bacteria: { label: "Gensurv", class: "text-bg-success" }, // legacy value, same meaning as "gensurv"
-  "num-sar_bacteria": { label: "NUM-SAR", class: "text-bg-info" },
-  "num-sar_virus": { label: "NUM-SAR", class: "text-bg-primary" },
-  cogdat: { label: "COGDAT", class: "text-bg-warning" },
+  gensurv: { label: "Gensurv", class: "bg-num-aqua-20 text-dark" },
+  bacteria: { label: "Gensurv", class: "bg-num-aqua-20 text-dark" }, // legacy value, same meaning as "gensurv"
+  "num-sar_norovirus": { label: "NUM-SAR", class: "bg-num-rose-20 text-dark" },
+  cogdat: { label: "COGDAT", class: "bg-num-gold-20 text-dark" },
 };
 
 function submissionTypeLabel(row) {
@@ -357,7 +366,7 @@ function submissionTypeLabel(row) {
 }
 
 function submissionTypeBadgeClass(row) {
-  return SUBMISSION_TYPE_BADGES[row.submission_type]?.class || "text-bg-success";
+  return SUBMISSION_TYPE_BADGES[row.submission_type]?.class || "bg-num-aqua-20 text-dark";
 }
 
 function warningToText(rawWarning) {
@@ -439,6 +448,17 @@ watch(selectedScope, () => {
 </script>
 
 <style scoped>
+.own-row td:first-child {
+  border-left: 4px solid var(--num-aqua);
+}
+
+.you-pill {
+  font-size: 0.6rem;
+  padding: 0.15em 0.4em;
+  vertical-align: middle;
+  letter-spacing: 0.03em;
+}
+
 .submissions-page {
   padding: 1rem 0 2rem;
 }
@@ -533,6 +553,7 @@ watch(selectedScope, () => {
 }
 
 .metadata-link {
+  font-size: 0.8rem;
   max-width: 220px;
   overflow: hidden;
   text-overflow: ellipsis;
