@@ -40,7 +40,7 @@ class Submission(models.Model):
     submit_to_pipeline = models.BooleanField(default=False)
     submission_type = models.CharField(
         max_length=20,
-        choices=[("num-sar_bacteria", "NUM-SAR/Bacteria"), ("num-sar_virus", "NUM-SAR/Virus"), ("cogdat", "COGDAT"), ("gensurv", "Gensurv")],
+        choices=[("num-sar_bacteria", "NUM-SAR/Bacteria"), ("num-sar_virus", "NUM-SAR/Virus"), ("norovirus_v2", "Norovirus V2"), ("cogdat", "COGDAT"), ("gensurv", "Gensurv")],
         default="gensurv",
     )
 
@@ -75,6 +75,7 @@ class UploadedFile(models.Model):
     file_type = models.CharField(max_length=30, choices=[
         ('metadata_raw', 'Metadata Raw'),
         ('metadata_cleaned', 'Metadata Cleaned'),
+        ('metadata_converted', 'Converted NUM-SAR Metadata'),
         ('antibiotics_raw', 'Antibiotics Raw'),
         ('antibiotics_cleaned', 'Antibiotics Cleaned'),
         ('fastq', 'FASTQ'),

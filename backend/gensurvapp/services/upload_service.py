@@ -16,9 +16,11 @@ SUBMISSION_TYPE_ALIASES = {
     "": "gensurv",
     "bacteria": "gensurv",
     "gensurv": "gensurv",
-    "virus": "num-sar_virus",
+    "virus": "norovirus_v2",
     "num-sar_bacteria": "num-sar_bacteria",
-    "num-sar_virus": "num-sar_virus",
+    "num-sar_virus": "norovirus_v2",
+    "num-sar_virus_legacy": "num-sar_virus",
+    "norovirus_v2": "norovirus_v2",
 }
 
 VIRUS_SUBMISSION_TYPES = {"num-sar_virus"}
@@ -32,7 +34,8 @@ def normalize_submission_type(value):
         return SUBMISSION_TYPE_ALIASES[normalized]
     except KeyError:
         raise ValueError(
-            "Invalid submission_type. Use 'gensurv', 'num-sar_bacteria', or 'num-sar_virus'."
+            "Invalid submission_type. Use 'gensurv', 'num-sar_bacteria', "
+            "'num-sar_virus', 'num-sar_virus_legacy', or 'norovirus_v2'."
         )
 
 

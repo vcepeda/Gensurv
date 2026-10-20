@@ -737,6 +737,7 @@ def validate_csv_columns(df: pd.DataFrame, expected_columns: dict, submission_ty
               - `invalid_values`: (list) Invalid values in mandatory fields.
     """
     from gensurvapp.num_sar_constants import NUM_SAR_SUBMISSION_TYPES
+    is_norovirus_v2 = submission_type == "norovirus_v2"
     validation_results = {
         "is_valid": True,
         "missing_columns": [],
@@ -760,7 +761,7 @@ def validate_csv_columns(df: pd.DataFrame, expected_columns: dict, submission_ty
         for col in df.columns:
             logger.debug(f"• {col.strip()}: {row[col]}")
 
-    if submission_type not in NUM_SAR_SUBMISSION_TYPES:
+    if submission_type not in NUM_SAR_SUBMISSION_TYPES and not is_norovirus_v2:
         # Explicitly cast the Postal Code column to int if it exists
         if "postal code" in df.columns:
             try:
@@ -831,7 +832,38 @@ def validate_csv_columns(df: pd.DataFrame, expected_columns: dict, submission_ty
                         f"Invalid values found in row(s): {', '.join(map(str, invalid_values.index + 1))}"
                     )
 
-            if submission_type not in NUM_SAR_SUBMISSION_TYPES:
+            if is_norovirus_v2:
+                if column in ("date_of_receiving", "date_of_sequencing", "upload_date") and not non_empty_values.empty:
+                    for idx, val in non_empty_values.items():
+                        is_valid, result = validate_iso_date(val)
+                        if not is_valid:
+                            validation_results["is_valid"] = False
+                            validation_results["type_mismatches"].append(
+                                f"Row {idx + 1}, {column}: {result}"
+                            )
+
+                if column == "date_of_sampling" and not non_empty_values.empty:
+                    for idx, val in non_empty_values.items():
+                        is_valid, result = validate_and_normalize_date(
+                            val,
+                            expected_formats=["%Y-%m-%d", "%d/%m/%Y"],
+                        )
+                        if not is_valid:
+                            validation_results["is_valid"] = False
+                            validation_results["type_mismatches"].append(
+                                f"Row {idx + 1}, DATE_OF_SAMPLING: {result}"
+                            )
+
+                if column == "species" and not non_empty_values.empty:
+                    for idx, val in non_empty_values.items():
+                        is_valid, result = is_valid_local_taxonomy(val)
+                        if not is_valid:
+                            validation_results["is_valid"] = False
+                            validation_results["type_mismatches"].append(
+                                f"Row {idx + 1}, SPECIES: {result}"
+                            )
+
+            elif submission_type not in NUM_SAR_SUBMISSION_TYPES:
                 # MIC-specific validation
                 if column == "observed antibiotic resistance mic (mg/l)":
                     logger.debug(f"Special case for MIC validation")
@@ -986,12 +1018,16 @@ def validate_and_save_csv(file, expected_columns, essential_columns=None, submis
     error_messages = []
     warning_messages = []
     is_num_sar = submission_type in NUM_SAR_SUBMISSION_TYPES
+    is_strict_metadata = is_num_sar or submission_type == "norovirus_v2"
 
     ext = os.path.splitext(file.name)[1].lower()
 
     # Read the file into a DataFrame
     try:
-        if ext == ".xlsx":
+        if ext == ".xlsx" and submission_type == "norovirus_v2":
+            delimiter = ","
+            df = pd.read_excel(file, dtype=str)
+        elif ext == ".xlsx":
             # Convert Excel to CSV
             csv_buffer = handle_excel_to_csv(file)
             delimiter = ","
@@ -1000,7 +1036,11 @@ def validate_and_save_csv(file, expected_columns, essential_columns=None, submis
             # Detect delimiter and clean CSV
             delimiter = detect_delimiter(file)
             cleaned_file = fix_trailing_empty_columns_new(file, delimiter)
-            df = pd.read_csv(cleaned_file, sep=delimiter)
+            df = pd.read_csv(
+                cleaned_file,
+                sep=delimiter,
+                dtype=str if submission_type == "norovirus_v2" else None,
+            )
 
         df.columns = df.columns.str.lower().str.strip()
 
@@ -1050,7 +1090,7 @@ def validate_and_save_csv(file, expected_columns, essential_columns=None, submis
             has_errors = True
             error_messages.append(f"Missing essential columns: {', '.join(essential_missing)}")
 
-    if is_num_sar and not validation_results["is_valid"]:
+    if is_strict_metadata and not validation_results["is_valid"]:
         fatal_messages = []
 
         if validation_results["missing_columns"]:

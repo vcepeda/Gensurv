@@ -18,6 +18,11 @@ from .services.upload_service_num_sar import (
     handle_bulk_upload as handle_num_sar_bulk_upload,
 )
 from .services.upload_service_cogdat import handle_cogdat_upload
+from .services.upload_service_norovirus_v2 import (
+    handle_bulk_upload as handle_norovirus_v2_bulk_upload,
+    handle_single_upload as handle_norovirus_v2_single_upload,
+    validate_upload as validate_norovirus_v2_upload,
+)
 from .num_sar_constants import NUM_SAR_SUBMISSION_TYPES
 
 from django.shortcuts import get_object_or_404
@@ -94,7 +99,15 @@ class SingleUploadAPIView(APIView):
             submit_to_pipeline = serializer.validated_data.get('submit_to_pipeline', False)
             upload_start_time = serializer.validated_data.get('upload_start_time')
 
-            if submission_type in NUM_SAR_SUBMISSION_TYPES:
+            if submission_type == "norovirus_v2":
+                result = handle_norovirus_v2_single_upload(
+                    user=request.user,
+                    metadata_file=metadata_file,
+                    fastq_files=fastq_files,
+                    submit_to_pipeline=submit_to_pipeline,
+                    dry_run=dry_run,
+                )
+            elif submission_type in NUM_SAR_SUBMISSION_TYPES:
                 result = handle_num_sar_single_upload(
                     user=request.user,
                     metadata_file=metadata_file,
@@ -202,7 +215,15 @@ class BulkUploadAPIView(APIView):
             upload_start_time = serializer.validated_data.get('upload_start_time')
 
             # Call the business logic handler
-            if submission_type in NUM_SAR_SUBMISSION_TYPES:
+            if submission_type == "norovirus_v2":
+                result = handle_norovirus_v2_bulk_upload(
+                    user=request.user,
+                    metadata_file=metadata_file,
+                    fastq_files=fastq_files,
+                    submit_to_pipeline=submit_to_pipeline,
+                    dry_run=dry_run,
+                )
+            elif submission_type in NUM_SAR_SUBMISSION_TYPES:
                 result = handle_num_sar_bulk_upload(
                     user=request.user,
                     metadata_file=metadata_file,
@@ -365,6 +386,7 @@ class DashboardAPIView(APIView):
             s = r["submission"]
             raw = r["raw_metadata"]
             cleaned = r["cleaned_metadata"]
+            converted = r["converted_metadata"]
 
             def file_obj(upl):
                 if not upl:
@@ -401,6 +423,11 @@ class DashboardAPIView(APIView):
                     if f.file
                 ]
 
+            metadata_files = file_obj(cleaned) or file_obj(raw) or {}
+            if converted and converted.file:
+                metadata_files["converted_url"] = request.build_absolute_uri(converted.file.url)
+                metadata_files["converted_name"] = os.path.basename(converted.file.name)
+
             payload.append({
                 "username": s.user.username,
                 "institution": getattr(s.user, "institution", "") or "",
@@ -410,7 +437,7 @@ class DashboardAPIView(APIView):
                 "is_own": s.user_id == request.user.id,
 
                 "metadata": {
-                    "files": file_obj(cleaned) or file_obj(raw),
+                    "files": metadata_files or None,
                     "warnings": s.metadata_warnings or "",
                     "resub_count": r["metadata_resub_count"],
                     "can_resubmit": bool(s.resubmission_allowed),
@@ -565,6 +592,46 @@ class ResubmitFileAPIView(APIView):
         if not old:
             return Response({"detail": f"No existing {file_type}_raw file found."}, status=400)
 
+        norovirus_validation = None
+        if file_type == "metadata" and submission.submission_type == "norovirus_v2":
+            stored_fastq_files = [
+                uploaded.file
+                for uploaded in submission.files.filter(file_type="fastq")
+                if uploaded.file
+            ]
+            try:
+                norovirus_validation = validate_norovirus_v2_upload(
+                    metadata_file=new_file,
+                    fastq_files=stored_fastq_files,
+                    max_rows=None if submission.is_bulk_upload else 1,
+                )
+            except ValueError as exc:
+                return Response({"ok": False, "detail": str(exc)}, status=400)
+
+            replacement_sample_ids = {
+                str(value).strip()
+                for value in norovirus_validation["metadata_df"]["lab_sequence_id"]
+                if str(value).strip()
+            }
+            stored_sample_ids = {
+                uploaded.sample_id.strip()
+                for uploaded in submission.files.filter(file_type="fastq")
+                if uploaded.sample_id and uploaded.sample_id.strip()
+            }
+            if replacement_sample_ids != stored_sample_ids:
+                return Response(
+                    {
+                        "ok": False,
+                        "detail": (
+                            "Replacement LAB_SEQUENCE_ID values must match the existing "
+                            "submission samples. Expected: "
+                            f"{', '.join(sorted(stored_sample_ids)) or 'none'}; received: "
+                            f"{', '.join(sorted(replacement_sample_ids)) or 'none'}."
+                        ),
+                    },
+                    status=400,
+                )
+
         # compute count once
         current_resubmission_count = FileHistory.objects.filter(
             submission=submission,
@@ -596,21 +663,27 @@ class ResubmitFileAPIView(APIView):
         warnings = False
         message = ""
         if file_type == "metadata":
-            valid, warnings, message, delimiter, df = validate_and_save_csv(
-                new_file, METADATA_COLUMNS, ESSENTIAL_METADATA_COLUMNS
-            )
-            if valid and df is not None:
-                mismatch, mismatch_msg = compare_metadata_with_uploaded_files(submission, df)
-                if mismatch:
-                    return Response({"ok": False, "detail": mismatch_msg}, status=400)
+            if norovirus_validation is not None:
+                df = norovirus_validation["metadata_df"]
+                warnings = norovirus_validation["has_warnings"]
+                message = norovirus_validation["message"]
+            else:
+                valid, warnings, message, delimiter, df = validate_and_save_csv(
+                    new_file, METADATA_COLUMNS, ESSENTIAL_METADATA_COLUMNS
+                )
+                if valid and df is not None:
+                    mismatch, mismatch_msg = compare_metadata_with_uploaded_files(submission, df)
+                    if mismatch:
+                        return Response({"ok": False, "detail": mismatch_msg}, status=400)
 
-            if not valid:
-                return Response({"ok": False, "detail": message}, status=400)
+                if not valid:
+                    return Response({"ok": False, "detail": message}, status=400)
 
             if df is not None:
                 cleaned = generate_cleaned_file(new_file.name, df)
                 old.cleaned_file = cleaned
 
+        new_file.seek(0)
         old.save()
 
         if warnings:
