@@ -9,7 +9,9 @@ from gensurvapp.utils import (
 from gensurvapp.services.bactopia_report_service import load_bactopia_report, classify_rank
 
 def build_dashboard_rows_for_user(user, scope: str = "all"):
-    sample_files_qs = UploadedFile.objects.filter(file_type__in=["metadata_cleaned", "metadata_raw", "metadata"])
+    sample_files_qs = UploadedFile.objects.filter(
+        file_type__in=["metadata_cleaned", "metadata_raw", "metadata_converted", "metadata"]
+    )
     antibiotics_files_qs = UploadedFile.objects.filter(file_type__in=["antibiotics", "antibiotics_raw", "antibiotics_cleaned"])
     fastq_files_qs = UploadedFile.objects.filter(file_type="fastq")
 
@@ -73,6 +75,7 @@ def build_dashboard_rows_for_user(user, scope: str = "all"):
         if not cleaned_metadata:
             cleaned_metadata = submission.files.filter(file_type="metadata_raw").first()
         raw_metadata = submission.files.filter(file_type="metadata_raw").first()
+        converted_metadata = submission.files.filter(file_type="metadata_converted").first()
 
         grouped_fastq_files = defaultdict(list)
         sample_analysis_status = {}
@@ -125,6 +128,7 @@ def build_dashboard_rows_for_user(user, scope: str = "all"):
             "submission": submission,
             "raw_metadata": raw_metadata,
             "cleaned_metadata": cleaned_metadata,
+            "converted_metadata": converted_metadata,
             "antibiotics_files": antibiotics_files,
             "antibiotics_info": antibiotics_info,
             "grouped_fastq_files": dict(grouped_fastq_files),

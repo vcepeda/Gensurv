@@ -75,6 +75,7 @@ class UploadedFile(models.Model):
     file_type = models.CharField(max_length=30, choices=[
         ('metadata_raw', 'Metadata Raw'),
         ('metadata_cleaned', 'Metadata Cleaned'),
+        ('metadata_converted', 'Converted NUM-SAR Metadata'),
         ('antibiotics_raw', 'Antibiotics Raw'),
         ('antibiotics_cleaned', 'Antibiotics Cleaned'),
         ('fastq', 'FASTQ'),

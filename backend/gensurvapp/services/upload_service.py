@@ -18,6 +18,8 @@ SUBMISSION_TYPE_ALIASES = {
     "gensurv": "gensurv",
     "virus": "num-sar_norovirus",
     "num-sar_norovirus": "num-sar_norovirus",
+    "num-sar_bacteria": "num-sar_norovirus",
+    "num-sar_virus": "num-sar_norovirus",
 }
 
 def normalize_submission_type(value):
