@@ -737,7 +737,7 @@ def validate_csv_columns(df: pd.DataFrame, expected_columns: dict, submission_ty
               - `invalid_values`: (list) Invalid values in mandatory fields.
     """
     from gensurvapp.num_sar_constants import NUM_SAR_SUBMISSION_TYPES
-    is_norovirus_v2 = submission_type == "norovirus_v2"
+    is_norovirus_v2 = submission_type in NUM_SAR_SUBMISSION_TYPES
     validation_results = {
         "is_valid": True,
         "missing_columns": [],
@@ -1018,13 +1018,13 @@ def validate_and_save_csv(file, expected_columns, essential_columns=None, submis
     error_messages = []
     warning_messages = []
     is_num_sar = submission_type in NUM_SAR_SUBMISSION_TYPES
-    is_strict_metadata = is_num_sar or submission_type == "norovirus_v2"
+    is_strict_metadata = is_num_sar
 
     ext = os.path.splitext(file.name)[1].lower()
 
     # Read the file into a DataFrame
     try:
-        if ext == ".xlsx" and submission_type == "norovirus_v2":
+        if ext == ".xlsx" and is_num_sar:
             delimiter = ","
             df = pd.read_excel(file, dtype=str)
         elif ext == ".xlsx":
@@ -1039,7 +1039,7 @@ def validate_and_save_csv(file, expected_columns, essential_columns=None, submis
             df = pd.read_csv(
                 cleaned_file,
                 sep=delimiter,
-                dtype=str if submission_type == "norovirus_v2" else None,
+                dtype=str if is_num_sar else None,
             )
 
         df.columns = df.columns.str.lower().str.strip()

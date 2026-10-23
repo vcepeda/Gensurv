@@ -99,16 +99,8 @@ class SingleUploadAPIView(APIView):
             submit_to_pipeline = serializer.validated_data.get('submit_to_pipeline', False)
             upload_start_time = serializer.validated_data.get('upload_start_time')
 
-            if submission_type == "norovirus_v2":
+            if submission_type in NUM_SAR_SUBMISSION_TYPES:
                 result = handle_norovirus_v2_single_upload(
-                    user=request.user,
-                    metadata_file=metadata_file,
-                    fastq_files=fastq_files,
-                    submit_to_pipeline=submit_to_pipeline,
-                    dry_run=dry_run,
-                )
-            elif submission_type in NUM_SAR_SUBMISSION_TYPES:
-                result = handle_num_sar_single_upload(
                     user=request.user,
                     metadata_file=metadata_file,
                     fastq_files=fastq_files,
@@ -215,21 +207,12 @@ class BulkUploadAPIView(APIView):
             upload_start_time = serializer.validated_data.get('upload_start_time')
 
             # Call the business logic handler
-            if submission_type == "norovirus_v2":
+            if submission_type in NUM_SAR_SUBMISSION_TYPES:
                 result = handle_norovirus_v2_bulk_upload(
                     user=request.user,
                     metadata_file=metadata_file,
                     fastq_files=fastq_files,
                     submit_to_pipeline=submit_to_pipeline,
-                    dry_run=dry_run,
-                )
-            elif submission_type in NUM_SAR_SUBMISSION_TYPES:
-                result = handle_num_sar_bulk_upload(
-                    user=request.user,
-                    metadata_file=metadata_file,
-                    fastq_files=fastq_files,
-                    submit_to_pipeline=submit_to_pipeline,
-                    submission_type=submission_type,
                     dry_run=dry_run,
                 )
             else:
@@ -595,7 +578,7 @@ class ResubmitFileAPIView(APIView):
             return Response({"detail": f"No existing {file_type}_raw file found."}, status=400)
 
         norovirus_validation = None
-        if file_type == "metadata" and submission.submission_type == "norovirus_v2":
+        if file_type == "metadata" and submission.submission_type in NUM_SAR_SUBMISSION_TYPES:
             stored_fastq_files = [
                 uploaded.file
                 for uploaded in submission.files.filter(file_type="fastq")
