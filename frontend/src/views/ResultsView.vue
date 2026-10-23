@@ -13,19 +13,19 @@
         <p class="lead text-center mb-2">
           Every submitted job, its service, and its pipeline status in one place.
         </p>
-
-        <div class="scope-toggle-wrap">
-          <div class="btn-group" role="group" aria-label="Results scope toggle">
-            <input id="rscope-all" v-model="selectedScope" class="btn-check" type="radio" name="results-scope" value="all" autocomplete="off" />
-            <label class="btn btn-outline-primary btn-sm" for="rscope-all">All submissions</label>
-
-            <input id="rscope-mine" v-model="selectedScope" class="btn-check" type="radio" name="results-scope" value="mine" autocomplete="off" />
-            <label class="btn btn-outline-primary btn-sm" for="rscope-mine">Your submissions</label>
-
-            <input id="rscope-others" v-model="selectedScope" class="btn-check" type="radio" name="results-scope" value="others" autocomplete="off" />
-            <label class="btn btn-outline-primary btn-sm" for="rscope-others">Other's submissions</label>
+        <div class="d-flex gap-3 align-items-center flex-wrap mt-3">
+          <select v-model="typeFilter" class="form-select form-select-sm w-auto">
+            <option value="all">All types</option>
+            <option value="Gensurv">Gensurv</option>
+            <option value="NUM-SAR">NUM-SAR</option>
+            <option value="COGDAT">COGDAT</option>
+          </select>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" id="own-only-filter" v-model="ownOnlyFilter" />
+            <label class="form-check-label" for="own-only-filter">My submissions only</label>
           </div>
         </div>
+
       </div>
 
       <div class="card shadow-sm dashboard-card">
@@ -47,22 +47,23 @@
             <table class="table table-sm table-hover align-middle compact-table">
               <thead class="table-light sticky-header">
                 <tr>
-                  <th>Service</th>
-                  <th>Owner</th>
+                  <th>Submission Type</th>
                   <th>Submission</th>
                   <th>Submitted</th>
                   <th>Status</th>
-                  <th>QC</th>
+                  <th>Samples Passed</th>
                   <th class="actions-col">Actions</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="row in rows" :key="row.submission_id">
+                <tr v-for="row in filteredRows" :key="row.submission_id" :class="{ 'own-row': row.is_own }">
                   <td>
                     <span class="badge" :class="submissionTypeBadgeClass(row)">{{ submissionTypeLabel(row) }}</span>
                   </td>
-                  <td class="text-nowrap">{{ row.username || "-" }}</td>
-                  <td class="fw-semibold">#{{ row.submission_id }}</td>
+                    <td class="fw-semibold" :title="row.username">
+                      #{{ row.submission_id }}
+                      <span v-if="row.is_own" class="badge text-bg-primary you-pill">YOU</span>
+                    </td>
                   <td>
                     <div class="created-date">{{ formatDateParts(row.created_at).date }}</div>
                     <div class="created-time">{{ formatDateParts(row.created_at).time }}</div>
@@ -82,7 +83,7 @@
                     </RouterLink>
                     <span v-else class="text-muted">&mdash;</span>
                   </td>
-                  <td>
+                  <td class="actions-col">
                     <RouterLink
                       class="btn btn-primary btn-sm"
                       :class="{ disabled: !hasCompletedStatus(row) }"
@@ -107,23 +108,33 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import apiClient from "@/api/client";
 import { useAuthStore } from "@/stores/auth";
 
 const authStore = useAuthStore();
 
 const rows = ref([]);
+const typeFilter = ref("all");
+const ownOnlyFilter = ref(false);
+
+const filteredRows = computed(() => {
+  return rows.value.filter((row) => {
+    if (ownOnlyFilter.value && !row.is_own) return false;
+    if (typeFilter.value !== "all" && submissionTypeLabel(row) !== typeFilter.value) return false;
+    return true;
+  });
+});
+
 const loading = ref(false);
 const error = ref("");
 const selectedScope = ref("all");
 
 const SUBMISSION_TYPE_BADGES = {
-  gensurv: { label: "Gensurv", class: "text-bg-success" },
-  bacteria: { label: "Gensurv", class: "text-bg-success" },
-  "num-sar_bacteria": { label: "NUM-SAR", class: "text-bg-info" },
-  "num-sar_virus": { label: "NUM-SAR", class: "text-bg-primary" },
-  cogdat: { label: "COGDAT", class: "text-bg-warning" },
+  gensurv: { label: "Gensurv", class: "bg-num-aqua-20 text-dark" },
+  bacteria: { label: "Gensurv", class: "bg-num-aqua-20 text-dark" },
+  "num-sar_norovirus": { label: "NUM-SAR", class: "bg-num-rose-20 text-dark" },
+  cogdat: { label: "COGDAT", class: "bg-num-gold-20 text-dark" },
 };
 
 function submissionTypeLabel(row) {
@@ -131,7 +142,7 @@ function submissionTypeLabel(row) {
 }
 
 function submissionTypeBadgeClass(row) {
-  return SUBMISSION_TYPE_BADGES[row.submission_type]?.class || "text-bg-success";
+  return SUBMISSION_TYPE_BADGES[row.submission_type]?.class || "text-bg-primary";
 }
 
 function formatDateParts(iso) {
@@ -159,14 +170,16 @@ function statusLabel(row) {
 
 function statusBadgeClass(row) {
   const label = statusLabel(row);
-  if (label === "Completed") return "text-bg-success";
-  if (label === "In Progress") return "text-bg-info";
+  if (label === "Completed") return "text-bg-primary";
+  if (label === "In Progress") return "text-bg-warning";
   return "text-bg-secondary";
 }
 
 function qcBadgeClass(qc) {
-  if (!qc || qc.total === 0) return "text-bg-secondary";
-  return qc.failed > 0 ? "text-bg-danger" : "text-bg-success";
+  if (!qc || qc.total === 0) return "bg-num-slate-40 text-dark";
+  if (qc.failed === 0) return "bg-num-aqua-40 text-dark";
+  const failRate = qc.failed / qc.total;
+  return failRate > 0.5 ? "bg-num-rose-40 text-dark" : "bg-num-gold-40 text-dark";
 }
 
 async function fetchRows() {
@@ -193,6 +206,17 @@ watch(selectedScope, fetchRows);
 </script>
 
 <style scoped>
+.own-row td:first-child {
+  border-left: 4px solid var(--num-aqua);
+}
+
+.you-pill {
+  font-size: 0.6rem;
+  padding: 0.15em 0.4em;
+  vertical-align: middle;
+  letter-spacing: 0.03em;
+}
+
 .submissions-page {
   padding: 1rem 0 2rem;
 }
@@ -260,4 +284,10 @@ watch(selectedScope, fetchRows);
 .actions-col {
   min-width: 140px;
 }
+
+.actions-col .btn {
+  border-radius: 0.5rem;
+  font-weight: 600;
+}
+
 </style>

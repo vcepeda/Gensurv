@@ -99,7 +99,7 @@ class SingleUploadAPIView(APIView):
             submit_to_pipeline = serializer.validated_data.get('submit_to_pipeline', False)
             upload_start_time = serializer.validated_data.get('upload_start_time')
 
-            if submission_type == "norovirus_v2":
+            if submission_type in {"num-sar_norovirus", "norovirus_v2"}:
                 result = handle_norovirus_v2_single_upload(
                     user=request.user,
                     metadata_file=metadata_file,
@@ -215,7 +215,7 @@ class BulkUploadAPIView(APIView):
             upload_start_time = serializer.validated_data.get('upload_start_time')
 
             # Call the business logic handler
-            if submission_type == "norovirus_v2":
+            if submission_type in {"num-sar_norovirus", "norovirus_v2"}:
                 result = handle_norovirus_v2_bulk_upload(
                     user=request.user,
                     metadata_file=metadata_file,
@@ -449,7 +449,9 @@ class DashboardAPIView(APIView):
                 },
                 "fastq": {
                     "grouped": grouped_fastq_payload,
-                    "extra_warning": s.extra_fastq_warning if hasattr(s, "extra_fastq_warning") else "",
+                    #"extra_warning": s.extra_fastq_warning if hasattr(s, "extra_fastq_warning") else "",
+                    "extra_warning": s.fastq_warnings or "",
+
                 },
                 "analysis": {
                     "statuses": r["sample_analysis_status"],
@@ -593,7 +595,7 @@ class ResubmitFileAPIView(APIView):
             return Response({"detail": f"No existing {file_type}_raw file found."}, status=400)
 
         norovirus_validation = None
-        if file_type == "metadata" and submission.submission_type == "norovirus_v2":
+        if file_type == "metadata" and submission.submission_type in {"num-sar_norovirus", "norovirus_v2"}:
             stored_fastq_files = [
                 uploaded.file
                 for uploaded in submission.files.filter(file_type="fastq")
@@ -880,13 +882,15 @@ PIPELINE_STAGE_ORDER = [
     "gtdbtk",
     "assembler",
     "annotator",
-    "sketcher",
+    #"sketcher",
     "snippy_st",
     "mlst",
+    "amrfinderplus",
     "plasmid_mge",
+    "merlin"
 ]
 PIPELINE_STAGE_PRIORITY = {name: idx for idx, name in enumerate(PIPELINE_STAGE_ORDER)}
-OPTIONAL_PIPELINE_STAGES = {"snippy_st", "plasmid_mge"}
+OPTIONAL_PIPELINE_STAGES = {"snippy_st", "plasmid_mge", "merlin"}
 
 PIPELINE_STAGE_PATHS = {
     "gather": "main/gather",
@@ -894,9 +898,10 @@ PIPELINE_STAGE_PATHS = {
     "gtdbtk": "tools/gtdbtk",
     "assembler": "main/assembler",
     "annotator": "main/annotator",
-    "sketcher": "main/sketcher",
+    #"sketcher": "main/sketcher",
     "snippy_st": "tools/snippy_st",
     "mlst": "tools/mlst",
+    "amrfinderplus": "tools/amrfinderplus",
     "plasmid_mge": "tools/plasmid_mge",
 }
 
@@ -920,13 +925,13 @@ STATIC_STAGE_TOOLS = {
     "sketcher": "Mash + Sourmash",
     "snippy_st": "Snippy",
     "mlst": "MLST",
+    "amrfinderplus": "AMRFinderPlus",
     "plasmid_mge": "Plasmid MGE",
 }
 
 # Merlin dispatches different species-specific typing tools per sample; these
 # live as their own top-level tools/<name>/ folders (not nested under a
 # "merlin" folder), alongside mlst/amrfinderplus which get their own columns.
-MERLIN_EXCLUDED_TOOL_DIRS = {"mlst", "amrfinderplus", "mashdist"}
 MERLIN_TOOL_DISPLAY_NAMES = {
     "kleborate": "Kleborate",
     "clermontyping": "ClermonTyping",
@@ -935,27 +940,38 @@ MERLIN_TOOL_DISPLAY_NAMES = {
     "stecfinder": "STECFinder",
     "shigapass": "ShigaPass",
     "ectyper": "ECTyper",
+    "seqsero2": "SeqSero2",
+    "genotyphi": "GenoTyphi",
+    "pasty": "PAsty",
 }
-
 
 def _merlin_display_name(folder_name: str) -> str:
     return MERLIN_TOOL_DISPLAY_NAMES.get(folder_name.lower(), folder_name.replace("_", " ").title())
 
 
-def _merlin_tools_for_sample(root: Path) -> tuple[Path | None, str | None]:
-    tools_dir = next((child for child in root.rglob("tools") if child.is_dir()), None)
-    if not tools_dir:
-        return None, None
-
+def _merlin_tools_for_sample_old(root: Path, sample_id: str) -> tuple[Path | None, str | None]:
+    analyses = build_sample_analyses(root, sample_id)["analyses"]
     found = [
-        d for d in tools_dir.iterdir()
-        if d.is_dir() and d.name.lower() not in MERLIN_EXCLUDED_TOOL_DIRS
+        root / entry["folder"]
+        for entry in analyses
+        if entry["status"] == "available" and Path(entry["folder"]).name.lower() in MERLIN_TOOL_DISPLAY_NAMES
     ]
     if not found:
         return None, None
 
     label = " + ".join(_merlin_display_name(d.name) for d in sorted(found, key=lambda d: d.name.lower()))
     return found[0], label
+def _merlin_tools_for_sample(root: Path, sample_id: str) -> list[dict]:
+    analyses = build_sample_analyses(root, sample_id)["analyses"]
+    tools = [
+        {
+            "name": _merlin_display_name(Path(entry["folder"]).name),
+            "path": entry["folder"],
+        }
+        for entry in analyses
+        if entry["status"] == "available" and Path(entry["folder"]).name.lower() in MERLIN_TOOL_DISPLAY_NAMES
+    ]
+    return sorted(tools, key=lambda t: t["name"].lower())
 
 
 def _detect_assembler_tool(stage_dir: Path) -> str | None:
@@ -1093,6 +1109,15 @@ class SubmissionResultsDashboardAPIView(APIView):
 
             stages = {}
             for stage in PIPELINE_STAGE_ORDER:
+                if stage == "merlin":
+                    merlin_tools = _merlin_tools_for_sample(root, sample_id) if root else []
+                    stages[stage] = {
+                        "available": bool(merlin_tools),
+                        "optional": stage in OPTIONAL_PIPELINE_STAGES,
+                        "tools": merlin_tools,
+                    }
+                    continue
+
                 stage_dir = stage_dirs.get(stage)
                 tool = _detect_stage_tool(stage, stage_dir) if stage_dir else None
 

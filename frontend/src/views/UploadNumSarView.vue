@@ -16,38 +16,6 @@
       </p>
     </div>
 
-    <div v-if="auth.isAuthenticated" class="row mb-4">
-      <div class="col-lg-12">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-md-center gap-3">
-              <span class="fw-semibold">Submission Type:</span>
-              <div class="form-check form-check-inline">
-                <input
-                  class="form-check-input"
-                  id="submission_type_bacteria"
-                  type="radio"
-                  value="bacteria"
-                  v-model="submissionType"
-                />
-                <label class="form-check-label" for="submission_type_bacteria">Bacteria</label>
-              </div>
-              <div class="form-check form-check-inline">
-                <input
-                  class="form-check-input"
-                  id="submission_type_virus"
-                  type="radio"
-                  value="virus"
-                  v-model="submissionType"
-                />
-                <label class="form-check-label" for="submission_type_virus">Virus</label>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <!-- SINGLE -->
     <div v-if="auth.isAuthenticated" class="row">
       <div class="col-lg-12 mb-4">
@@ -299,13 +267,9 @@ const singleMetadataInput = ref(null);
 const singleFastqInput = ref(null);
 const bulkMetadataInput = ref(null);
 const bulkFastqInput = ref(null);
-const submissionType = ref("bacteria");
-
 const helpLink = "/help/num-sar";
 
-const uploadSubmissionType = computed(() => {
-  return submissionType.value === "bacteria" ? "num-sar_bacteria" : "num-sar_virus";
-});
+const uploadSubmissionType = computed(() => "num-sar_norovirus");
 
 let singleAbortController = null;
 let bulkAbortController = null;

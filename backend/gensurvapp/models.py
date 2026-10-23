@@ -40,7 +40,7 @@ class Submission(models.Model):
     submit_to_pipeline = models.BooleanField(default=False)
     submission_type = models.CharField(
         max_length=20,
-        choices=[("num-sar_bacteria", "NUM-SAR/Bacteria"), ("num-sar_virus", "NUM-SAR/Virus"), ("norovirus_v2", "Norovirus V2"), ("cogdat", "COGDAT"), ("gensurv", "Gensurv")],
+        choices=[("num-sar_norovirus", "NUM-SAR/Norovirus"), ("norovirus_v2", "NUM-SAR/Norovirus (legacy V2 identifier)"), ("cogdat", "COGDAT"), ("gensurv", "Gensurv")],
         default="gensurv",
     )
 

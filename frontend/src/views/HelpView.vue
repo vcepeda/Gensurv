@@ -12,7 +12,7 @@
     </div>
 
     <!-- Single Sample Upload -->
-    <h2 id="single-upload" class="text-info">Single Sample Upload</h2>
+    <h2 id="single-upload" class="text-primary">Single Sample Upload</h2>
     <p>For single sample uploads, ensure that your files adhere to the following format requirements:</p>
 
     <h3 id="single-files">Required Files</h3>
@@ -114,7 +114,7 @@
 
     <div class="table-responsive">
       <table class="table table-bordered">
-        <thead class="thead-dark">
+        <thead class="table-header">
           <tr>
             <th>Examples of accepted NGS inputs</th>
             <th>Illumina R1</th>
@@ -216,7 +216,7 @@
     </div>
 
     <!-- Bulk Upload Instructions -->
-    <h2 id="bulk-upload" class="text-info">Bulk Upload</h2>
+    <h2 id="bulk-upload" class="text-primary">Bulk Upload</h2>
     <p>For bulk uploads, the following guidelines must be followed:</p>
 
     <h3 id="bulk-files">Required Files</h3>
@@ -329,7 +329,7 @@
     </div>
 
     <!-- Detailed Metadata and Antibiotics Information -->
-    <h2 id="details" class="text-info">Detailed Metadata and Antibiotics Information</h2>
+    <h2 id="details" class="text-primary">Detailed Metadata and Antibiotics Information</h2>
     <p>
       This section provides detailed descriptions of the required fields for Sample Metadata and Antibiotic Testing Results.
       The tables below outline the specific fields, their descriptions, expected content, and whether they are mandatory or optional.
@@ -471,7 +471,7 @@
 
     <div class="table-responsive">
       <table class="table table-striped table-bordered details-table">
-        <thead class="thead-dark">
+        <thead class="table-header">
           <tr>
             <th>Field</th>
             <th>Description</th>
@@ -580,7 +580,7 @@
 
     <div class="table-responsive">
       <table class="table table-striped table-bordered details-anti-table">
-        <thead class="thead-dark">
+        <thead class="table-header">
           <tr>
             <th>Field</th>
             <th>Description</th>
@@ -618,7 +618,7 @@
     </div>
 
     <!-- Resubmission -->
-    <h2 id="resubmission" class="text-info">Resubmission of Metadata Files</h2>
+    <h2 id="resubmission" class="text-primary">Resubmission of Metadata Files</h2>
 
     <p>
       If your metadata file was accepted with <strong>warnings</strong>, you will be allowed to resubmit a corrected version of that file.
@@ -663,7 +663,7 @@
 </script>
 
 <style scoped>
-.table-header {
+.table-header th {
   background-color: var(--num-slate);
   color: #fff;
 }
@@ -689,8 +689,8 @@
 
 /* Header colors matching the template */
 .gray-head {
-  background-color: #d3d3d3 !important;
-  color: #000 !important;
+  background-color: var(--num-slate) !important;
+  color: #fff !important;
 }
 
 .th-mandatory {

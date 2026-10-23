@@ -12,7 +12,7 @@
     </div>
 
     <!-- About CoGDat -->
-    <h2 id="about" class="text-info">About CoGDat</h2>
+    <h2 id="about" class="text-primary">About CoGDat</h2>
     <p>
       CoGDat is a research initiative that collects, stores and analyses SARS-CoV-2 sequence data produced
       in Germany. It gathers raw sequencing data (FASTQ files) directly from sequencing laboratories doing
@@ -28,7 +28,7 @@
     </p>
 
     <!-- How to read the table -->
-    <h2 id="reading" class="text-info">How to Read This Table</h2>
+    <h2 id="reading" class="text-primary">How to Read This Table</h2>
     <ul>
       <li>Columns marked as a flag hold <code>1</code> for yes and <code>0</code> or an empty value for no.</li>
       <li>Timestamp columns record when a step happened; an empty timestamp means the step has not run.</li>
@@ -39,14 +39,14 @@
     </ul>
 
     <!-- Column Reference -->
-    <h2 id="columns" class="text-info">Column Reference</h2>
+    <h2 id="columns" class="text-primary">Column Reference</h2>
     <p class="lead">
       This table lists every column in the CoGDat metadata export, grouped by what it describes.
     </p>
 
     <div class="table-responsive">
       <table class="table table-striped table-bordered details-table">
-        <thead class="thead-dark">
+        <thead class="table-header">
           <tr>
             <th>Column</th>
             <th>Description</th>
@@ -343,14 +343,14 @@
 </script>
 
 <style scoped>
-.table-header {
+.table-header th {
   background-color: var(--num-slate);
   color: #fff;
 }
 
 .gray-head {
-  background-color: #d3d3d3 !important;
-  color: #000 !important;
+  background-color: var(--num-slate) !important;
+  color: #fff !important;
 }
 
 /* Table borders + font */

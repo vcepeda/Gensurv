@@ -66,7 +66,7 @@
         </div>
       </div>
 
-      <div class="card mb-4">
+      <div class="card mb-4" v-if="statistics?.submission_type === 'gensurv' || statistics?.submission_type === 'bacteria'">
         <div class="card-header bg-primary text-white">
           <h5 class="mb-0">Antibiotics Statistics</h5>
         </div>

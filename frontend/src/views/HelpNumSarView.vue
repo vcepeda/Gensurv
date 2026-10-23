@@ -20,7 +20,7 @@
     </div>
 
     <!-- Single Sample Upload -->
-    <h2 id="single-upload" class="text-info">Single Sample Upload</h2>
+    <h2 id="single-upload" class="text-primary">Single Sample Upload</h2>
     <p>For single sample uploads, ensure that your files adhere to the following format requirements:</p>
 
     <h3 id="single-files">Required Files</h3>
@@ -42,16 +42,16 @@
             <code>.csv</code>, <code>.tsv</code>, <code>.txt</code>, <code>.xlsx</code>.
           </li>
           <li>
-            <strong>FASTQ File Fields:</strong> You must list the sequencing file names in the following fields:
+            <strong>FASTQ File Fields:</strong> You must list the FASTQ file names in one or more of the following fields:
             <ul>
-              <li><code>FILE_1_NAME</code> — required. The primary sequencing file (or paired-end R1 file, for Illumina).</li>
-              <li><code>FILE_2_NAME</code> — optional; only for paired-end Illumina data (the R2 file).</li>
-              <li><code>SEQUENCING_PLATFORM</code> — required. The platform used for sequencing (e.g. Illumina, PacBio, ONT).</li>
+              <li><code>Illumina R1</code> — required if using Illumina platform (paired-end R1 file).</li>
+              <li><code>Illumina R2</code> — optional; must be provided only if <code>Illumina R1</code> is provided (paired-end R2 file).</li>
+              <li><code>Nanopore</code> — required if using Oxford Nanopore platform.</li>
+              <li><code>PacBio</code> — required if using PacBio platform.</li>
             </ul>
-            <strong>Important:</strong> File names must exactly match the actual uploaded file names (case-sensitive), and
-            each file's SHA256 checksum must be provided in the matching <code>FILE_1_SHA256SUM</code> /
-            <code>FILE_2_SHA256SUM</code> field.
+            <strong>Important:</strong> FASTQ file names must exactly match the actual uploaded file names (case-sensitive).
           </li>
+
           <li>Ensure all <strong>mandatory metadata fields</strong> are included.</li>
         </ul>
       </li>
@@ -87,50 +87,83 @@
 
     <!-- NGS Files Formatting Guide -->
     <h3 id="ngs-formatting-guide">📌 Example of NGS Files inputs</h3>
-    <p>
-      Unlike Gensurv, NUM-SAR metadata does not use separate fields per platform. Each sample row has two generic
-      file-name fields, <code>FILE_1_NAME</code> (required) and <code>FILE_2_NAME</code> (optional, paired-end R2
-      only), plus a <code>SEQUENCING_PLATFORM</code> field stating which technology was used.
+        <p>
+      The <code>"Illumina R1", "Illumina R2", "Nanopore", and "PacBio"</code> fields in the metadata file must follow a structured
+      format to indicate sequencing platforms and their corresponding files.
     </p>
 
     <div class="table-responsive">
       <table class="table table-bordered">
-        <thead class="thead-dark">
+        <thead class="table-header">
           <tr>
-            <th>Example scenario</th>
-            <th>FILE_1_NAME</th>
-            <th>FILE_2_NAME</th>
-            <th>SEQUENCING_PLATFORM</th>
+            <th>Examples of accepted NGS inputs</th>
+            <th>Illumina R1</th>
+            <th>Illumina R2</th>
+            <th>Nanopore</th>
+            <th>PacBio</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>Paired-end Illumina</td>
+            <td>Single Platform: <code>Paired-end Illumina</code></td>
             <td>sample_001_R1.fastq.gz</td>
             <td>sample_001_R2.fastq.gz</td>
-            <td>Illumina</td>
+            <td></td>
+            <td></td>
           </tr>
           <tr>
-            <td>Single-end Illumina</td>
+            <td>Single Platform: <code>Single-end Illumina</code></td>
             <td>sample_001_R1.fastq.gz</td>
             <td></td>
-            <td>Illumina</td>
+            <td></td>
+            <td></td>
           </tr>
           <tr>
-            <td>Nanopore (ONT)</td>
+            <td>Single Platform: <code>Nanopore</code></td>
+            <td></td>
+            <td></td>
             <td>sample_ont.fastq.gz</td>
             <td></td>
-            <td>ONT</td>
           </tr>
           <tr>
-            <td>PacBio</td>
-            <td>sample_pacbio.fastq.gz</td>
+            <td>Single Platform: <code>PacBio</code></td>
             <td></td>
-            <td>PacBio</td>
+            <td></td>
+            <td></td>
+            <td>sample_pacbio.fastq.gz</td>
+          </tr>
+          <tr>
+            <td>Multiple Platforms: <code>Paired-end Illumina</code> and <code>Nanopore</code></td>
+            <td>sample_001_R1.fastq.gz</td>
+            <td>sample_001_R2.fastq.gz</td>
+            <td>sample_ont.fastq.gz</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>Multiple Platforms: <code>Paired-end Illumina</code> and <code>PacBio</code></td>
+            <td>sample_001_R1.fastq.gz</td>
+            <td>sample_001_R2.fastq.gz</td>
+            <td></td>
+            <td>sample_pacbio.fastq.gz</td>
+          </tr>
+          <tr>
+            <td>Multiple Platforms: <code>Nanopore</code> and <code>PacBio</code></td>
+            <td></td>
+            <td></td>
+            <td>sample_ont.fastq.gz</td>
+            <td>sample_pacbio.fastq.gz</td>
+          </tr>
+          <tr>
+            <td>Multiple Platforms: <code>Paired-end Illumina</code>, <code>Nanopore</code> and <code>PacBio</code></td>
+            <td>sample_001_R1.fastq.gz</td>
+            <td>sample_001_R2.fastq.gz</td>
+            <td>sample_ont.fastq.gz</td>
+            <td>sample_pacbio.fastq.gz</td>
           </tr>
         </tbody>
       </table>
     </div>
+
 
     <h4>🛠 Additional Notes</h4>
     <ul>
@@ -162,7 +195,7 @@
     </div>
 
     <!-- Bulk Upload Instructions -->
-    <h2 id="bulk-upload" class="text-info">Bulk Upload</h2>
+    <h2 id="bulk-upload" class="text-primary">Bulk Upload</h2>
     <p>For bulk uploads, the following guidelines must be followed:</p>
 
     <h3 id="bulk-files">Required Files</h3>
@@ -173,13 +206,13 @@
           <li>One metadata file in CSV format, following the single upload metadata format.</li>
           <li>
             At least one FASTQ file per sample, with filenames matching exactly as listed in the metadata file's
-            <code>FILE_1_NAME</code> / <code>FILE_2_NAME</code> fields.
+            platform fields (<code>Illumina R1</code> / <code>Illumina R2</code> / <code>Nanopore</code> / <code>PacBio</code>).
           </li>
         </ul>
       </li>
       <li>
-        The metadata file must specify the expected filenames for FASTQ files in the <code>FILE_1_NAME</code> /
-        <code>FILE_2_NAME</code> fields.
+        The metadata file must specify the expected filenames for FASTQ files in the platform fields
+        (<code>Illumina R1</code> / <code>Illumina R2</code> / <code>Nanopore</code> / <code>PacBio</code>).
       </li>
       <li>
         Uploaded FASTQ files must match the filenames listed in the metadata file.
@@ -245,7 +278,7 @@
     </div>
 
     <!-- Detailed Metadata Information -->
-    <h2 id="details" class="text-info">Detailed Metadata Information</h2>
+    <h2 id="details" class="text-primary">Detailed Metadata Information</h2>
     <p>
       This section provides detailed descriptions of the required fields for Sample Metadata.
       The table below outlines the specific fields, their descriptions, expected content, and whether they are mandatory or optional.
@@ -268,6 +301,14 @@
         <span class="legend-box optional"></span>
         <span>Optional Fields</span>
       </div>
+      <div>
+        <span class="legend-box groupone"></span>
+        <span>At least one required (sequencing file fields)</span>
+      </div>
+      <div>
+        <strong>✓</strong>
+        <span> under "Research Only" = used internally only, not sent to RKI/DEMIS</span>
+      </div>
     </div>
 
     <a href="/static/num-sar_metadata.csv" class="btn btn-secondary">Download Sample CSV</a>
@@ -278,320 +319,478 @@
     <h3 id="detailed-meta">Detailed Metadata Fields</h3>
     <p class="lead">
       This table outlines the required and optional metadata fields for sample uploads, as well as their descriptions and conditions.
+      Fields marked <strong>Research Only</strong> are used internally and are not converted into the RKI/DEMIS output file.
     </p>
 
     <div class="table-responsive">
       <table class="table table-striped table-bordered details-table">
-        <thead class="thead-dark">
+        <thead class="table-header">
           <tr>
             <th>Field</th>
             <th>Description</th>
             <th>Content</th>
             <th>Condition</th>
+            <th>Research Only</th>
           </tr>
         </thead>
         <tbody>
           <tr class="table-primary">
-            <td colspan="4"><strong>Sample and Isolate Information</strong></td>
-          </tr>
-          <tr>
-            <td>STATUS</td>
-            <td>Status of the test results.</td>
-            <td>Text. Example: final</td>
-            <td class="cell-mandatory">Mandatory</td>
+            <td colspan="5"><strong>Sample and Isolate Information</strong></td>
           </tr>
           <tr>
             <td>LAB_SEQUENCE_ID</td>
-            <td>Unique ID for tracking the sample. This ID is generated during sample sequencing. Used for communication in case of internal queries.</td>
+            <td>Unique ID for tracking the sample (called "Sample identifier" in Gensurv). Not user-generated — it is the ID assigned during sample sequencing by the submitting Sequencing Lab. Used for communication in case of internal queries.</td>
             <td>Text</td>
             <td class="cell-mandatory">Mandatory</td>
-          </tr>
-          <tr>
-            <td>MELDETATBESTAND</td>
-            <td>4-letter code describing the pathogen found at https://simplifier.net/rki.demis.laboratory/notificationcategory. Example: cvdp</td>
-            <td>Text (4 characters)</td>
-            <td class="cell-mandatory">Mandatory</td>
+            <td></td>
           </tr>
           <tr>
             <td>SPECIES</td>
-            <td>A detailed description of the species on the species level using the Simplifier display name as reference.</td>
+            <td>Isolate or organism species name (called "Isolate Species" in Gensurv). Use official NCBI Taxonomy or ENA conventions; no other accepted. Example: Norovirus norwalkense (ENA) or Norwalk virus (NCBI).</td>
             <td>Text</td>
-            <td class="cell-optional">Optional</td>
-          </tr>
-          <tr>
-            <td>SPECIES_CODE</td>
-            <td>A detailed description of the species on the species level using Simplifier code as reference.</td>
-            <td>Text (4 characters)</td>
             <td class="cell-mandatory">Mandatory</td>
+            <td></td>
           </tr>
           <tr>
             <td>ISOLATE</td>
-            <td>Identification or description of the specific individual micro-organism from which this sequence was obtained. Example: Isolate 1</td>
+            <td>Identification or description of the specific individual micro-organism from which this sequence was obtained, to separate replicates. Examples: Isolate 1, Hu-GII.4-Berlin-2026-DE, NV-2026-Outbreak-09A, Replicate 3.</td>
             <td>Text</td>
             <td class="cell-optional">Optional</td>
+            <td></td>
           </tr>
           <tr>
-            <td>Subtype</td>
-            <td>Final classification assigned to the virus sample (e.g., Sequence type, strain, serotype, etc.). Examples: GII.4; GII.P16_GII.4; H1N1; B.1.1.7</td>
+            <td>SUBTYPE</td>
+            <td>Final classification assigned to the virus sample (e.g., Sequence type, strain, serotype, etc.). Examples: GII.4; GII.P16_GII.4.</td>
             <td>Text</td>
             <td class="cell-optional">Optional</td>
+            <td>✓</td>
           </tr>
           <tr>
-            <td>Typing strategy</td>
-            <td>Strategy that was used to identify the pathogen subtype if applicable. Examples: phylogenetic analyses, kmer clustering, BLAST, or typing tools such as Nextclade</td>
+            <td>Typing_Strategy</td>
+            <td>The method, target genomic region, or bioinformatic tool used to identify the pathogen subtype. Examples: Polymerase region, Capsid region, Dual-typing, Nextclade, BLAST, phylogenetic analyses, kmer clustering.</td>
             <td>Text</td>
             <td class="cell-optional">Optional</td>
+            <td>✓</td>
           </tr>
 
           <tr class="table-primary">
-            <td colspan="4"><strong>Sample Collection Data</strong></td>
+            <td colspan="5"><strong>Sample Collection Data</strong></td>
           </tr>
           <tr>
             <td>DATE_OF_SAMPLING</td>
-            <td>Date on which the sample was collected from the host or environment. Example: 2025-02-15</td>
-            <td>YYYY-MM-DD</td>
+            <td>The date of sample collection from the patient or source. Example: 2026-11-25.</td>
+            <td>YYYY-MM-DD or DAY/MONTH/YEAR</td>
             <td class="cell-optional">Optional</td>
-          </tr>
-          <tr>
-            <td>SEQUENCING_REASON</td>
-            <td>Reason for the sequencing of this sample, e.g. random sample. In other words, context or purpose for which the sample was collected and/or sequenced.</td>
-            <td>Diagnostic sample, Screening sample, Other [Text]</td>
-            <td class="cell-mandatory">Mandatory</td>
+            <td></td>
           </tr>
           <tr>
             <td>ISOLATION SOURCE</td>
-            <td>Method used to collect the sample. Describes the local source of the organism from which the sequence was obtained, e.g. nasal, blood, stool using the simplifier material display names.</td>
-            <td>Stool/faeces, Anal/rectal swab, Inanimate surroundings</td>
-            <td class="cell-optional">Optional</td>
-          </tr>
-          <tr>
-            <td>ISOLATION SOURCE_CODE = SAMPLE_TYPE</td>
-            <td>Describes the local source of the organism from which the sequence was obtained, e.g. nasal, blood, stool using the simplifier material codes. Example: 309164002</td>
-            <td>Number</td>
+            <td>Describes the local source of the organism from which the sequence was obtained, whether from a patient or the environment. Example: Upper respiratory swab specimen.</td>
+            <td>Stool/faeces, Anal/rectal swab, Vomitus, Inanimate surroundings, Water, Food, Other [Text]</td>
             <td class="cell-mandatory">Mandatory</td>
+            <td></td>
           </tr>
           <tr>
-            <td>Storage duration</td>
+            <td>Storage Duration</td>
             <td>Time between sampling and sequencing of the sample.</td>
             <td>&lt; 1 week, 1 week - 1 month, 1–6 months, 6-12 months, &gt; 12 months</td>
             <td class="cell-optional">Optional</td>
-          </tr>
-
-          <tr class="table-primary">
-            <td colspan="4"><strong>Sample Collection Facility</strong></td>
-          </tr>
-          <tr>
-            <td>DATE_OF_RECEIVING</td>
-            <td>Date the sample arrived in the lab.</td>
-            <td>YYYY-MM-DD</td>
-            <td class="cell-mandatory">Mandatory</td>
-          </tr>
-          <tr>
-            <td>PRIME_DIAGNOSTIC_LAB.CITY</td>
-            <td>City where the sample was collected. City code of the prime diagnostic lab.</td>
-            <td>Text</td>
-            <td class="cell-mandatory">Mandatory</td>
-          </tr>
-          <tr>
-            <td>PRIME_DIAGNOSTIC_LAB.POSTAL_CODE</td>
-            <td>Postal code where the sample was collected. Zip code of the prime diagnostic lab. Example: 13353</td>
-            <td>Number</td>
-            <td class="cell-mandatory">Mandatory</td>
-          </tr>
-          <tr>
-            <td>PRIME_DIAGNOSTIC_LAB.COUNTRY</td>
-            <td>Country of the prime diagnostic lab.</td>
-            <td>Text</td>
-            <td class="cell-mandatory">Mandatory</td>
+            <td>✓</td>
           </tr>
           <tr>
             <td>County</td>
-            <td>County where the sample was collected.</td>
+            <td>County (Landkreis/Stadtkreis) of sample origin.</td>
             <td>Text</td>
             <td class="cell-optional">Optional</td>
-          </tr>
-          <tr>
-            <td>PRIME_DIAGNOSTIC_LAB.FEDERAL_STATE</td>
-            <td>State where the sample was collected. Federal State of the prime diagnostic lab. Example: DE-BE</td>
-            <td>Text</td>
-            <td class="cell-optional">Optional</td>
+            <td>✓</td>
           </tr>
           <tr>
             <td>Country</td>
             <td>Country where the sample was collected.</td>
             <td>Text</td>
             <td class="cell-mandatory">Mandatory</td>
+            <td>✓</td>
           </tr>
 
           <tr class="table-primary">
-            <td colspan="4"><strong>Patient/Host Details</strong></td>
+            <td colspan="5"><strong>Sample Collection Facility</strong></td>
+          </tr>
+          <tr>
+            <td>DATE_OF_RECEIVING</td>
+            <td>The date when the sample arrived at the laboratory.</td>
+            <td>YYYY-MM-DD</td>
+            <td class="cell-mandatory">Mandatory</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>PRIME_DIAGNOSTIC_LAB.NAME</td>
+            <td>Name of the primary diagnostic laboratory collecting the sample. Example: Labor Dr. Limbach &amp; Kollegen GbR.</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>PRIME_DIAGNOSTIC_LAB.EMAIL</td>
+            <td>E-mail of the prime diagnostic lab.</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>PRIME_DIAGNOSTIC_LAB.ADDRESS</td>
+            <td>Street of the prime diagnostic lab.</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>PRIME_DIAGNOSTIC_LAB.CITY</td>
+            <td>City of the main diagnostic laboratory.</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>PRIME_DIAGNOSTIC_LAB.POSTAL_CODE</td>
+            <td>Postal code of the primary diagnostic laboratory.</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>PRIME_DIAGNOSTIC_LAB.COUNTRY</td>
+            <td>Country of the primary diagnostic laboratory.</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>PRIME_DIAGNOSTIC_LAB.FEDERAL_STATE</td>
+            <td>Federal state or region of the primary diagnostic laboratory.</td>
+            <td>Text</td>
+            <td class="cell-optional">Optional</td>
+            <td></td>
+          </tr>
+
+          <tr class="table-primary">
+            <td colspan="5"><strong>Patient/Host Details</strong></td>
           </tr>
           <tr>
             <td>HOST_SEX</td>
-            <td>Sex of the patient. Biological sex of the host. Use "Other" to specify additional information if needed.</td>
-            <td>Male, Female, Other</td>
+            <td>Sex of the patient from whom the sample was collected.</td>
+            <td>Male, Female, Diverse, Unknown</td>
             <td class="cell-optional">Optional</td>
-          </tr>
-          <tr>
-            <td>Age Group</td>
-            <td>Age range of the host.</td>
-            <td>Neonate [0-28 days], Infant [29 days-1 year], Pediatric [1-17], Adult [18-59], [60-75], Elder [&gt;=75]</td>
-            <td class="cell-optional">Optional</td>
+            <td></td>
           </tr>
           <tr>
             <td>HOST_BIRTH_MONTH</td>
-            <td>The birth month of the patient. Example: 11</td>
-            <td>Number [1-12]</td>
+            <td>The birth month of the patient.</td>
+            <td></td>
             <td class="cell-optional">Optional</td>
+            <td></td>
           </tr>
           <tr>
             <td>HOST_BIRTH_YEAR</td>
-            <td>The birth year of the patient. Example: 1990</td>
-            <td>4 digits number</td>
+            <td>The birth year of the patient.</td>
+            <td></td>
             <td class="cell-optional">Optional</td>
+            <td></td>
           </tr>
           <tr>
-            <td>Patient status</td>
-            <td>Admission status of the host.</td>
-            <td>Inpatient, Outpatient</td>
+            <td>Age Group</td>
+            <td>Age group of the patient, for cases where the user does not have the exact birth month and year.</td>
+            <td>0-4, 5-14, 15-34, 35-59, 60-79, 80+, Unknown</td>
             <td class="cell-optional">Optional</td>
+            <td>✓</td>
+          </tr>
+          <tr>
+            <td>GEOGRAPHIC_LOCATION</td>
+            <td>Three-digit postal code of the patient's place of residence. Leading zeros are retained. Example: 123.</td>
+            <td>3 digit number</td>
+            <td class="cell-optional">Optional</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>Patient Status</td>
+            <td>Admission status of the host.</td>
+            <td>Outpatient, Inpatient, Unknown</td>
+            <td class="cell-optional">Optional</td>
+            <td>✓</td>
           </tr>
           <tr>
             <td>Non patient sample</td>
-            <td>Rare, but sample can come from non human sources, such as from a food related outbreak in case of a suspected point source.</td>
-            <td>Text. Leave blank if sample is from human</td>
+            <td>Rare, but sample can come from non-human sources, such as from a food-related outbreak in case of a suspected point source. Leave blank if sample is from human.</td>
+            <td>Text</td>
             <td class="cell-optional">Optional</td>
+            <td>✓</td>
           </tr>
           <tr>
-            <td>suspected outbreak</td>
-            <td>Binary (Yes/No)</td>
+            <td>Suspected outbreak</td>
+            <td>Binary (Yes/No).</td>
             <td>Yes, No</td>
             <td class="cell-optional">Optional</td>
+            <td>✓</td>
           </tr>
 
           <tr class="table-primary">
-            <td colspan="4"><strong>Sequencing Details</strong></td>
+            <td colspan="5"><strong>Sequencing Details</strong></td>
           </tr>
           <tr>
-            <td>SEQUENCING_LAB.DEMIS_LAB_ID</td>
-            <td>DEMIS lab ID of sequencing lab where the biological sample was sequenced.</td>
-            <td>Text</td>
+            <td>SEQUENCING_REASON</td>
+            <td>The epidemiological reason or strategy for selecting and sequencing the sample.</td>
+            <td>Surveillance, Outbreak, Targeted study, Diagnostic confirmation, Other [Text]</td>
             <td class="cell-mandatory">Mandatory</td>
-          </tr>
-          <tr>
-            <td>SEQUENCING_LAB.NAME</td>
-            <td>Name of the sequencing lab.</td>
-            <td>Text</td>
-            <td class="cell-mandatory">Mandatory</td>
-          </tr>
-          <tr>
-            <td>SEQUENCING_LAB.EMAIL</td>
-            <td>E-mail of the sequencing lab.</td>
-            <td>Text</td>
-            <td class="cell-mandatory">Mandatory</td>
-          </tr>
-          <tr>
-            <td>SEQUENCING_LAB.ADDRESS</td>
-            <td>Street, house number, and city of the sequencing lab.</td>
-            <td>Text</td>
-            <td class="cell-mandatory">Mandatory</td>
-          </tr>
-          <tr>
-            <td>SEQUENCING_LAB.CITY</td>
-            <td>City of the sequencing lab.</td>
-            <td>Text</td>
-            <td class="cell-mandatory">Mandatory</td>
-          </tr>
-          <tr>
-            <td>SEQUENCING_LAB.POSTAL_CODE</td>
-            <td>Zip code of the sequencing lab.</td>
-            <td>Text</td>
-            <td class="cell-mandatory">Mandatory</td>
-          </tr>
-          <tr>
-            <td>SEQUENCING_LAB.COUNTRY</td>
-            <td>Country of the sequencing lab.</td>
-            <td>Text</td>
-            <td class="cell-mandatory">Mandatory</td>
-          </tr>
-          <tr>
-            <td>REPOSITORY_NAME</td>
-            <td>Was the sequence uploaded to a repository, e.g. GISAID or ENA, already.</td>
-            <td>Text</td>
-            <td class="cell-mandatory">Mandatory</td>
-          </tr>
-          <tr>
-            <td>UPLOAD_STATUS</td>
-            <td>The status of the upload. Is the sample already uploaded, or is the upload in preparation?</td>
-            <td>Code</td>
-            <td class="cell-mandatory">Mandatory</td>
+            <td></td>
           </tr>
           <tr>
             <td>DATE_OF_SEQUENCING</td>
             <td>The date the sample was sequenced.</td>
             <td>YYYY-MM-DD</td>
             <td class="cell-mandatory">Mandatory</td>
+            <td></td>
           </tr>
           <tr>
-            <td>SEQUENCING_PLATFORM</td>
-            <td>Platform(s) used for sequencing. Can be more than one. The sequencing platform that was used for sequencing the sample is based on the ENA documentation. Example: Illumina</td>
-            <td>Illumina, PacBio, ONT, other [Text]</td>
+            <td>SEQUENCING_LAB.NAME</td>
+            <td>Full official name of the facility performing the sequencing.</td>
+            <td>Text</td>
             <td class="cell-mandatory">Mandatory</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>SEQUENCING_LAB.EMAIL</td>
+            <td>Contact email address for the sequencing laboratory.</td>
+            <td>Email address</td>
+            <td class="cell-mandatory">Mandatory</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>SEQUENCING_LAB.ADDRESS</td>
+            <td>Street address and house number of the sequencing laboratory.</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>SEQUENCING_LAB.CITY</td>
+            <td>City where the sequencing laboratory is located.</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>SEQUENCING_LAB.POSTAL_CODE</td>
+            <td>Postal/ZIP code of the sequencing laboratory.</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>SEQUENCING_LAB.COUNTRY</td>
+            <td>Country where the sequencing laboratory is located.</td>
+            <td>Text</td>
+            <td class="cell-mandatory">Mandatory</td>
+            <td></td>
           </tr>
           <tr>
             <td>SEQUENCING_STRATEGY</td>
-            <td>The sequencing strategy that was used to sequence the sample. This property is based on the ENA documentation. Example: WGS. Type of sequencing performed. Add free-text details for additional types if necessary.</td>
-            <td>Whole genome sequencing, Amplicon sequencing, Metagenome sequencing, RNA-sequencing, other [Text]. Select one.</td>
+            <td>The experimental sequencing strategy used to process the sample, based on the ENA library strategy vocabulary.</td>
+            <td>WGS, AMPLICON, METAGENOMIC, RNA-Seq, or OTHER [Text]</td>
             <td class="cell-mandatory">Mandatory</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>SEQUENCING_PLATFORM</td>
+            <td>Sequencing platform used to generate read files.</td>
+            <td>Illumina, Oxford Nanopore, PacBio, Ion Torrent, Other [Text]</td>
+            <td class="cell-mandatory">Mandatory</td>
+            <td></td>
           </tr>
           <tr>
             <td>SEQUENCING_INSTRUMENT</td>
-            <td>The sequencing instrument that was used for sequencing the sample. This property is based on the ENA documentation. Example: Illumina_MiSeq</td>
-            <td>Text</td>
+            <td>Specific model of instrument used for sequencing.</td>
+            <td>Illumina MiSeq, Illumina NextSeq, Oxford Nanopore GridION, Oxford Nanopore MinION, PacBio Sequel II, Other [Text]</td>
             <td class="cell-mandatory">Mandatory</td>
+            <td></td>
           </tr>
           <tr>
             <td>Library Preparation Kit</td>
             <td>Kit used for preparing the sequencing library. Examples: Nextera XT, TruSeq DNA, SMRTbell, and others.</td>
             <td>Text</td>
             <td class="cell-optional">Optional</td>
+            <td>✓</td>
+          </tr>
+          <tr>
+            <td>ADAPTER</td>
+            <td>The specific molecular adapter sequences or index names added to the DNA/RNA fragments during library prep. Example: TAGCGAGT.</td>
+            <td>Text</td>
+            <td class="cell-optional">Optional</td>
+            <td></td>
           </tr>
           <tr>
             <td>NAME_AMP_PROTOCOL</td>
-            <td>Name of the protocol that was used to sequence the sample. Example: CVD_Artic_Protokoll_2.1, ARTICv4.1. Strategy for targeted sequencing, e.g. amplicon or myBaits. For amplicon schemes consider adding additional references.</td>
+            <td>Name of the specific protocol used to amplify the target pathogen genomic regions. Example: CVD_Artic_Protokoll_2.1, ARTICv4.1.</td>
             <td>Text</td>
             <td class="cell-optional">Optional</td>
+            <td></td>
           </tr>
           <tr>
-            <td>FILE_1_SHA256SUM</td>
-            <td>The SHA256SUM of the file provided. Example: c16516c6d9b1dd9c0f1e8ce8baf43d42031a32fcf75f1d69f16eb4b24df6fecd</td>
+            <td>PRIMER_SCHEME</td>
+            <td>The specific primer design panel used to amplify the pathogen DNA/RNA. Example: ARTICv4.1.</td>
+            <td>Text</td>
+            <td class="cell-optional">Optional</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>REPOSITORY_NAME</td>
+            <td>The name of the external database where this genetic sequence has already been or is planned to be uploaded. If submitted to multiple databases, list them separated by a semicolon. Example: GISAID, ENA.</td>
             <td>Text</td>
             <td class="cell-mandatory">Mandatory</td>
+            <td></td>
           </tr>
           <tr>
-            <td>FILE_2_SHA256SUM</td>
-            <td>The SHA256SUM of the file provided.</td>
+            <td>REPOSITORY_LINK</td>
+            <td>Hyperlink to the sample in the REPOSITORY_NAME repository.</td>
             <td>Text</td>
             <td class="cell-optional">Optional</td>
+            <td></td>
           </tr>
           <tr>
-            <td>FILE_1_NAME</td>
-            <td>The filename that is connected to this sample is provided. Example: sample1_1.fastq.gz</td>
-            <td>Text</td>
-            <td class="cell-mandatory">Mandatory</td>
-          </tr>
-          <tr>
-            <td>FILE_2_NAME</td>
-            <td>The filename that is connected to this sample is provided. Example: sample1_2.fastq.gz</td>
+            <td>REPOSITORY_ID</td>
+            <td>The ID of the sample in the repository.</td>
             <td>Text</td>
             <td class="cell-optional">Optional</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>UPLOAD_DATE</td>
+            <td>The date the sample was uploaded to the repository.</td>
+            <td>Date</td>
+            <td class="cell-optional">Optional</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>Illumina R1</td>
+            <td>Filename of the Illumina paired-end R1 FASTQ file.</td>
+            <td>sample_001_R1.fastq.gz</td>
+            <td class="cell-groupone">At least one required</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>Illumina R2</td>
+            <td>Filename of the Illumina paired-end R2 FASTQ file. Only allowed if Illumina R1 exists.</td>
+            <td>sample_001_R2.fastq.gz</td>
+            <td class="cell-groupone">At least one required</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>Nanopore</td>
+            <td>Filename of the Oxford Nanopore sequencing file.</td>
+            <td>sample_ont.fastq.gz</td>
+            <td class="cell-groupone">At least one required</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>PacBio</td>
+            <td>Filename of the PacBio sequencing file.</td>
+            <td>sample_pacbio.fastq.gz</td>
+            <td class="cell-groupone">At least one required</td>
+            <td></td>
           </tr>
         </tbody>
       </table>
     </div>
 
+    <!-- RKI Metadata Fields -->
+    <h2 id="rki-fields" class="text-primary">RKI Metadata Fields (Downloadable File)</h2>
+    <p>
+      The fields below are the ones included in the RKI/DEMIS metadata file generated from your submission. Most are
+      derived directly from the fields you provide above; a few are generated automatically by the system. For full
+      field definitions, see the
+      <a href="https://wiki.gematik.de/spaces/DSKB/pages/659360260/Metadaten+f%C3%BCr+Upload+via+csv+oder+LIS-Schnittstelle" target="_blank" rel="noopener">
+        official RKI/DEMIS documentation
+      </a>.
+    </p>
+
+    <div class="table-responsive">
+      <table class="table table-striped table-bordered details-table">
+        <thead class="table-header">
+          <tr>
+            <th>RKI Field</th>
+            <th>Condition</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="table-primary">
+            <td colspan="2"><strong>Sample and Isolate Information</strong></td>
+          </tr>
+          <tr><td>STATUS</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>LAB_SEQUENCE_ID</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>MELDETATBESTAND</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>SPECIES</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>SPECIES_CODE</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>ISOLATE</td><td class="cell-optional">Optional</td></tr>
+
+          <tr class="table-primary">
+            <td colspan="2"><strong>Sample Collection Data</strong></td>
+          </tr>
+          <tr><td>DATE_OF_SAMPLING</td><td class="cell-optional">Optional</td></tr>
+          <tr><td>ISOLATION SOURCE</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>ISOLATION SOURCE_CODE / SAMPLE_TYPE</td><td class="cell-mandatory">Mandatory</td></tr>
+
+          <tr class="table-primary">
+            <td colspan="2"><strong>Sample Collection Facility</strong></td>
+          </tr>
+          <tr><td>DATE_OF_RECEIVING</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>PRIME_DIAGNOSTIC_LAB.NAME</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>PRIME_DIAGNOSTIC_LAB.EMAIL</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>PRIME_DIAGNOSTIC_LAB.ADDRESS</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>PRIME_DIAGNOSTIC_LAB.CITY</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>PRIME_DIAGNOSTIC_LAB.POSTAL_CODE</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>PRIME_DIAGNOSTIC_LAB.COUNTRY</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>PRIME_DIAGNOSTIC_LAB.FEDERAL_STATE</td><td class="cell-optional">Optional</td></tr>
+
+          <tr class="table-primary">
+            <td colspan="2"><strong>Patient/Host Details</strong></td>
+          </tr>
+          <tr><td>HOST_SEX</td><td class="cell-optional">Optional</td></tr>
+          <tr><td>HOST_BIRTH_MONTH</td><td class="cell-optional">Optional</td></tr>
+          <tr><td>HOST_BIRTH_YEAR</td><td class="cell-optional">Optional</td></tr>
+          <tr><td>GEOGRAPHIC_LOCATION</td><td class="cell-optional">Optional</td></tr>
+
+          <tr class="table-primary">
+            <td colspan="2"><strong>Sequencing Details</strong></td>
+          </tr>
+          <tr><td>SEQUENCING_LAB.DEMIS_LAB_ID</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>SEQUENCING_LAB.NAME</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>SEQUENCING_LAB.EMAIL</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>SEQUENCING_LAB.ADDRESS</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>SEQUENCING_LAB.CITY</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>SEQUENCING_LAB.POSTAL_CODE</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>SEQUENCING_LAB.COUNTRY</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>DATE_OF_SEQUENCING</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>SEQUENCING_REASON</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>SEQUENCING_PLATFORM</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>SEQUENCING_INSTRUMENT</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>SEQUENCING_STRATEGY</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>NAME_AMP_PROTOCOL</td><td class="cell-optional">Optional</td></tr>
+          <tr><td>ADAPTER</td><td class="cell-optional">Optional</td></tr>
+          <tr><td>PRIMER_SCHEME</td><td class="cell-optional">Optional</td></tr>
+          <tr><td>UPLOAD_STATUS</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>REPOSITORY_NAME</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>REPOSITORY_LINK</td><td class="cell-optional">Optional</td></tr>
+          <tr><td>REPOSITORY_ID</td><td class="cell-optional">Optional</td></tr>
+          <tr><td>UPLOAD_DATE</td><td class="cell-optional">Optional</td></tr>
+          <tr><td>FILE_1_NAME</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>FILE_1_SHA256SUM</td><td class="cell-mandatory">Mandatory</td></tr>
+          <tr><td>FILE_2_NAME</td><td class="cell-optional">Optional</td></tr>
+          <tr><td>FILE_2_SHA256SUM</td><td class="cell-optional">Optional</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+
     <!-- Resubmission -->
-    <h2 id="resubmission" class="text-info">Resubmission of Metadata Files</h2>
+    <h2 id="resubmission" class="text-primary">Resubmission of Metadata Files</h2>
 
     <p>
       If your metadata file was accepted with <strong>warnings</strong>, you will be allowed to resubmit a corrected version of that file.
@@ -636,7 +835,7 @@
 </script>
 
 <style scoped>
-.table-header {
+.table-header th {
   background-color: var(--num-slate);
   color: #fff;
 }
@@ -662,8 +861,8 @@
 
 /* Header colors matching the template */
 .gray-head {
-  background-color: #d3d3d3 !important;
-  color: #000 !important;
+  background-color: var(--num-slate) !important;
+  color: #fff !important;
 }
 
 .th-mandatory {

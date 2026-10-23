@@ -192,7 +192,7 @@ def _persist_upload(
     submission = Submission.objects.create(
         user=user,
         is_bulk_upload=is_bulk_upload,
-        submission_type="norovirus_v2",
+        submission_type="num-sar_norovirus",
         submit_to_pipeline=bool(submit_to_pipeline),
         resubmission_allowed=validation_result["has_warnings"],
         metadata_warnings=(

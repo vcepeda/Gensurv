@@ -6,8 +6,11 @@ contains the Gensurv metadata and antibiotics schema.
 """
 
 NUM_SAR_SUBMISSION_TYPES = {
-    "num-sar_bacteria",
-    "num-sar_virus",
+    "num-sar_norovirus",
+    #TODO: Add other NUM-SAR submission types here when they are supported, e.g.:
+    #"num-sar_bacteria",
+    #"num-sar_virus",
+
 }
 
 # DEMIS CodeSystem NotificationCategory, version 2.3.1, dated 2026-01-19.
