@@ -7,8 +7,7 @@ backend/gensurv_project/settings.py
 *.pyc
 __pycache__/
 db.sqlite3
-frontend/node_modules/.vite/
-/media/
+frontend/node_modules
 #/staticfiles/
 /.env
 *.env
@@ -27,3 +26,5 @@ venv/
 DBBACKUP_STORAGE/
 postgres_setup.txt
 postgres_*
+manual_test_files
+backend/media/submissions

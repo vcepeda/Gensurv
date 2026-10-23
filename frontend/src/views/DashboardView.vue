@@ -135,8 +135,19 @@
                           {{ row.metadata.files.raw_name }}
                         </a>
                       </div>
+                      <div v-if="row.metadata?.files?.converted_url" class="metadata-line">
+                        <span class="metadata-label">Converted:</span>
+                        <a
+                          :href="metadataViewerHref(row.metadata.files.converted_url, row.metadata.files.converted_name)"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="metadata-link"
+                        >
+                          {{ row.metadata.files.converted_name }}
+                        </a>
+                      </div>
                       <span
-                        v-if="!row.metadata?.files?.raw_url && !row.metadata?.files?.cleaned_url"
+                        v-if="!row.metadata?.files?.raw_url && !row.metadata?.files?.cleaned_url && !row.metadata?.files?.converted_url"
                         class="text-muted"
                       >
                         N/A
@@ -349,6 +360,7 @@ const SUBMISSION_TYPE_BADGES = {
   bacteria: { label: "Gensurv", class: "text-bg-success" }, // legacy value, same meaning as "gensurv"
   "num-sar_bacteria": { label: "NUM-SAR", class: "text-bg-info" },
   "num-sar_virus": { label: "NUM-SAR", class: "text-bg-primary" },
+  norovirus_v2: { label: "NUM-SAR", class: "text-bg-primary" },
   cogdat: { label: "COGDAT", class: "text-bg-warning" },
 };
 
