@@ -2,11 +2,15 @@
 import csv
 import io
 import tempfile
+import importlib
+from types import SimpleNamespace
 from pathlib import Path
 from unittest.mock import patch
 
 import pandas as pd
 from django.contrib.auth import get_user_model
+from django.apps import apps
+from django.db import connection
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
@@ -100,7 +104,7 @@ class UploadMergeIntegrationTests(TestCase):
         self.assertIn("cleaned_url", str(dashboard.data))
         self.assertIn("raw_url", str(dashboard.data))
 
-    def test_resubmission_preserves_history_for_both_type_identifiers(self):
+    def test_resubmission_preserves_history_after_identifier_migration(self):
         for kind in ("num-sar_norovirus", "norovirus_v2"):
             with self.subTest(kind=kind):
                 response = self.upload([self.row()])
@@ -109,6 +113,14 @@ class UploadMergeIntegrationTests(TestCase):
                 submission.submission_type = kind
                 submission.resubmission_allowed = True
                 submission.save()
+                migration = importlib.import_module(
+                    "gensurvapp.migrations.0037_canonical_num_sar_submission_type"
+                )
+                before = list(submission.files.values_list("pk", "file", "cleaned_file"))
+                migration.canonicalize_submissions(apps, SimpleNamespace(connection=connection))
+                submission.refresh_from_db()
+                self.assertEqual(submission.submission_type, "num-sar_norovirus")
+                self.assertEqual(before, list(submission.files.values_list("pk", "file", "cleaned_file")))
                 url = f"/api/submissions/{submission.pk}/resubmissions/metadata/"
                 invalid = self.row()
                 invalid["GEOGRAPHIC_LOCATION"] = "1"

@@ -15,9 +15,7 @@ class Migration(migrations.Migration):
             name="submission_type",
             field=models.CharField(
                 choices=[
-                    ("num-sar_bacteria", "NUM-SAR/Bacteria"),
-                    ("num-sar_virus", "NUM-SAR/Virus"),
-                    ("norovirus_v2", "Norovirus V2"),
+                    ("num-sar_norovirus", "NUM-SAR/Norovirus"),
                     ("cogdat", "COGDAT"),
                     ("gensurv", "Gensurv"),
                 ],

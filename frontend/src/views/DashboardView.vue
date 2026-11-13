@@ -161,14 +161,15 @@
                         View Submission
                       </button>
                       <RouterLink
-                        class="btn btn-primary btn-sm"
+                        class="btn btn-primary btn-sm results-button"
                         :class="{ disabled: !hasCompletedStatus(row) }"
                         :to="{ name: 'submission_results_dashboard', params: { submissionId: row.submission_id } }"
                         :aria-disabled="!hasCompletedStatus(row)"
-                        :title="!hasCompletedStatus(row) ? 'Results not available' : 'View Results'"
+                        :title="!hasCompletedStatus(row) ? 'Results pending' : 'View Results'"
                         @click="!hasCompletedStatus(row) && $event.preventDefault()"
                       >
-                        View Results
+                      <span class="results-button-size" aria-hidden="true">Results pending</span>
+                      <span>{{ hasCompletedStatus(row) ? 'View Results' : 'Results pending' }}</span>
                       </RouterLink>
                       <button
                         v-if="canManageRow(row) && !row.deletion?.requested"
@@ -358,7 +359,6 @@ const SUBMISSION_TYPE_BADGES = {
   gensurv: { label: "Gensurv", class: "bg-num-aqua-20 text-dark" },
   bacteria: { label: "Gensurv", class: "bg-num-aqua-20 text-dark" }, // legacy value, same meaning as "gensurv"
   "num-sar_norovirus": { label: "NUM-SAR", class: "bg-num-rose-20 text-dark" },
-  norovirus_v2: { label: "NUM-SAR", class: "bg-num-rose-20 text-dark" },
   cogdat: { label: "COGDAT", class: "bg-num-gold-20 text-dark" },
 };
 
@@ -449,6 +449,21 @@ watch(selectedScope, () => {
 </script>
 
 <style scoped>
+.results-button {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.results-button > span {
+  grid-area: 1 / 1;
+}
+
+.results-button-size {
+  visibility: hidden;
+}
+
 .own-row td:first-child {
   border-left: 4px solid var(--num-aqua);
 }

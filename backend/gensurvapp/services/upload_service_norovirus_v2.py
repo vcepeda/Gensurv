@@ -131,7 +131,7 @@ def validate_upload(*, metadata_file, fastq_files, max_rows=None):
         metadata_file,
         NOROVIRUS_V2_METADATA_COLUMNS,
         NOROVIRUS_V2_ESSENTIAL_COLUMNS,
-        submission_type="norovirus_v2",
+        submission_type="num-sar_norovirus",
         max_rows=max_rows,
     )
     if not valid:

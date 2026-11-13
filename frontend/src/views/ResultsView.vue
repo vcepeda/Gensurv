@@ -85,14 +85,15 @@
                   </td>
                   <td class="actions-col">
                     <RouterLink
-                      class="btn btn-primary btn-sm"
+                      class="btn btn-primary btn-sm results-button"
                       :class="{ disabled: !hasCompletedStatus(row) }"
                       :to="{ name: 'submission_results_dashboard', params: { submissionId: row.submission_id } }"
                       :aria-disabled="!hasCompletedStatus(row)"
-                      :title="!hasCompletedStatus(row) ? 'Results not available yet' : 'View Results'"
+                      :title="!hasCompletedStatus(row) ? 'Results pending' : 'View Results'"
                       @click="!hasCompletedStatus(row) && $event.preventDefault()"
                     >
-                      View Results
+                      <span class="results-button-size" aria-hidden="true">Results pending</span>
+                      <span>{{ hasCompletedStatus(row) ? 'View Results' : 'Results pending' }}</span>
                     </RouterLink>
                   </td>
                 </tr>
@@ -206,6 +207,21 @@ watch(selectedScope, fetchRows);
 </script>
 
 <style scoped>
+.results-button {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.results-button > span {
+  grid-area: 1 / 1;
+}
+
+.results-button-size {
+  visibility: hidden;
+}
+
 .own-row td:first-child {
   border-left: 4px solid var(--num-aqua);
 }
