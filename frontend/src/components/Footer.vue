@@ -39,21 +39,36 @@
 
 <style scoped>
 footer {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   width: 100%;
   box-sizing: border-box;
-  background: linear-gradient(90deg, var(--num-slate) 0%, var(--num-slate-dark) 100%);
+  background: linear-gradient(105deg, #48ac9f 0%, #467f7b 16%, #43b8a7 38%, #3dcbb5 59%, #46968c 100%);
   color: white;
   padding: 2.5rem 0;
   margin-top: auto;
-  border-width: 4px 0 0 0;
-  border-style: solid;
-  border-image: linear-gradient(
-      90deg,
-      var(--num-aqua) 0%,
-      var(--num-gold) 50%,
-      var(--num-rose) 100%
-    )
-    1;
+  border: 0;
+  border-radius: 0;
+}
+
+footer::before,
+footer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+footer::before {
+  background: rgb(75 192 174 / 65%);
+  clip-path: polygon(16.5% 0, 79% 0, 81% 100%, 13.5% 100%);
+}
+
+footer::after {
+  background: rgb(54 216 190 / 38%);
+  clip-path: polygon(33.3% 0, 65% 0, 62% 100%, 35% 100%);
 }
 
 footer .footer-copy,
@@ -62,13 +77,16 @@ footer .footer-links {
 }
 
 footer .footer-links a {
-  color: var(--num-rose);
+  color: white;
   text-decoration: none;
   transition: color 0.3s ease;
 }
 
-footer .footer-links a:hover {
-  color: #f27f8d;
+footer .footer-links a:hover,
+footer .footer-links a:focus-visible {
+  color: white;
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
 }
 
 .footer-logo-panel {

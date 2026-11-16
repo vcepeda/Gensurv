@@ -28,3 +28,6 @@ venv/
 DBBACKUP_STORAGE/
 postgres_setup.txt
 postgres_*
+backend/media/
+manual_test_files/
+backend/gensurvapp/management/commands/seed_dummy_results.py
