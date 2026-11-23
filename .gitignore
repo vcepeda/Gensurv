@@ -2,6 +2,9 @@
 .token
 token
 tmp
+all_results
+error
+*.bak
 backend/db.json
 backend/gensurv_project/settings.py
 *.pyc
@@ -9,6 +12,7 @@ __pycache__/
 db.sqlite3
 frontend/node_modules
 frontend/node_modules/.vite/
+frontend/dist/
 /media/
 #/staticfiles/
 /.env

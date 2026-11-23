@@ -311,7 +311,8 @@
       </div>
     </div>
 
-    <a href="/static/num-sar_metadata.csv" class="btn btn-secondary">Download Sample CSV</a>
+    <a href="/static/num-sar_metadata.csv" class="btn btn-secondary">Download Single Sample CSV</a>
+    <a href="/static/num-sar_metadata_bulk.csv" class="btn btn-secondary ms-2">Download Bulk Sample CSV</a>
 
     <br /><br />
 
