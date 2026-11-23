@@ -1133,6 +1133,7 @@ class SubmissionResultsDashboardAPIView(APIView):
             {
                 "submission_id": submission.id,
                 "total": len(sample_ids),
+                "submission_type": submission.submission_type,
                 "succeeded": succeeded,
                 "failed": failed,
                 "pending": pending,
