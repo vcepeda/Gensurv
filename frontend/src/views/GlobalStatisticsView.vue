@@ -2,142 +2,171 @@
   <div class="container mt-5 text-dark">
     <h1 class="text-center mb-4">Statistics</h1>
 
-    <div v-if="loading" class="text-center">
-      <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Loading...</span>
+    <ul class="nav nav-tabs mb-4">
+      <li v-for="tab in STATS_TABS" :key="tab.value" class="nav-item">
+        <button
+          type="button"
+          class="nav-link"
+          :class="{ active: activeTab === tab.value }"
+          :aria-pressed="activeTab === tab.value"
+          @click="selectTab(tab.value)"
+        >
+          {{ tab.label }}
+        </button>
+      </li>
+    </ul>
+
+    <section class="card mb-4" aria-labelledby="planned-statistics-title">
+      <div class="card-body">
+        <h2 id="planned-statistics-title" class="h5">Planned statistics — {{ activeTabConfig.label }}</h2>
+        <p class="text-muted">{{ activeTabConfig.note }} These statistics are planned; no new values or charts are available yet.</p>
+        <ul class="row mb-0 ps-3">
+          <li v-for="item in activeTabConfig.planned" :key="item" class="col-12 col-md-6 mb-2">
+            {{ item }}
+          </li>
+        </ul>
       </div>
-      <p class="mt-2">Loading global statistics...</p>
-    </div>
+    </section>
 
-    <div v-else-if="error" class="alert alert-danger">
-      {{ error }}
-    </div>
-
-    <div v-else>
-      <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-          <h5 class="mb-0">Overview</h5>
+    <!-- v-show, not v-if: the Plotly charts and Leaflet map are bound to these DOM nodes. -->
+    <div v-show="activeTab === 'all'">
+      <div v-if="loading" class="text-center">
+        <div class="spinner-border text-primary" role="status">
+          <span class="visually-hidden">Loading...</span>
         </div>
-        <div class="card-body">
-          <div class="row g-3">
-            <div class="col-md-4">
-              <div class="text-center p-3 border rounded">
-                <h4 class="text-dark">{{ stats.total_submissions || 0 }}</h4>
-                <p class="mb-0">Total Submissions</p>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <div class="text-center p-3 border rounded">
-                <h4 class="text-dark">{{ stats.total_unique_sample_identifiers || 0 }}</h4>
-                <p class="mb-0">Unique Sample Identifiers</p>
-              </div>
-            </div>
-            <div class="col-md-4">
-              <div class="text-center p-3 border rounded">
-                <h4 class="text-dark">{{ stats.total_unique_isolate_species || 0 }}</h4>
-                <p class="mb-0">Unique Isolate Species</p>
-              </div>
-            </div>
-          </div>
-          <div class="row g-3 mt-1 justify-content-center">
-            <div class="col-md-5">
-              <div class="text-center p-3 border rounded">
-                <h4 class="text-dark">{{ stats.total_fastq_files || 0 }}</h4>
-                <p class="mb-0">Total FASTQ Files</p>
-              </div>
-            </div>
-            <div class="col-md-5">
-              <div class="text-center p-3 border rounded">
-                <h4 class="text-dark">{{ stats.total_antibiotics_files || 0 }}</h4>
-                <p class="mb-0">Total Antibiotics Files</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <p class="mt-2">Loading global statistics...</p>
       </div>
 
-      <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-          <h5 class="mb-0">QC Pass/Fail Overview</h5>
-        </div>
-        <div class="card-body">
-          <div class="row g-3 text-center mb-2">
-            <div class="col-6 col-md-3">
-              <div class="p-2">
-                <h3 class="mb-0">{{ qcPassRate === null ? "-" : `${qcPassRate}%` }}</h3>
-                <p class="mb-0 text-muted">Passed</p>
-              </div>
-            </div>
-          </div>
-          <div class="row g-3">
-            <div class="col-6 col-md-3">
-              <div class="text-center p-3 border rounded">
-                <h4 class="text-dark">{{ qcRankCounts.gold || 0 }}</h4>
-                <p class="mb-0">Gold</p>
-              </div>
-            </div>
-            <div class="col-6 col-md-3">
-              <div class="text-center p-3 border rounded">
-                <h4 class="text-dark">{{ qcRankCounts.silver || 0 }}</h4>
-                <p class="mb-0">Silver</p>
-              </div>
-            </div>
-            <div class="col-6 col-md-3">
-              <div class="text-center p-3 border rounded">
-                <h4 class="text-dark">{{ qcRankCounts.bronze || 0 }}</h4>
-                <p class="mb-0">Bronze</p>
-              </div>
-            </div>
-            <div class="col-6 col-md-3">
-              <div class="text-center p-3 border rounded">
-                <h4 class="text-dark">{{ qcRankCounts.exclude || 0 }}</h4>
-                <p class="mb-0">Excluded</p>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div v-else-if="error" class="alert alert-danger">
+        {{ error }}
       </div>
 
-      <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-          <h5 class="mb-0">Sequencing Platform Distribution</h5>
-        </div>
-        <div class="card-body">
-          <div class="chart-wrap">
-            <div ref="platformChartRef" class="plotly-chart"></div>
+      <div v-else>
+        <div class="card mb-4">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Overview</h5>
+          </div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-md-4">
+                <div class="text-center p-3 border rounded">
+                  <h4 class="text-dark">{{ stats.total_submissions || 0 }}</h4>
+                  <p class="mb-0">Total Submissions</p>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="text-center p-3 border rounded">
+                  <h4 class="text-dark">{{ stats.total_unique_sample_identifiers || 0 }}</h4>
+                  <p class="mb-0">Unique Sample Identifiers</p>
+                </div>
+              </div>
+              <div class="col-md-4">
+                <div class="text-center p-3 border rounded">
+                  <h4 class="text-dark">{{ stats.total_unique_isolate_species || 0 }}</h4>
+                  <p class="mb-0">Unique Isolate Species</p>
+                </div>
+              </div>
+            </div>
+            <div class="row g-3 mt-1 justify-content-center">
+              <div class="col-md-5">
+                <div class="text-center p-3 border rounded">
+                  <h4 class="text-dark">{{ stats.total_fastq_files || 0 }}</h4>
+                  <p class="mb-0">Total FASTQ Files</p>
+                </div>
+              </div>
+              <div class="col-md-5">
+                <div class="text-center p-3 border rounded">
+                  <h4 class="text-dark">{{ stats.total_antibiotics_files || 0 }}</h4>
+                  <p class="mb-0">Total Antibiotics Files</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="card mb-4">
-        <div class="card-header bg-primary text-white">
-          <h5 class="mb-0">Antibiotics SIR Distribution</h5>
-        </div>
-        <div class="card-body">
-          <div class="chart-wrap">
-            <div ref="sirChartRef" class="plotly-chart"></div>
+        <div class="card mb-4">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">QC Pass/Fail Overview</h5>
+          </div>
+          <div class="card-body">
+            <div class="row g-3 text-center mb-2">
+              <div class="col-6 col-md-3">
+                <div class="p-2">
+                  <h3 class="mb-0">{{ qcPassRate === null ? "-" : `${qcPassRate}%` }}</h3>
+                  <p class="mb-0 text-muted">Passed</p>
+                </div>
+              </div>
+            </div>
+            <div class="row g-3">
+              <div class="col-6 col-md-3">
+                <div class="text-center p-3 border rounded">
+                  <h4 class="text-dark">{{ qcRankCounts.gold || 0 }}</h4>
+                  <p class="mb-0">Gold</p>
+                </div>
+              </div>
+              <div class="col-6 col-md-3">
+                <div class="text-center p-3 border rounded">
+                  <h4 class="text-dark">{{ qcRankCounts.silver || 0 }}</h4>
+                  <p class="mb-0">Silver</p>
+                </div>
+              </div>
+              <div class="col-6 col-md-3">
+                <div class="text-center p-3 border rounded">
+                  <h4 class="text-dark">{{ qcRankCounts.bronze || 0 }}</h4>
+                  <p class="mb-0">Bronze</p>
+                </div>
+              </div>
+              <div class="col-6 col-md-3">
+                <div class="text-center p-3 border rounded">
+                  <h4 class="text-dark">{{ qcRankCounts.exclude || 0 }}</h4>
+                  <p class="mb-0">Excluded</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="card mb-4" v-if="micValues.length > 0">
-        <div class="card-header bg-primary text-white">
-          <h5 class="mb-0">Antibiotics MIC Distribution</h5>
-        </div>
-        <div class="card-body">
-          <div class="chart-wrap">
-            <div ref="micChartRef" class="plotly-chart"></div>
+        <div class="card mb-4">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Sequencing Platform Distribution</h5>
+          </div>
+          <div class="card-body">
+            <div class="chart-wrap">
+              <div ref="platformChartRef" class="plotly-chart"></div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div class="card mb-4" v-if="germanyTotalCount > 0">
-        <div class="card-header bg-primary text-white">
-          <h5 class="mb-0">Data Origin</h5>
+        <div class="card mb-4">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Antibiotics SIR Distribution</h5>
+          </div>
+          <div class="card-body">
+            <div class="chart-wrap">
+              <div ref="sirChartRef" class="plotly-chart"></div>
+            </div>
+          </div>
         </div>
-        <div class="card-body">
-          <div class="chart-wrap">
-            <div ref="mapContainerRef" class="leaflet-map"></div>
+
+        <div class="card mb-4" v-if="micValues.length > 0">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Antibiotics MIC Distribution</h5>
+          </div>
+          <div class="card-body">
+            <div class="chart-wrap">
+              <div ref="micChartRef" class="plotly-chart"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mb-4" v-if="germanyTotalCount > 0">
+          <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Data Origin</h5>
+          </div>
+          <div class="card-body">
+            <div class="chart-wrap">
+              <div ref="mapContainerRef" class="leaflet-map"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -155,6 +184,31 @@ import apiClient from "../api/client";
 
 const Plotly = PlotlyModule?.default || PlotlyModule;
 
+const STATS_TABS = [
+  {
+    value: "all", label: "All",
+    note: "Combined statistics across submission types. The existing overview remains below.",
+    planned: ["Submissions and samples by submission type", "Uploads over time", "Sequencing-file counts and total size", "Pending, completed, and failed analyses", "QC outcomes", "Metadata coverage and completeness by submission type"],
+  },
+  {
+    value: "gensurv", label: "Gensurv",
+    note: "Statistics based on Gensurv metadata and linked antibiotic data.",
+    planned: ["Submission and sample counts over time", "Species distribution", "Collection dates and geographic distribution", "Sample sources, sampling strategies, and collection methods", "Sequencing platforms, sequencing types, and library-preparation kits", "Susceptibility by antibiotic and species", "MIC distributions per antibiotic", "Analysis status, QC, and metadata completeness"],
+  },
+  {
+    value: "num-sar_norovirus", label: "NUM-SAR",
+    note: "Statistics based on the updated Norovirus metadata.",
+    planned: ["Submission and sample counts over time", "Species, subtypes, and typing strategies", "Collection dates and geographic distribution", "Isolation sources and storage duration", "Sequencing reasons, platforms, and instruments", "Suspected outbreak status", "Aggregated age groups, sex, and patient status", "Sampling-to-receiving and receiving-to-sequencing times", "Repository participation", "Analysis status, QC, and metadata completeness"],
+  },
+  {
+    value: "cogdat", label: "COGDAT",
+    note: "Based on upload and analysis records. Species, platform, and location breakdowns require an additional reliable metadata source.",
+    planned: ["Submission and sample counts", "Uploads over time", "Sequencing-file counts and total size", "Pending, completed, and failed analyses", "QC outcomes"],
+  },
+];
+
+const activeTab = ref("all");
+const activeTabConfig = computed(() => STATS_TABS.find((tab) => tab.value === activeTab.value) || STATS_TABS[0]);
 const loading = ref(false);
 const error = ref("");
 const stats = ref({});
@@ -586,12 +640,22 @@ async function renderCharts() {
 }
 
 function handleResize() {
+  if (activeTab.value !== "all") return;
   [platformChartRef.value, sirChartRef.value, micChartRef.value].forEach((chartEl) => {
     if (chartEl && Plotly?.Plots?.resize) {
       Plotly.Plots.resize(chartEl);
     }
   });
   if (germanyMap) germanyMap.invalidateSize();
+}
+
+async function selectTab(tab) {
+  activeTab.value = tab;
+  if (tab !== "all") return;
+  // The charts and map can't measure themselves while hidden.
+  await nextTick();
+  handleResize();
+  resetGermanyMapView();
 }
 
 async function fetchGlobalStatistics() {

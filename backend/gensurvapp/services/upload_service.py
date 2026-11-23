@@ -276,7 +276,7 @@ def handle_single_upload(*, user, metadata_file, uploaded_antibiotics_file, fast
 
     submission_type = normalize_submission_type(submission_type)
 
-    if submission_type in uploaded_antibiotics_file:
+    if submission_type == "num-sar_norovirus" and uploaded_antibiotics_file:
         raise ValueError("Virus submissions do not accept antibiotics files.")
 
     if not metadata_file:
@@ -352,7 +352,7 @@ def handle_single_upload(*, user, metadata_file, uploaded_antibiotics_file, fast
     if not sample_id or sample_id.lower() == "nan":
         raise ValueError("Metadata has missing/invalid 'sample identifier' in first row.")
     
-    if submission_type:
+    if submission_type == "num-sar_norovirus":
         ab_file_val = _safe_str(metadata_df.loc[0, "antibiotics file"]) if "antibiotics file" in metadata_df.columns else None
         ab_info_val = _safe_str(metadata_df.loc[0, "antibiotics info"]) if "antibiotics info" in metadata_df.columns else None
         if ab_file_val or ab_info_val:
@@ -574,7 +574,7 @@ def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, s
 
     submission_type = normalize_submission_type(submission_type)
 
-    if submission_type in antibiotics_files:
+    if submission_type == "num-sar_norovirus" and antibiotics_files:
         raise ValueError("Virus submissions do not accept antibiotics files.")
 
     server_start = time.time()
@@ -730,7 +730,7 @@ def handle_bulk_upload(*, user, metadata_file, antibiotics_files, fastq_files, s
         antibiotics_info = _safe_str(row.get("antibiotics info"))
 
         # inside handle_bulk_upload loop that processes antibiotics fields
-        if submission_type:
+        if submission_type == "num-sar_norovirus":
             if expected_ab_file or antibiotics_info:
                 ab_row_errors.append(f"Sample '{sample_id}': Virus submissions must not include antibiotics fields.")
             continue

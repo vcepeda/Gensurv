@@ -2,7 +2,7 @@
   <div class="container-fluid py-3">
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
       <div>
-        <h1 class="mb-1">Submission {{ submissionId }} Results Dashboard</h1>
+        <h1 class="mb-1">Submission {{ submissionId }} Results Dashboard<span v-if="submissionTypeLabel"> ({{ submissionTypeLabel }})</span></h1>
         <p class="lead mb-1">Explore each sample's pipeline status and results, from Bactopia's own QC summary.</p>
         <p class="mb-1">
           The analysis was done using
@@ -248,6 +248,15 @@ const STAGE_DESCRIPTIONS = {
 
 const route = useRoute();
 const submissionId = computed(() => Number(route.params.submissionId));
+const submissionType = ref("");
+const submissionTypeLabel = computed(() => ({
+  gensurv: "Gensurv",
+  bacteria: "Gensurv",
+  "num-sar_norovirus": "NUM-SAR",
+  "num-sar_bacteria": "NUM-SAR",
+  "num-sar_virus": "NUM-SAR",
+  cogdat: "COGDAT",
+}[submissionType.value] || submissionType.value));
 
 const loading = ref(false);
 const error = ref("");
@@ -343,6 +352,7 @@ async function fetchDashboard() {
 
   try {
     const res = await apiClient.get(`/api/submissions/${submissionId.value}/results/dashboard/`);
+    submissionType.value = res.data?.submission_type || "";
     stageOrder.value = res.data?.stage_order || [];
     samples.value = res.data?.samples || [];
     summary.value = {
